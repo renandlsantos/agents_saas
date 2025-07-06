@@ -188,7 +188,7 @@
       "edit": "編輯自訂插件"
     },
     "type": {
-      "lobe": "LobeChat 插件",
+      "lobe": "Agents Chat 插件",
       "openai": "OpenAI 插件"
     },
     "update": "更新",

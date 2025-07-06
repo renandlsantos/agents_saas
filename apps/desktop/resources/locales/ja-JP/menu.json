@@ -37,7 +37,7 @@
   },
   "macOS": {
     "about": "{{appName}} について",
-    "devTools": "LobeHub 開発者ツール",
+    "devTools": "Agents SaaS 開発者ツール",
     "hide": "{{appName}} を隠す",
     "hideOthers": "他を隠す",
     "preferences": "環境設定...",

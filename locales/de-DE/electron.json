@@ -2,7 +2,7 @@
   "remoteServer": {
     "authError": "Autorisierung fehlgeschlagen: {{error}}",
     "authPending": "Bitte schließen Sie die Autorisierung im Browser ab",
-    "configDesc": "Verbinden Sie sich mit dem Remote LobeChat-Server, um die Datensynchronisierung zu aktivieren",
+    "configDesc": "Verbinden Sie sich mit dem Remote Agents Chat-Server, um die Datensynchronisierung zu aktivieren",
     "configError": "Konfigurationsfehler",
     "configTitle": "Cloud-Synchronisierung konfigurieren",
     "connect": "Verbinden und autorisieren",
@@ -24,7 +24,7 @@
     "isIniting": "Wird initialisiert...",
     "lobehubCloud": {
       "description": "Offizielle Cloud-Version",
-      "title": "LobeHub Cloud"
+      "title": "Agents SaaS Cloud"
     },
     "local": {
       "description": "Verwendet lokale Datenbank, vollständig offline verfügbar",

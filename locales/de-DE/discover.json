@@ -56,7 +56,7 @@
       "desc1": "Gehe im Chatfenster über die Einstellungen in der oberen rechten Ecke zur Seite, auf der du deinen Assistenten einreichen möchtest;",
       "desc2": "Klicke auf die Schaltfläche 'In den Assistentenmarkt einreichen' in der oberen rechten Ecke.",
       "tag": "Methode Eins",
-      "title": "Einreichung über LobeChat"
+      "title": "Einreichung über Agents Chat"
     },
     "func2": {
       "button": "Gehe zum Github-Assistenten-Repository",
@@ -142,14 +142,14 @@
       "type": "Typ"
     },
     "providerInfo": {
-      "apiTooltip": "LobeChat unterstützt die Verwendung eines benutzerdefinierten API-Schlüssels für diesen Anbieter.",
+      "apiTooltip": "Agents Chat unterstützt die Verwendung eines benutzerdefinierten API-Schlüssels für diesen Anbieter.",
       "input": "Eingabepreis",
       "inputTooltip": "Kosten pro Million Token",
       "latency": "Latenz",
       "latencyTooltip": "Durchschnittliche Antwortzeit des Anbieters für das erste Token",
       "maxOutput": "Maximale Ausgabelänge",
       "maxOutputTooltip": "Maximale Anzahl von Tokens, die dieser Endpunkt generieren kann",
-      "officialTooltip": "Offizieller LobeHub-Dienst",
+      "officialTooltip": "Offizieller Agents SaaS-Dienst",
       "output": "Ausgabepreis",
       "outputTooltip": "Kosten pro Million Token",
       "streamCancellationTooltip": "Dieser Anbieter unterstützt die Stream-Abbruchfunktion.",

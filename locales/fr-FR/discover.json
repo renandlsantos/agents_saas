@@ -56,7 +56,7 @@
       "desc1": "Accédez à la page de paramètres de l'assistant que vous souhaitez soumettre via le coin supérieur droit de la fenêtre de conversation ;",
       "desc2": "Cliquez sur le bouton de soumission au marché des assistants dans le coin supérieur droit.",
       "tag": "Méthode un",
-      "title": "Soumettre via LobeChat"
+      "title": "Soumettre via Agents Chat"
     },
     "func2": {
       "button": "Aller au dépôt d'assistants Github",
@@ -142,14 +142,14 @@
       "type": "Type"
     },
     "providerInfo": {
-      "apiTooltip": "LobeChat prend en charge l'utilisation de clés API personnalisées pour ce fournisseur.",
+      "apiTooltip": "Agents Chat prend en charge l'utilisation de clés API personnalisées pour ce fournisseur.",
       "input": "Prix d'entrée",
       "inputTooltip": "Coût par million de tokens",
       "latency": "Latence",
       "latencyTooltip": "Temps de réponse moyen pour que le fournisseur envoie le premier token",
       "maxOutput": "Longueur de sortie maximale",
       "maxOutputTooltip": "Nombre maximal de tokens que ce point de terminaison peut générer",
-      "officialTooltip": "Service officiel de LobeHub",
+      "officialTooltip": "Service officiel de Agents SaaS",
       "output": "Prix de sortie",
       "outputTooltip": "Coût par million de tokens",
       "streamCancellationTooltip": "Ce fournisseur prend en charge la fonction d'annulation de flux.",

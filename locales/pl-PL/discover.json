@@ -56,7 +56,7 @@
       "desc1": "W oknie rozmowy przejdź do ustawień w prawym górnym rogu, aby wejść na stronę ustawień asystenta, który chcesz dodać;",
       "desc2": "Kliknij przycisk 'Wyślij do rynku asystentów' w prawym górnym rogu.",
       "tag": "Metoda pierwsza",
-      "title": "Zgłoś przez LobeChat"
+      "title": "Zgłoś przez Agents Chat"
     },
     "func2": {
       "button": "Przejdź do repozytorium asystentów na Githubie",
@@ -142,14 +142,14 @@
       "type": "Typ"
     },
     "providerInfo": {
-      "apiTooltip": "LobeChat obsługuje użycie niestandardowego klucza API dla tego dostawcy.",
+      "apiTooltip": "Agents Chat obsługuje użycie niestandardowego klucza API dla tego dostawcy.",
       "input": "Cena wejściowa",
       "inputTooltip": "Koszt za milion tokenów",
       "latency": "Opóźnienie",
       "latencyTooltip": "Średni czas odpowiedzi dostawcy na pierwszy token",
       "maxOutput": "Maksymalna długość wyjścia",
       "maxOutputTooltip": "Maksymalna liczba tokenów, które ten punkt końcowy może wygenerować",
-      "officialTooltip": "Oficjalna usługa LobeHub",
+      "officialTooltip": "Oficjalna usługa Agents SaaS",
       "output": "Cena wyjściowa",
       "outputTooltip": "Koszt za milion tokenów",
       "streamCancellationTooltip": "Ten dostawca obsługuje funkcję anulowania strumienia.",

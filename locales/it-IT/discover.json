@@ -56,7 +56,7 @@
       "desc1": "Accedi alla pagina delle impostazioni dell'assistente che desideri inviare tramite l'icona in alto a destra nella finestra di conversazione;",
       "desc2": "Clicca sul pulsante per inviare al mercato degli assistenti in alto a destra.",
       "tag": "Metodo uno",
-      "title": "Invia tramite LobeChat"
+      "title": "Invia tramite Agents Chat"
     },
     "func2": {
       "button": "Vai al repository degli assistenti su Github",
@@ -142,14 +142,14 @@
       "type": "Tipo"
     },
     "providerInfo": {
-      "apiTooltip": "LobeChat supporta l'uso di chiavi API personalizzate per questo fornitore.",
+      "apiTooltip": "Agents Chat supporta l'uso di chiavi API personalizzate per questo fornitore.",
       "input": "Prezzo di input",
       "inputTooltip": "Costo per milione di Token",
       "latency": "Latenza",
       "latencyTooltip": "Tempo medio di risposta del fornitore per il primo Token inviato",
       "maxOutput": "Lunghezza massima di output",
       "maxOutputTooltip": "Numero massimo di Token che questo endpoint può generare",
-      "officialTooltip": "Servizio ufficiale LobeHub",
+      "officialTooltip": "Servizio ufficiale Agents SaaS",
       "output": "Prezzo di output",
       "outputTooltip": "Costo per milione di Token",
       "streamCancellationTooltip": "Questo fornitore supporta la funzione di cancellazione dello streaming.",

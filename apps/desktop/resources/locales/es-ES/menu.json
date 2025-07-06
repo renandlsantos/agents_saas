@@ -37,7 +37,7 @@
   },
   "macOS": {
     "about": "Acerca de {{appName}}",
-    "devTools": "Herramientas de desarrollador de LobeHub",
+    "devTools": "Herramientas de desarrollador de Agents SaaS",
     "hide": "Ocultar {{appName}}",
     "hideOthers": "Ocultar otros",
     "preferences": "Configuración...",

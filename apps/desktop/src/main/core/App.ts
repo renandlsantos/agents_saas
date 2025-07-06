@@ -67,7 +67,7 @@ export class App {
     logger.info(`PATH: ${app.getAppPath()}`);
     logger.info(` lng: ${app.getLocale()}`);
     logger.info('----------------------------------------------');
-    logger.info('Starting LobeHub...');
+    logger.info('Starting Agents SaaS...');
 
     logger.debug('Initializing App');
     // Initialize store manager

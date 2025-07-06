@@ -56,7 +56,7 @@
       "desc1": "ادخل إلى صفحة إعداد المساعد الذي ترغب في تقديمه من خلال الإعدادات في الزاوية العليا اليمنى من نافذة المحادثة;",
       "desc2": "انقر على زر التقديم إلى سوق المساعدين في الزاوية العليا اليمنى.",
       "tag": "الطريقة الأولى",
-      "title": "تقديم عبر LobeChat"
+      "title": "تقديم عبر Agents Chat"
     },
     "func2": {
       "button": "اذهب إلى مستودع مساعدي Github",
@@ -142,14 +142,14 @@
       "type": "نوع"
     },
     "providerInfo": {
-      "apiTooltip": "يدعم LobeChat استخدام مفتاح API مخصص لهذا المزود.",
+      "apiTooltip": "يدعم Agents Chat استخدام مفتاح API مخصص لهذا المزود.",
       "input": "سعر الإدخال",
       "inputTooltip": "تكلفة لكل مليون Token",
       "latency": "زمن الاستجابة",
       "latencyTooltip": "متوسط زمن استجابة المزود لإرسال أول Token",
       "maxOutput": "أقصى طول للإخراج",
       "maxOutputTooltip": "عدد Tokens الأقصى الذي يمكن أن ينتجه هذا النقطة",
-      "officialTooltip": "خدمة رسمية من LobeHub",
+      "officialTooltip": "خدمة رسمية من Agents SaaS",
       "output": "سعر الإخراج",
       "outputTooltip": "تكلفة لكل مليون Token",
       "streamCancellationTooltip": "يدعم هذا المزود ميزة إلغاء التدفق.",

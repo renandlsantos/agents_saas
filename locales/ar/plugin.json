@@ -188,7 +188,7 @@
       "edit": "تحرير برنامج مساعد مخصص"
     },
     "type": {
-      "lobe": "برنامج مساعد LobeChat",
+      "lobe": "برنامج مساعد Agents Chat",
       "openai": "برنامج مساعد OpenAI"
     },
     "update": "تحديث",

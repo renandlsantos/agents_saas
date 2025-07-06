@@ -2,7 +2,7 @@
   "remoteServer": {
     "authError": "Yetkilendirme hatası: {{error}}",
     "authPending": "Yetkilendirmeyi tarayıcıda tamamlayın",
-    "configDesc": "Uzak LobeChat sunucusuna bağlanın, veri senkronizasyonunu etkinleştirin",
+    "configDesc": "Uzak Agents Chat sunucusuna bağlanın, veri senkronizasyonunu etkinleştirin",
     "configError": "Yapılandırma hatası",
     "configTitle": "Bulut Senkronizasyonunu Yapılandır",
     "connect": "Bağlan ve yetkilendir",
@@ -24,7 +24,7 @@
     "isIniting": "Başlatılıyor...",
     "lobehubCloud": {
       "description": "Resmi olarak sağlanan bulut versiyonu",
-      "title": "LobeHub Bulut"
+      "title": "Agents SaaS Bulut"
     },
     "local": {
       "description": "Yerel veritabanı kullanarak tamamen çevrimdışı kullanılabilir",

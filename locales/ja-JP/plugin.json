@@ -188,7 +188,7 @@
       "edit": "カスタムプラグインを編集"
     },
     "type": {
-      "lobe": "LobeChatプラグイン",
+      "lobe": "Agents Chatプラグイン",
       "openai": "OpenAIプラグイン"
     },
     "update": "更新",

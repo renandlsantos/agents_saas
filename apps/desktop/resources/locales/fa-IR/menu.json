@@ -37,7 +37,7 @@
   },
   "macOS": {
     "about": "درباره {{appName}}",
-    "devTools": "ابزارهای توسعه‌دهنده LobeHub",
+    "devTools": "ابزارهای توسعه‌دهنده Agents SaaS",
     "hide": "پنهان کردن {{appName}}",
     "hideOthers": "پنهان کردن دیگران",
     "preferences": "تنظیمات...",

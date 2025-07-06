@@ -37,7 +37,7 @@
   },
   "macOS": {
     "about": "Về {{appName}}",
-    "devTools": "Công cụ phát triển LobeHub",
+    "devTools": "Công cụ phát triển Agents SaaS",
     "hide": "Ẩn {{appName}}",
     "hideOthers": "Ẩn khác",
     "preferences": "Cài đặt ưu tiên...",

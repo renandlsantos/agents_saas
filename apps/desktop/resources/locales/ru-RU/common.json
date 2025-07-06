@@ -20,7 +20,7 @@
   },
   "app": {
     "description": "Ваша платформа для совместной работы с ИИ",
-    "name": "LobeHub"
+    "name": "Agents SaaS"
   },
   "status": {
     "error": "Ошибка",

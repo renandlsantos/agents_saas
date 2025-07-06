@@ -188,7 +188,7 @@
       "edit": "Editar complemento personalizado"
     },
     "type": {
-      "lobe": "Complemento LobeChat",
+      "lobe": "Complemento Agents Chat",
       "openai": "Complemento OpenAI"
     },
     "update": "Actualizar",

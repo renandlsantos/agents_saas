@@ -56,7 +56,7 @@
       "desc1": "Ga naar de instellingenpagina van de assistent die je wilt indienen via de instellingen in de rechterbovenhoek van het gespreksscherm;",
       "desc2": "Klik op de knop 'Indienen naar assistentmarkt' in de rechterbovenhoek.",
       "tag": "Methode één",
-      "title": "Indienen via LobeChat"
+      "title": "Indienen via Agents Chat"
     },
     "func2": {
       "button": "Ga naar de Github assistent repository",
@@ -142,14 +142,14 @@
       "type": "Type"
     },
     "providerInfo": {
-      "apiTooltip": "LobeChat ondersteunt het gebruik van een aangepaste API-sleutel voor deze provider.",
+      "apiTooltip": "Agents Chat ondersteunt het gebruik van een aangepaste API-sleutel voor deze provider.",
       "input": "Invoerkosten",
       "inputTooltip": "Kosten per miljoen tokens",
       "latency": "Latentie",
       "latencyTooltip": "Gemiddelde responstijd voor de eerste token van de provider",
       "maxOutput": "Maximale uitvoerlengte",
       "maxOutputTooltip": "Maximaal aantal tokens dat deze endpoint kan genereren",
-      "officialTooltip": "Officiële LobeHub service",
+      "officialTooltip": "Officiële Agents SaaS service",
       "output": "Uitvoerkosten",
       "outputTooltip": "Kosten per miljoen tokens",
       "streamCancellationTooltip": "Deze provider ondersteunt stream annulering.",

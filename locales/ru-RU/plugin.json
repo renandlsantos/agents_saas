@@ -188,7 +188,7 @@
       "edit": "Редактировать плагин"
     },
     "type": {
-      "lobe": "Плагин LobeChat",
+      "lobe": "Плагин Agents Chat",
       "openai": "Плагин OpenAI"
     },
     "update": "Обновить",
