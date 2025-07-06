@@ -1,13 +1,13 @@
 ---
-description: 桌面端测试
+description: Testes desktop
 globs:
 alwaysApply: false
 ---
-# 桌面端控制器单元测试指南
+# Guia de Testes Unitários de Controladores Desktop
 
-## 测试框架与目录结构
+## Framework de Testes e Estrutura de Diretórios
 
-LobeChat 桌面端使用 Vitest 作为测试框架。控制器的单元测试应放置在对应控制器文件同级的 `__tests__` 目录下，并以原控制器文件名加 `.test.ts` 作为文件名。
+O desktop do Agents Chat usa Vitest como framework de testes. Os testes unitários dos controladores devem ser colocados no diretório `__tests__` no mesmo nível do arquivo do controlador correspondente, e nomeados com o nome do arquivo do controlador original mais `.test.ts`.
 
 ```
 apps/desktop/src/main/controllers/
@@ -20,7 +20,7 @@ apps/desktop/src/main/controllers/
 └── ...
 ```
 
-## 测试文件基本结构
+## Estrutura Básica do Arquivo de Teste
 
 ```typescript
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -29,14 +29,14 @@ import type { App } from '@/core/App';
 
 import YourController from '../YourControllerName';
 
-// 模拟依赖
-vi.mock('依赖模块', () => ({
-  依赖函数: vi.fn(),
+// Mock de dependências
+vi.mock('modulo-dependencia', () => ({
+  funcaoDependencia: vi.fn(),
 }));
 
-// 模拟 App 实例
+// Mock da instância App
 const mockApp = {
-  // 按需模拟必要的 App 属性和方法
+  // Mock das propriedades e métodos necessários do App conforme necessidade
 } as unknown as App;
 
 describe('YourController', () => {
@@ -47,23 +47,23 @@ describe('YourController', () => {
     controller = new YourController(mockApp);
   });
 
-  describe('方法名', () => {
-    it('测试场景描述', async () => {
-      // 准备测试数据
+  describe('nomeDoMetodo', () => {
+    it('descricao do cenario de teste', async () => {
+      // Preparar dados de teste
 
-      // 执行被测方法
-      const result = await controller.方法名(参数);
+      // Executar método sendo testado
+      const result = await controller.nomeDoMetodo(parametros);
 
-      // 验证结果
-      expect(result).toMatchObject(预期结果);
+      // Verificar resultado
+      expect(result).toMatchObject(resultadoEsperado);
     });
   });
 });
 ```
 
-## 模拟外部依赖
+## Mock de Dependências Externas
 
-### 模拟模块函数
+### Mock de Funções de Módulo
 
 ```typescript
 const mockFunction = vi.fn();
@@ -73,22 +73,22 @@ vi.mock('module-name', () => ({
 }));
 ```
 
-### 模拟 Node.js 核心模块
+### Mock de Módulos Core do Node.js
 
-例如模拟 `child_process.exec` 和 `util.promisify`:
+Por exemplo, fazer mock de `child_process.exec` e `util.promisify`:
 
 ```typescript
-// 存储模拟的 exec 实现
+// Armazenar implementação mock do exec
 const mockExecImpl = vi.fn();
 
-// 模拟 child_process.exec
+// Mock child_process.exec
 vi.mock('child_process', () => ({
   exec: vi.fn((cmd, callback) => {
     return mockExecImpl(cmd, callback);
   }),
 }));
 
-// 模拟 util.promisify
+// Mock util.promisify
 vi.mock('util', () => ({
   promisify: vi.fn((fn) => {
     return async (cmd: string) => {
@@ -103,86 +103,86 @@ vi.mock('util', () => ({
 }));
 ```
 
-## 编写有效的测试用例
+## Escrevendo Casos de Teste Eficazes
 
-### 测试分类
+### Classificação de Testes
 
-将测试用例分为不同类别，每个类别测试一个特定场景：
+Divida os casos de teste em diferentes categorias, cada categoria testando um cenário específico:
 
 ```typescript
-// 成功场景
-it('应该成功完成操作', async () => {});
+// Cenários de sucesso
+it('deve completar operação com sucesso', async () => {});
 
-// 边界条件
-it('应该处理边界情况', async () => {});
+// Condições de borda
+it('deve lidar com casos limite', async () => {});
 
-// 错误处理
-it('应该优雅地处理错误', async () => {});
+// Tratamento de erro
+it('deve tratar erros graciosamente', async () => {});
 ```
 
-### 设置测试数据
+### Configuração de Dados de Teste
 
 ```typescript
-// 模拟返回值
+// Mock de valores de retorno
 mockExecImpl.mockImplementation((cmd: string, callback: any) => {
-  if (cmd === '命令') {
-    callback(null, { stdout: '成功输出' });
+  if (cmd === 'comando') {
+    callback(null, { stdout: 'saída de sucesso' });
   } else {
-    callback(new Error('错误信息'), null);
+    callback(new Error('mensagem de erro'), null);
   }
 });
 ```
 
-### 断言
+### Asserções
 
-使用 Vitest 的断言函数验证结果：
+Use as funções de asserção do Vitest para verificar resultados:
 
 ```typescript
-// 检查基本值
+// Verificar valores básicos
 expect(result.success).toBe(true);
 
-// 检查对象部分匹配
+// Verificar correspondência parcial de objeto
 expect(result.data).toMatchObject({
   key: 'value',
 });
 
-// 检查数组
+// Verificar arrays
 expect(result.items).toHaveLength(2);
 expect(result.items[0].name).toBe('expectedName');
 
-// 检查函数调用
+// Verificar chamadas de função
 expect(mockFunction).toHaveBeenCalledWith(expectedArgs);
 expect(mockFunction).toHaveBeenCalledTimes(1);
 ```
 
-## 最佳实践
+## Melhores Práticas
 
-1. **隔离测试**：确保每个测试互不影响，使用 `beforeEach` 重置模拟和状态
-2. **全面覆盖**：测试正常流程、边界条件和错误处理
-3. **清晰命名**：测试名称应清晰描述测试内容和预期结果
-4. **避免测试实现细节**：测试应该关注行为而非实现细节，使代码重构不会破坏测试
-5. **模拟外部依赖**：使用 `vi.mock()` 模拟所有外部依赖，减少测试的不确定性
+1. **Isolamento de Testes**: Garanta que cada teste não afete os outros, use `beforeEach` para resetar mocks e estado
+2. **Cobertura Abrangente**: Teste fluxos normais, condições de borda e tratamento de erros
+3. **Nomenclatura Clara**: Nomes de teste devem descrever claramente o conteúdo do teste e resultado esperado
+4. **Evitar Testar Detalhes de Implementação**: Testes devem focar no comportamento ao invés de detalhes de implementação, fazendo com que refatoração de código não quebre testes
+5. **Mock de Dependências Externas**: Use `vi.mock()` para fazer mock de todas as dependências externas, reduzindo incerteza dos testes
 
-## 示例：测试 IPC 事件处理方法
+## Exemplo: Testando Método de Manipulação de Evento IPC
 
 ```typescript
-it('应该正确处理 IPC 事件', async () => {
-  // 模拟依赖
+it('deve processar evento IPC corretamente', async () => {
+  // Mock de dependências
   mockSomething.mockReturnValue({ result: 'success' });
 
-  // 调用 IPC 方法
+  // Chamar método IPC
   const result = await controller.ipcMethodName({
     param1: 'value1',
     param2: 'value2',
   });
 
-  // 验证结果
+  // Verificar resultado
   expect(result).toEqual({
     success: true,
     data: { result: 'success' },
   });
 
-  // 验证依赖调用
+  // Verificar chamadas de dependência
   expect(mockSomething).toHaveBeenCalledWith('value1', 'value2');
 });
 ```

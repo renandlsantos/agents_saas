@@ -3,22 +3,22 @@ description:
 globs: src/store/**
 alwaysApply: false
 ---
-# LobeChat Zustand Action 组织模式
+# Padrões de Organização de Actions Zustand do Agents Chat
 
-本文档详细说明了 LobeChat 项目中 Zustand Action 的组织方式、命名规范和实现模式，特别关注乐观更新与后端服务的集成。
+Este documento detalha a forma de organização, convenções de nomenclatura e padrões de implementação das Actions Zustand no projeto Agents Chat, com foco especial na integração de atualizações otimistas com serviços de backend.
 
-## Action 类型分层
+## Estratificação de Tipos de Action
 
-LobeChat 的 Action 采用分层架构，明确区分不同职责：
+As Actions do Agents Chat adotam uma arquitetura em camadas, distinguindo claramente diferentes responsabilidades:
 
 ### 1. Public Actions
-对外暴露的主要接口，供 UI 组件调用：
-- 命名：动词形式（`createTopic`, `sendMessage`, `updateTopicTitle`）
-- 职责：参数验证、流程编排、调用 internal actions
-- 示例：[src/store/chat/slices/topic/action.ts](mdc:src/store/chat/slices/topic/action.ts)
+Interface principal exposta externamente, para uso por componentes de UI:
+- Nomenclatura: forma verbal (`createTopic`, `sendMessage`, `updateTopicTitle`)
+- Responsabilidades: validação de parâmetros, orquestração de fluxo, chamada de internal actions
+- Exemplo: [src/store/chat/slices/topic/action.ts](mdc:src/store/chat/slices/topic/action.ts)
 
 ```typescript
-// Public Action 示例
+// Exemplo de Public Action
 createTopic: async () => {
   const { activeId, internal_createTopic } = get();
   const messages = chatSelectors.activeBaseChats(get());
@@ -36,28 +36,28 @@ createTopic: async () => {
 ```
 
 ### 2. Internal Actions (`internal_*`)
-内部实现细节，处理核心业务逻辑：
-- 命名：`internal_` 前缀 + 动词（`internal_createTopic`, `internal_updateMessageContent`）
-- 职责：乐观更新、服务调用、错误处理、状态同步
-- 不应该被 UI 组件直接调用
+Detalhes de implementação interna, lida com lógica de negócio central:
+- Nomenclatura: prefixo `internal_` + verbo (`internal_createTopic`, `internal_updateMessageContent`)
+- Responsabilidades: atualização otimista, chamada de serviço, tratamento de erros, sincronização de estado
+- Não devem ser chamadas diretamente por componentes de UI
 
 ```typescript
-// Internal Action 示例 - 乐观更新模式
+// Exemplo de Internal Action - padrão de atualização otimista
 internal_createTopic: async (params) => {
   const tmpId = Date.now().toString();
   
-  // 1. 立即更新前端状态（乐观更新）
+  // 1. Atualiza imediatamente o estado frontend (atualização otimista)
   get().internal_dispatchTopic(
     { type: 'addTopic', value: { ...params, id: tmpId } },
     'internal_createTopic',
   );
   get().internal_updateTopicLoading(tmpId, true);
   
-  // 2. 调用后端服务
+  // 2. Chama serviço backend
   const topicId = await topicService.createTopic(params);
   get().internal_updateTopicLoading(tmpId, false);
   
-  // 3. 刷新数据确保一致性
+  // 3. Atualiza dados para garantir consistência
   get().internal_updateTopicLoading(topicId, true);
   await get().refreshTopic();
   get().internal_updateTopicLoading(topicId, false);
@@ -67,12 +67,12 @@ internal_createTopic: async (params) => {
 ```
 
 ### 3. Dispatch Methods (`internal_dispatch*`)
-专门处理状态更新的方法：
-- 命名：`internal_dispatch` + 实体名（`internal_dispatchTopic`, `internal_dispatchMessage`）
-- 职责：调用 reducer、更新 Zustand store、处理状态对比
+Métodos especializados para lidar com atualizações de estado:
+- Nomenclatura: `internal_dispatch` + nome da entidade (`internal_dispatchTopic`, `internal_dispatchMessage`)
+- Responsabilidades: chamar reducer, atualizar Zustand store, lidar com comparação de estado
 
 ```typescript
-// Dispatch Method 示例
+// Exemplo de Dispatch Method
 internal_dispatchTopic: (payload, action) => {
   const nextTopics = topicReducer(topicSelectors.currentTopics(get()), payload);
   const nextMap = { ...get().topicMaps, [get().activeId]: nextTopics };

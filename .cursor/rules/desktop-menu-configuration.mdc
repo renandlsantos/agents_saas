@@ -3,114 +3,114 @@ description:
 globs:
 alwaysApply: false
 ---
-**桌面端菜单配置指南**
+**Guia de Configuração de Menu Desktop**
 
-## 菜单系统概述
+## Visão Geral do Sistema de Menus
 
-LobeChat 桌面应用有三种主要的菜单类型：
+A aplicação desktop do Agents Chat possui três tipos principais de menus:
 
-1. **应用菜单 (App Menu)**：显示在应用窗口顶部（macOS）或窗口标题栏（Windows/Linux）
-2. **上下文菜单 (Context Menu)**：右键点击时显示的菜单
-3. **托盘菜单 (Tray Menu)**：点击系统托盘图标显示的菜单
+1. **Menu da Aplicação (App Menu)**: Exibido no topo da janela da aplicação (macOS) ou na barra de título da janela (Windows/Linux)
+2. **Menu de Contexto (Context Menu)**: Menu exibido ao clicar com o botão direito
+3. **Menu da Bandeja (Tray Menu)**: Menu exibido ao clicar no ícone da bandeja do sistema
 
-## 菜单相关文件结构
+## Estrutura de Arquivos Relacionados aos Menus
 
 ```
 apps/desktop/src/main/
-├── menus/                 # 菜单定义
-│   ├── appMenu.ts         # 应用菜单配置
-│   ├── contextMenu.ts     # 上下文菜单配置
-│   └── factory.ts         # 菜单工厂函数
+├── menus/                 # Definições de menu
+│   ├── appMenu.ts         # Configuração do menu da aplicação
+│   ├── contextMenu.ts     # Configuração do menu de contexto
+│   └── factory.ts         # Funções de fábrica de menu
 ├── controllers/
-│   ├── MenuCtr.ts         # 菜单控制器
-│   └── TrayMenuCtr.ts     # 托盘菜单控制器
+│   ├── MenuCtr.ts         # Controlador de menu
+│   └── TrayMenuCtr.ts     # Controlador de menu da bandeja
 ```
 
-## 菜单配置流程
+## Fluxo de Configuração de Menu
 
-### 1. 应用菜单配置
+### 1. Configuração do Menu da Aplicação
 
-应用菜单在 `apps/desktop/src/main/menus/appMenu.ts` 中定义：
+O menu da aplicação é definido em `apps/desktop/src/main/menus/appMenu.ts`:
 
-1. **导入依赖**
+1. **Importar dependências**
    ```typescript
    import { app, BrowserWindow, Menu, MenuItem, MenuItemConstructorOptions } from 'electron';
    import { is } from 'electron-util';
    ```
 
-2. **定义菜单项**
-   - 使用 `MenuItemConstructorOptions` 类型定义菜单结构
-   - 每个菜单项可以包含：label, accelerator (快捷键), role, submenu, click 等属性
+2. **Definir itens de menu**
+   - Usar tipo `MenuItemConstructorOptions` para definir estrutura de menu
+   - Cada item de menu pode incluir: label, accelerator (atalho), role, submenu, click, etc.
 
-3. **创建菜单工厂函数**
+3. **Criar função de fábrica de menu**
    ```typescript
    export const createAppMenu = (win: BrowserWindow) => {
      const template = [
-       // 定义菜单项...
+       // Definir itens de menu...
      ];
 
      return Menu.buildFromTemplate(template);
    };
    ```
 
-4. **注册菜单**
-   - 在 `MenuCtr.ts` 控制器中使用 `Menu.setApplicationMenu(menu)` 设置应用菜单
+4. **Registrar menu**
+   - No controlador `MenuCtr.ts`, usar `Menu.setApplicationMenu(menu)` para definir menu da aplicação
 
-### 2. 上下文菜单配置
+### 2. Configuração do Menu de Contexto
 
-上下文菜单通常在特定元素上右键点击时显示：
+Menu de contexto é geralmente exibido ao clicar com o botão direito em elementos específicos:
 
-1. **在主进程中定义菜单模板**
+1. **Definir template de menu no processo principal**
    ```typescript
    // apps/desktop/src/main/menus/contextMenu.ts
    export const createContextMenu = () => {
      const template = [
-       // 定义菜单项...
+       // Definir itens de menu...
      ];
 
      return Menu.buildFromTemplate(template);
    };
    ```
 
-2. **在适当的事件处理器中显示菜单**
+2. **Exibir menu no manipulador de evento apropriado**
    ```typescript
    const menu = createContextMenu();
    menu.popup();
    ```
 
-### 3. 托盘菜单配置
+### 3. Configuração do Menu da Bandeja
 
-托盘菜单在 `TrayMenuCtr.ts` 中配置：
+Menu da bandeja é configurado em `TrayMenuCtr.ts`:
 
-1. **创建托盘图标**
+1. **Criar ícone da bandeja**
    ```typescript
    this.tray = new Tray(trayIconPath);
    ```
 
-2. **定义托盘菜单**
+2. **Definir menu da bandeja**
    ```typescript
    const contextMenu = Menu.buildFromTemplate([
-     { label: '显示主窗口', click: this.showMainWindow },
+     { label: 'Mostrar janela principal', click: this.showMainWindow },
      { type: 'separator' },
-     { label: '退出', click: () => app.quit() },
+     { label: 'Sair', click: () => app.quit() },
    ]);
    ```
 
-3. **设置托盘菜单**
+3. **Definir menu da bandeja**
    ```typescript
    this.tray.setContextMenu(contextMenu);
    ```
 
-## 多语言支持
+## Suporte Multilíngue
 
-为菜单添加多语言支持：
+Adicionar suporte multilíngue aos menus:
 
-1. **导入本地化工具**
+1. **Importar ferramentas de localização**
    ```typescript
    import { i18n } from '../locales';
    ```
 
-2. **使用翻译函数**
+2. **Usar função de tradução**
    ```typescript
    const template = [
      {
@@ -124,46 +124,46 @@ apps/desktop/src/main/
    ];
    ```
 
-3. **在语言切换时更新菜单**
-   在 `MenuCtr.ts` 中监听语言变化事件并重新创建菜单
+3. **Atualizar menu ao mudar idioma**
+   No `MenuCtr.ts`, monitorar eventos de mudança de idioma e recriar menu
 
-## 添加新菜单项流程
+## Fluxo para Adicionar Novos Itens de Menu
 
-1. **确定菜单位置**
-   - 决定添加到哪个菜单（应用菜单、上下文菜单或托盘菜单）
-   - 确定在菜单中的位置（主菜单项或子菜单项）
+1. **Determinar posição do menu**
+   - Decidir a qual menu adicionar (menu da aplicação, menu de contexto ou menu da bandeja)
+   - Determinar posição no menu (item de menu principal ou submenu)
 
-2. **定义菜单项**
+2. **Definir item de menu**
    ```typescript
    const newMenuItem: MenuItemConstructorOptions = {
-     label: '新功能',
+     label: 'Nova funcionalidade',
      accelerator: 'CmdOrCtrl+N',
      click: (_, window) => {
-       // 处理点击事件
+       // Tratar evento de clique
        if (window) window.webContents.send('trigger-new-feature');
      }
    };
    ```
 
-3. **添加到菜单模板**
-   将新菜单项添加到相应的菜单模板中
+3. **Adicionar ao template de menu**
+   Adicionar novo item de menu ao template de menu correspondente
 
-4. **对于与渲染进程交互的功能**
-   - 使用 `window.webContents.send()` 发送 IPC 消息到渲染进程
-   - 在渲染进程中监听该消息并处理
+4. **Para funcionalidades que interagem com processo de renderização**
+   - Usar `window.webContents.send()` para enviar mensagem IPC ao processo de renderização
+   - Monitorar e tratar essa mensagem no processo de renderização
 
-## 菜单项启用/禁用控制
+## Controle de Ativação/Desativação de Itens de Menu
 
-动态控制菜单项状态：
+Controlar dinamicamente o estado dos itens de menu:
 
-1. **保存对菜单项的引用**
+1. **Salvar referência aos itens de menu**
    ```typescript
    this.menuItems = {};
    const menu = Menu.buildFromTemplate(template);
    this.menuItems.newFeature = menu.getMenuItemById('new-feature');
    ```
 
-2. **根据条件更新状态**
+2. **Atualizar estado baseado em condições**
    ```typescript
    updateMenuState(state) {
      if (this.menuItems.newFeature) {
@@ -172,26 +172,26 @@ apps/desktop/src/main/
    }
    ```
 
-## 最佳实践
+## Melhores Práticas
 
-1. **使用标准角色**
-   - 尽可能使用 Electron 预定义的角色（如 `role: 'copy'`）以获得本地化和一致的行为
+1. **Usar papéis padrão**
+   - Usar papéis predefinidos do Electron (como `role: 'copy'`) sempre que possível para obter localização e comportamento consistente
 
-2. **平台特定菜单**
-   - 使用 `process.platform` 检查为不同平台提供不同菜单
+2. **Menus específicos de plataforma**
+   - Usar `process.platform` para verificar e fornecer menus diferentes para plataformas diferentes
    ```typescript
    if (process.platform === 'darwin') {
      template.unshift({ role: 'appMenu' });
    }
    ```
 
-3. **快捷键冲突**
-   - 避免与系统快捷键冲突
-   - 使用 `CmdOrCtrl` 代替 `Ctrl` 以支持 macOS 和 Windows/Linux
+3. **Conflitos de atalhos**
+   - Evitar conflitos com atalhos do sistema
+   - Usar `CmdOrCtrl` ao invés de `Ctrl` para suportar macOS e Windows/Linux
 
-4. **保持菜单简洁**
-   - 避免过多嵌套的子菜单
-   - 将相关功能分组在一起
+4. **Manter menus concisos**
+   - Evitar muitos submenus aninhados
+   - Agrupar funcionalidades relacionadas
 
-5. **添加分隔符**
-   - 使用 `{ type: 'separator' }` 在逻辑上分隔不同组的菜单项
+5. **Adicionar separadores**
+   - Usar `{ type: 'separator' }` para separar logicamente diferentes grupos de itens de menu

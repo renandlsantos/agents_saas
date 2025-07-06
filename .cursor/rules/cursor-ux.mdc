@@ -3,92 +3,92 @@ description:
 globs: 
 alwaysApply: true
 ---
-# Guide to Optimize Output(Response) Rendering
+# Guia para Otimizar Renderização de Saída(Resposta)
 
-## File Path and Code Symbol Rendering
+## Renderização de Caminho de Arquivo e Símbolo de Código
 
-- When rendering file paths, use backtick wrapping instead of markdown links so they can be parsed as clickable links in Cursor IDE.
+- Ao renderizar caminhos de arquivo, use aspas invertidas ao invés de links markdown para que possam ser analisados como links clicáveis no IDE Cursor.
 
-    - Good: `src/components/Button.tsx`
-    - Bad: [src/components/Button.tsx](mdc:src/components/Button.tsx)
+    - Bom: `src/components/Button.tsx`
+    - Ruim: [src/components/Button.tsx](mdc:src/components/Button.tsx)
 
-- When rendering functions, variables, or other code symbols, use backtick wrapping so they can be parsed as navigable links in Cursor IDE
-    - Good: The `useState` hook in `MyComponent`
-    - Bad: The useState hook in MyComponent
+- Ao renderizar funções, variáveis ou outros símbolos de código, use aspas invertidas para que possam ser analisados como links navegáveis no IDE Cursor
+    - Bom: O hook `useState` em `MyComponent`
+    - Ruim: O hook useState em MyComponent
      
-## Markdown Render
+## Renderização Markdown
 
-- don't use br tag to wrap in table cell
+- não use tag br para quebrar em célula de tabela
 
-## Terminal Command Output
+## Saída de Comando de Terminal
 
-- If terminal commands don't produce output, it's likely due to paging issues. Try piping the command to `cat` to ensure full output is displayed.
-    - Good: `git show commit_hash -- file.txt | cat`
-    - Good: `git log --oneline | cat`
-    - Reason: Some git commands use pagers by default, which may prevent output from being captured properly
+- Se comandos de terminal não produzem saída, é provavelmente devido a problemas de paginação. Tente canalizar o comando para `cat` para garantir que a saída completa seja exibida.
+    - Bom: `git show commit_hash -- file.txt | cat`
+    - Bom: `git log --oneline | cat`
+    - Razão: Alguns comandos git usam paginadores por padrão, o que pode impedir que a saída seja capturada adequadamente
 
-## Mermaid Diagram Generation: Strict Syntax Validation Checklist
+## Geração de Diagrama Mermaid: Lista de Verificação de Validação de Sintaxe Rigorosa
 
-Before producing any Mermaid diagram, you **must** compare your final code line-by-line against every rule in the following checklist to ensure 100% compliance. **This is a hard requirement and takes precedence over other stylistic suggestions.** Please follow these action steps:
+Antes de produzir qualquer diagrama Mermaid, você **deve** comparar seu código final linha por linha contra cada regra na seguinte lista de verificação para garantir 100% de conformidade. **Este é um requisito rígido e tem precedência sobre outras sugestões estilísticas.** Por favor, siga estes passos de ação:
 
-1.  Plan the Mermaid diagram logic in your mind.
-2.  Write the Mermaid code.
-3.  **Carefully review your code line-by-line against the entire checklist below.**
-4.  Fix any aspect of your code that doesn't comply.
-5.  Use the `validateMermaid` tool to check your code for syntax errors. Only proceed if validation passes.
-6.  Output the final, compliant, and copy-ready Mermaid code block.
-7.  Immediately after the Mermaid code block, output:  
-    I have checked that the Mermaid syntax fully complies with the validation checklist.
+1.  Planeje a lógica do diagrama Mermaid em sua mente.
+2.  Escreva o código Mermaid.
+3.  **Revise cuidadosamente seu código linha por linha contra toda a lista de verificação abaixo.**
+4.  Corrija qualquer aspecto do seu código que não esteja em conformidade.
+5.  Use a ferramenta `validateMermaid` para verificar seu código quanto a erros de sintaxe. Apenas prossiga se a validação passar.
+6.  Gere o bloco de código Mermaid final, em conformidade e pronto para cópia.
+7.  Imediatamente após o bloco de código Mermaid, gere:  
+    Verifiquei que a sintaxe Mermaid está totalmente em conformidade com a lista de verificação de validação.
 
 ---
 
-### Checklist Details
+### Detalhes da Lista de Verificação
 
-#### Rule 1: Edge Labels – Must Be Plain Text Only  
-> **Essence:** Anything inside `|...|` must contain pure, unformatted text. Absolutely NO Markdown, list markers, or parentheses/brackets allowed—these often cause rendering failures.
+#### Regra 1: Rótulos de Aresta – Devem Ser Apenas Texto Simples  
+> **Essência:** Qualquer coisa dentro de `|...|` deve conter texto puro e não formatado. Absolutamente NENHUM Markdown, marcadores de lista ou parênteses/colchetes permitidos—estes frequentemente causam falhas de renderização.
 
--   **✅ Do:** `A -->|Process plain text data| B`
--   **❌ Don't:** `A -->|1. Ordered list item| B`    (No numbered lists)
--   **❌ Don't:** `CC --"1. fetch('/api/...')"--> API`   (No square brackets)
--   **❌ Don't:** `A -->|- Unordered list item| B`   (No hyphen lists)
--   **❌ Don't:** `A -->|Transform (important)| B`   (No parentheses)
--   **❌ Don't:** `A -->|Transform [important]| B`   (No square brackets)
+-   **✅ Faça:** `A -->|Process plain text data| B`
+-   **❌ Não faça:** `A -->|1. Ordered list item| B`    (Sem listas numeradas)
+-   **❌ Não faça:** `CC --"1. fetch('/api/...')"--> API`   (Sem colchetes)
+-   **❌ Não faça:** `A -->|- Unordered list item| B`   (Sem listas com hífen)
+-   **❌ Não faça:** `A -->|Transform (important)| B`   (Sem parênteses)
+-   **❌ Não faça:** `A -->|Transform [important]| B`   (Sem colchetes)
 
-#### Rule 2: Node Definition – Handle Special Characters with Care  
-> **Essence:** When node text or subgraph titles contain special characters like `()` or `[]`, wrap the text in quotes to avoid conflicts with Mermaid shape syntax.
+#### Regra 2: Definição de Nó – Lidar com Caracteres Especiais com Cuidado  
+> **Essência:** Quando o texto do nó ou títulos de subgráfico contêm caracteres especiais como `()` ou `[]`, envolva o texto em aspas para evitar conflitos com a sintaxe de forma do Mermaid.
 
--   **When your node text includes parentheses (e.g., 'React (JSX)'):**
-    -   **✅ Do:** `I_REACT["<b>React component (JSX)</b>"]` (Quotes wrap all text)
-    -   **❌ Don't:** `I_REACT(<b>React component (JSX)</b>)` (Wrong, Mermaid parses this as a shape)
-    -   **❌ Don't:** `subgraph Plugin Features (Plugins)` (Wrong, subgraph titles with parentheses must also be wrapped in quotes)
+-   **Quando seu texto de nó inclui parênteses (ex: 'React (JSX)'):**
+    -   **✅ Faça:** `I_REACT["<b>React component (JSX)</b>"]` (Aspas envolvem todo o texto)
+    -   **❌ Não faça:** `I_REACT(<b>React component (JSX)</b>)` (Errado, Mermaid analisa isso como uma forma)
+    -   **❌ Não faça:** `subgraph Plugin Features (Plugins)` (Errado, títulos de subgráfico com parênteses também devem ser envolvidos em aspas)
 
-#### Rule 3: Double Quotes in Text – Must Be Escaped  
-> **Essence:** Use `&quot;` for double quotes **inside node text**.
+#### Regra 3: Aspas Duplas em Texto – Devem Ser Escapadas  
+> **Essência:** Use `&quot;` para aspas duplas **dentro do texto do nó**.
 
--   **✅ Do:** `A[This node contains &quot;quotes&quot;]`
--   **❌ Don't:** `A[This node contains "quotes"]`
+-   **✅ Faça:** `A[This node contains &quot;quotes&quot;]`
+-   **❌ Não faça:** `A[This node contains "quotes"]`
 
-#### Rule 4: All Formatting Must Use HTML Tags (NOT Markdown!)  
-> **Essence:** For newlines, bold, and other text formatting in nodes, use HTML tags only. Markdown is not supported.
+#### Regra 4: Toda Formatação Deve Usar Tags HTML (NÃO Markdown!)  
+> **Essência:** Para quebras de linha, negrito e outras formatações de texto em nós, use apenas tags HTML. Markdown não é suportado.
 
--   **✅ Do (robust):** `A["<b>Bold</b> and <code>code</code><br>This is a new line"]`
--   **❌ Don't (not rendered):** `C["# This is a heading"]`
--   **❌ Don't (not rendered):** ``C["`const` means constant"]``
--   **⚠️ Warning (unreliable):** `B["Markdown **bold** might sometimes work but DON'T rely on it"]`
+-   **✅ Faça (robusto):** `A["<b>Bold</b> and <code>code</code><br>This is a new line"]`
+-   **❌ Não faça (não renderizado):** `C["# This is a heading"]`
+-   **❌ Não faça (não renderizado):** ``C["`const` means constant"]``
+-   **⚠️ Aviso (não confiável):** `B["Markdown **bold** might sometimes work but DON'T rely on it"]`
 
-#### Rule 5: No HTML Tags for Participants and Message Labels (Sequence Diagrams)  
-> **Important Addition:**  
-> In Mermaid sequence diagrams, you MUST NOT use any HTML tags (such as `<b>`, `<code>`, etc.) in:
-> - `participant` display names (`as` part)
-> - Message labels (the text after `:` in diagram flows)
+#### Regra 5: Sem Tags HTML para Participantes e Rótulos de Mensagem (Diagramas de Sequência)  
+> **Adição Importante:**  
+> Em diagramas de sequência Mermaid, você NÃO DEVE usar nenhuma tag HTML (como `<b>`, `<code>`, etc.) em:
+> - Nomes de exibição de `participant` (parte `as`)
+> - Rótulos de mensagem (o texto após `:` nos fluxos do diagrama)
 >
-> These tags are generally not rendered—they may appear as-is or cause compatibility issues.
+> Estas tags geralmente não são renderizadas—podem aparecer como estão ou causar problemas de compatibilidade.
 
--   **✅ Do:** `participant A as Client`
--   **❌ Don't:** `participant A as <b>Client</b>`
--   **✅ Do:** `A->>B: 1. Establish connection`
--   **❌ Don't:** `A->>B: 1. <code>Establish connection</code>`
+-   **✅ Faça:** `participant A as Client`
+-   **❌ Não faça:** `participant A as <b>Client</b>`
+-   **✅ Faça:** `A->>B: 1. Establish connection`
+-   **❌ Não faça:** `A->>B: 1. <code>Establish connection</code>`
 
 ---
 
-**Validate each Mermaid code block by running it through the `validateMermaid` tool before delivering your output!**
+**Valide cada bloco de código Mermaid executando-o através da ferramenta `validateMermaid` antes de entregar sua saída!**

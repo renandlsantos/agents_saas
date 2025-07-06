@@ -3,22 +3,22 @@ description:
 globs: src/store/**
 alwaysApply: false
 ---
-# LobeChat Zustand Store Slice 组织架构
+# Arquitetura de Organização de Slice Zustand Store do Agents Chat
 
-本文档描述了 LobeChat 项目中 Zustand Store 的模块化 Slice 组织方式，展示如何通过分片架构管理复杂的应用状态。
+Este documento descreve a forma modular de organização dos Slices do Zustand Store no projeto Agents Chat, mostrando como gerenciar estados complexos de aplicação através de arquitetura fragmentada.
 
-## 顶层 Store 结构
+## Estrutura do Store de Nível Superior
 
-LobeChat 的 `chat` store (`src/store/chat/`) 采用模块化的 slice 结构来组织状态和逻辑。
+O `chat` store do Agents Chat (`src/store/chat/`) adota uma estrutura de slice modular para organizar estado e lógica.
 
-### 关键聚合文件
+### Arquivos de Agregação Principais
 
-- `src/store/chat/initialState.ts`: 聚合所有 slice 的初始状态
-- `src/store/chat/store.ts`: 定义顶层的 `ChatStore`，组合所有 slice 的 actions
-- `src/store/chat/selectors.ts`: 统一导出所有 slice 的 selectors
-- `src/store/chat/helpers.ts`: 提供聊天相关的辅助函数
+- `src/store/chat/initialState.ts`: Agrega todos os estados iniciais dos slices
+- `src/store/chat/store.ts`: Define o `ChatStore` de nível superior, combinando todas as actions dos slices
+- `src/store/chat/selectors.ts`: Exporta unificadamente todos os selectors dos slices
+- `src/store/chat/helpers.ts`: Fornece funções auxiliares relacionadas ao chat
 
-### Store 聚合模式
+### Padrão de Agregação do Store
 
 ```typescript
 // src/store/chat/initialState.ts
@@ -29,13 +29,13 @@ import { ChatAIChatState, initialAiChatState } from './slices/aiChat/initialStat
 export type ChatStoreState = ChatTopicState &
   ChatMessageState &
   ChatAIChatState &
-  // ...其他 slice states
+  // ...outros slice states
 
 export const initialState: ChatStoreState = {
   ...initialMessageState,
   ...initialTopicState,
   ...initialAiChatState,
-  // ...其他 initial slice states
+  // ...outros initial slice states
 };
 ```
 
@@ -49,14 +49,14 @@ export interface ChatStoreAction
   extends ChatMessageAction,
     ChatTopicAction,
     ChatAIChatAction,
-    // ...其他 slice actions
+    // ...outras slice actions
 
 const createStore: StateCreator<ChatStore, [['zustand/devtools', never]]> = (...params) => ({
   ...initialState,
   ...chatMessage(...params),
   ...chatTopic(...params),
   ...chatAiChat(...params),
-  // ...其他 slice action creators
+  // ...outros slice action creators
 });
 
 export const useChatStore = createWithEqualityFn<ChatStore>()(
@@ -65,34 +65,34 @@ export const useChatStore = createWithEqualityFn<ChatStore>()(
 );
 ```
 
-## 单个 Slice 的标准结构
+## Estrutura Padrão de um Slice Individual
 
-每个 slice 位于 `src/store/chat/slices/[sliceName]/` 目录下：
+Cada slice está localizado no diretório `src/store/chat/slices/[sliceName]/`:
 
 ```
 src/store/chat/slices/
-└── [sliceName]/                 # 例如 message, topic, aiChat, builtinTool
-    ├── action.ts                # 定义 actions (或者是一个 actions/ 目录)
-    ├── initialState.ts          # 定义 state 结构和初始值
-    ├── reducer.ts               # (可选) 如果使用 reducer 模式
-    ├── selectors.ts             # 定义 selectors
-    └── index.ts                 # (可选) 重新导出模块内容
+└── [sliceName]/                 # Ex: message, topic, aiChat, builtinTool
+    ├── action.ts                # Define actions (ou um diretório actions/)
+    ├── initialState.ts          # Define estrutura do state e valores iniciais
+    ├── reducer.ts               # (Opcional) Se usar padrão reducer
+    ├── selectors.ts             # Define selectors
+    └── index.ts                 # (Opcional) Re-exporta conteúdo do módulo
 ```
 
-### 文件职责说明
+### Descrição das Responsabilidades dos Arquivos
 
 1. `initialState.ts`:
-   - 定义 slice 的 TypeScript 状态接口
-   - 提供初始状态默认值
+   - Define interface TypeScript do estado do slice
+   - Fornece valores padrão do estado inicial
 
 ```typescript
-// 典型的 initialState.ts 结构
+// Estrutura típica do initialState.ts
 export interface ChatTopicState {
   activeTopicId?: string;
-  topicMaps: Record<string, ChatTopic[]>; // 核心数据结构
+  topicMaps: Record<string, ChatTopic[]>; // Estrutura de dados central
   topicsInit: boolean;
   topicLoadingIds: string[];
-  // ...其他状态字段
+  // ...outros campos de estado
 }
 
 export const initialTopicState: ChatTopicState = {
@@ -100,16 +100,16 @@ export const initialTopicState: ChatTopicState = {
   topicMaps: {},
   topicsInit: false,
   topicLoadingIds: [],
-  // ...其他初始值
+  // ...outros valores iniciais
 };
 ```
 
-2. `reducer.ts` (复杂状态使用):
-   - 定义纯函数 reducer，处理同步状态转换
-   - 使用 `immer` 确保不可变更新
+2. `reducer.ts` (para estados complexos):
+   - Define reducers de função pura, gerencia transições de estado síncronas
+   - Usa `immer` para garantir atualizações imutáveis
 
 ```typescript
-// 典型的 reducer.ts 结构
+// Estrutura típica do reducer.ts
 import { produce } from 'immer';
 
 interface AddChatTopicAction {
@@ -151,12 +151,12 @@ export const topicReducer = (state: ChatTopic[] = [], payload: ChatTopicDispatch
 ```
 
 3. `selectors.ts`:
-   - 提供状态查询和计算函数
-   - 供 UI 组件使用的状态订阅接口
-   - 重要: 使用 `export const xxxSelectors` 模式聚合所有 selectors
+   - Fornece funções de consulta e cálculo de estado
+   - Interface de assinatura de estado para uso por componentes de UI
+   - Importante: Usa o padrão `export const xxxSelectors` para agregar todos os selectors
 
 ```typescript
-// 典型的 selectors.ts 结构
+// Estrutura típica do selectors.ts
 import { ChatStoreState } from '../../initialState';
 
 const currentTopics = (s: ChatStoreState): ChatTopic[] | undefined => 
@@ -169,132 +169,132 @@ const currentActiveTopic = (s: ChatStoreState): ChatTopic | undefined => {
 const getTopicById = (id: string) => (s: ChatStoreState): ChatTopic | undefined =>
   currentTopics(s)?.find((topic) => topic.id === id);
 
-// 核心模式：使用 xxxSelectors 聚合导出
+// Padrão central: uso de xxxSelectors para exportação agregada
 export const topicSelectors = {
   currentActiveTopic,
   currentTopics,
   getTopicById,
-  // ...其他 selectors
+  // ...outros selectors
 };
 ```
 
-## 特殊 Slice 组织模式
+## Padrões de Organização Especiais para Slices
 
-### 复杂 Actions 的子目录结构 (aiChat Slice)
+### Estrutura de Subdiretórios para Actions Complexas (aiChat Slice)
 
-当 slice 的 actions 过于复杂时，可以拆分到子目录：
+Quando as actions de um slice são muito complexas, podem ser divididas em subdiretórios:
 
 ```
 src/store/chat/slices/aiChat/
 ├── actions/
-│   ├── generateAIChat.ts       # AI 对话生成
-│   ├── rag.ts                  # RAG 检索增强生成
-│   ├── memory.ts               # 对话记忆管理
-│   └── index.ts                # 聚合所有 actions
+│   ├── generateAIChat.ts       # Geração de conversa AI
+│   ├── rag.ts                  # RAG - Retrieval Augmented Generation
+│   ├── memory.ts               # Gerenciamento de memória da conversa
+│   └── index.ts                # Agrega todas as actions
 ├── initialState.ts
 ├── selectors.ts
 └── index.ts
 ```
 
-参考：`src/store/chat/slices/aiChat/actions/`
+Referencia: `src/store/chat/slices/aiChat/actions/`
 
-### 工具类 Slice (builtinTool)
+### Slice de Ferramentas (builtinTool)
 
-管理多种内置工具的状态：
+Gerencia estados de múltiplas ferramentas integradas:
 
 ```
 src/store/chat/slices/builtinTool/
 ├── actions/
-│   ├── dalle.ts                # DALL-E 图像生成
-│   ├── search.ts               # 搜索功能
-│   ├── localFile.ts            # 本地文件操作
+│   ├── dalle.ts                # Geração de imagem DALL-E
+│   ├── search.ts               # Funcionalidade de busca
+│   ├── localFile.ts            # Operações de arquivo local
 │   └── index.ts
 ├── initialState.ts
 ├── selectors.ts
 └── index.ts
 ```
 
-参考：`src/store/chat/slices/builtinTool/`
+Referencia: `src/store/chat/slices/builtinTool/`
 
-## 状态设计模式
+## Padrões de Design de Estado
 
-### 1. Map 结构用于关联数据
+### 1. Estrutura Map para Dados Relacionais
 ```typescript
-// 以 sessionId 为 key，管理多个会话的数据
+// Usa sessionId como chave, gerencia dados de múltiplas sessões
 topicMaps: Record<string, ChatTopic[]>
 messagesMap: Record<string, ChatMessage[]>
 ```
 
-### 2. 数组用于加载状态管理
+### 2. Arrays para Gerenciamento de Estados de Carregamento
 ```typescript
-// 管理多个并发操作的加载状态
+// Gerencia estados de carregamento de múltiplas operações concorrentes
 messageLoadingIds: string[]
 topicLoadingIds: string[]
 chatLoadingIds: string[]
 ```
 
-### 3. 可选字段用于当前活动项
+### 3. Campos Opcionais para Itens Ativos Atuais
 ```typescript
-// 当前激活的实体 ID
+// IDs de entidades atualmente ativas
 activeId: string
 activeTopicId?: string
 activeThreadId?: string
 ```
 
-## Slice 集成到顶层 Store
+## Integração de Slices ao Store de Nível Superior
 
-### 1. 状态聚合
+### 1. Agregação de Estado
 ```typescript
-// 在 initialState.ts 中
+// Em initialState.ts
 export type ChatStoreState = ChatTopicState &
   ChatMessageState &
   ChatAIChatState &
-  // ...其他 slice states
+  // ...outros slice states
 ```
 
-### 2. Action 接口聚合
+### 2. Agregação de Interface de Actions
 ```typescript
-// 在 store.ts 中
+// Em store.ts
 export interface ChatStoreAction
   extends ChatMessageAction,
     ChatTopicAction,
     ChatAIChatAction,
-    // ...其他 slice actions
+    // ...outras slice actions
 ```
 
-### 3. Selector 统一导出
+### 3. Exportação Unificada de Selectors
 ```typescript
-// 在 selectors.ts 中 - 统一聚合 selectors
+// Em selectors.ts - agregação unificada de selectors
 export { chatSelectors } from './slices/message/selectors';
 export { topicSelectors } from './slices/topic/selectors';
 export { aiChatSelectors } from './slices/aiChat/selectors';
 
-// 每个 slice 的 selectors.ts 都使用 xxxSelectors 模式：
+// Cada selectors.ts do slice usa o padrão xxxSelectors:
 // export const chatSelectors = { ... }
 // export const topicSelectors = { ... }
 // export const aiChatSelectors = { ... }
 ```
 
-## 最佳实践
+## Melhores Práticas
 
-1. Slice 划分原则:
-   - 按功能领域划分（message, topic, aiChat 等）
-   - 每个 slice 管理相关的状态和操作
-   - 避免 slice 之间的强耦合
+1. Princípios de Divisão de Slices:
+   - Dividir por domínio funcional (message, topic, aiChat etc.)
+   - Cada slice gerencia estado e operações relacionadas
+   - Evitar forte acoplamento entre slices
 
-2. 文件命名规范:
-   - 使用小驼峰命名 slice 目录
-   - 文件名使用一致的模式（action.ts, selectors.ts 等）
-   - 复杂 actions 时使用 actions/ 子目录
+2. Convenções de Nomenclatura de Arquivos:
+   - Usar camelCase para nomear diretórios de slices
+   - Nomes de arquivo seguem padrão consistente (action.ts, selectors.ts etc.)
+   - Para actions complexas, usar subdiretório actions/
 
-3. 状态结构设计:
-   - 扁平化的状态结构，避免深层嵌套
-   - 使用 Map 结构管理列表数据
-   - 分离加载状态和业务数据
+3. Design de Estrutura de Estado:
+   - Estrutura de estado achatada, evitar aninhamento profundo
+   - Usar estruturas Map para gerenciar dados de lista
+   - Separar estado de carregamento de dados de negócio
 
-4. 类型安全:
-   - 为每个 slice 定义清晰的 TypeScript 接口
-   - 使用 Zustand 的 StateCreator 确保类型一致性
-   - 在顶层聚合时保持类型安全
+4. Segurança de Tipos:
+   - Definir interfaces TypeScript claras para cada slice
+   - Usar StateCreator do Zustand para garantir consistência de tipos
+   - Manter segurança de tipos ao agregar no nível superior
 
-这种模块化的 slice 组织方式使得大型应用的状态管理变得清晰、可维护，并且易于扩展。
+Este método de organização modular de slices torna o gerenciamento de estado de aplicações de grande escala claro, mantenível e fácil de expandir.

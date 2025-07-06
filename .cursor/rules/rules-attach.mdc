@@ -3,74 +3,74 @@ description:
 globs: 
 alwaysApply: true
 ---
-# LobeChat Cursor Rules System Guide
+# Guia do Sistema de Regras Cursor do Agents Chat
 
-This document explains how the LobeChat project's Cursor rules system works and serves as an index for manually accessible rules.
+Este documento explica como funciona o sistema de regras Cursor do projeto Agents Chat e serve como um índice para regras acessíveis manualmente.
 
-## 🎯 Core Principle
+## 🎯 Princípio Central
 
-**All rules are equal** - there are no priorities or "recommendations" between different rule sources. You should follow all applicable rules simultaneously.
+**Todas as regras são iguais** - não há prioridades ou "recomendações" entre diferentes fontes de regras. Você deve seguir todas as regras aplicáveis simultaneamente.
 
-## 📚 Four Ways to Access Rules
+## 📚 Quatro Formas de Acessar Regras
 
-### 1. **Always Applied Rules** - `always_applied_workspace_rules`
-- **What**: Core project guidelines that are always active
-- **Content**: Project tech stack, basic coding standards, output formatting rules
-- **Access**: No tools needed - automatically provided in every conversation
+### 1. **Regras Sempre Aplicadas** - `always_applied_workspace_rules`
+- **O que**: Diretrizes centrais do projeto que estão sempre ativas
+- **Conteúdo**: Stack tecnológica do projeto, padrões básicos de codificação, regras de formatação de saída
+- **Acesso**: Nenhuma ferramenta necessária - fornecidas automaticamente em toda conversa
 
-### 2. **Dynamic Context Rules** - `cursor_rules_context`
-- **What**: Rules automatically matched based on files referenced in the conversation
-- **Trigger**: Only when user **explicitly @ mentions files** or **opens files in Cursor**
-- **Content**: May include brief descriptions or full rule content, depending on relevance
-- **Access**: No tools needed - automatically updated when files are referenced
+### 2. **Regras de Contexto Dinâmico** - `cursor_rules_context`
+- **O que**: Regras automaticamente correspondidas baseadas em arquivos referenciados na conversa
+- **Ativação**: Apenas quando o usuário **explicitamente @ menciona arquivos** ou **abre arquivos no Cursor**
+- **Conteúdo**: Pode incluir descrições breves ou conteúdo completo da regra, dependendo da relevância
+- **Acesso**: Nenhuma ferramenta necessária - atualizada automaticamente quando arquivos são referenciados
 
-### 3. **Agent Requestable Rules** - `agent_requestable_workspace_rules`
-- **What**: Detailed operational guides that can be requested on-demand
-- **Access**: Use `fetch_rules` tool with rule names
-- **Examples**: `debug`, `i18n/i18n`, `code-review`
+### 3. **Regras Solicitáveis pelo Agente** - `agent_requestable_workspace_rules`
+- **O que**: Guias operacionais detalhados que podem ser solicitados sob demanda
+- **Acesso**: Use ferramenta `fetch_rules` com nomes das regras
+- **Exemplos**: `debug`, `i18n/i18n`, `code-review`
 
-### 4. **Manual Rules Index** - This file + `read_file`
-- **What**: Additional rules not covered by the above mechanisms
-- **Why needed**: Cursor's rule system only supports "agent request" or "auto attach" modes
-- **Access**: Use `read_file` tool to read specific `.mdc` files
+### 4. **Índice de Regras Manuais** - Este arquivo + `read_file`
+- **O que**: Regras adicionais não cobertas pelos mecanismos acima
+- **Por que necessário**: O sistema de regras do Cursor apenas suporta modos "solicitação do agente" ou "anexo automático"
+- **Acesso**: Use ferramenta `read_file` para ler arquivos `.mdc` específicos
 
-## 🔧 When to Use `read_file` for Rules
+## 🔧 Quando Usar `read_file` para Regras
 
-Use `read_file` to access rules from the index below when:
+Use `read_file` para acessar regras do índice abaixo quando:
 
-1. **Gap identification**: You determine a rule is needed for the current task
-2. **No auto-trigger**: The rule isn't provided in `cursor_rules_context` (because relevant files weren't @ mentioned)
-3. **Not agent-requestable**: The rule isn't available via `fetch_rules`
+1. **Identificação de lacuna**: Você determina que uma regra é necessária para a tarefa atual
+2. **Sem ativação automática**: A regra não é fornecida em `cursor_rules_context` (porque arquivos relevantes não foram @ mencionados)
+3. **Não solicitável pelo agente**: A regra não está disponível via `fetch_rules`
 
-## 📋 Available Rules Index
+## 📋 Índice de Regras Disponíveis
 
-The following rules are available via `read_file` from the `.cursor/rules/` directory:
+As seguintes regras estão disponíveis via `read_file` do diretório `.cursor/rules/`:
 
-- `backend-architecture.mdc` – Backend layer architecture and design guidelines
-- `zustand-action-patterns.mdc` – Recommended patterns for organizing Zustand actions
-- `zustand-slice-organization.mdc` – Best practices for structuring Zustand slices
-- `drizzle-schema-style-guide.mdc` – Style guide for defining Drizzle ORM schemas
-- `react-component.mdc` – React component style guide and conventions
+- `backend-architecture.mdc` – Arquitetura de camadas backend e diretrizes de design
+- `zustand-action-patterns.mdc` – Padrões recomendados para organizar actions Zustand
+- `zustand-slice-organization.mdc` – Melhores práticas para estruturar slices Zustand
+- `drizzle-schema-style-guide.mdc` – Guia de estilo para definir schemas Drizzle ORM
+- `react-component.mdc` – Guia de estilo e convenções de componentes React
 
-## ❌ Common Misunderstandings to Avoid
+## ❌ Mal-entendidos Comuns a Evitar
 
-1. **"Priority confusion"**: There's no hierarchy between rule sources - they're complementary, not competitive
-2. **"Dynamic expectations"**: `cursor_rules_context` only updates when you @ files - it won't automatically include rules for tasks you're thinking about
-3. **"Tool redundancy"**: Each access method serves a different purpose - they're not alternatives to choose from
+1. **"Confusão de prioridade"**: Não há hierarquia entre fontes de regras - elas são complementares, não competitivas
+2. **"Expectativas dinâmicas"**: `cursor_rules_context` apenas atualiza quando você @ arquivos - não incluirá automaticamente regras para tarefas sobre as quais você está pensando
+3. **"Redundância de ferramentas"**: Cada método de acesso serve um propósito diferente - não são alternativas para escolher
 
-## 🛠️ Practical Workflow
+## 🛠️ Fluxo de Trabalho Prático
 
 ```
-1. Start with always_applied_workspace_rules (automatic)
-2. Check cursor_rules_context for auto-matched rules (automatic) 
-3. If you need specific guides: fetch_rules (manual)
-4. If you identify gaps: consult this index → read_file (manual)
+1. Comece com always_applied_workspace_rules (automático)
+2. Verifique cursor_rules_context para regras auto-correspondidas (automático) 
+3. Se você precisar de guias específicos: fetch_rules (manual)
+4. Se você identificar lacunas: consulte este índice → read_file (manual)
 ```
 
-## Example Decision Flow
+## Exemplo de Fluxo de Decisão
 
-**Scenario**: Working on a new Zustand store slice
-1. Follow always_applied_workspace_rules ✅
-2. If store files were @ mentioned → use cursor_rules_context rules ✅  
-3. Need detailed Zustand guidance → `read_file('.cursor/rules/zustand-slice-organization.mdc')` ✅
-4. All rules apply simultaneously - no conflicts ✅
+**Cenário**: Trabalhando em um novo slice de store Zustand
+1. Siga always_applied_workspace_rules ✅
+2. Se arquivos de store foram @ mencionados → use regras cursor_rules_context ✅  
+3. Precisa de orientação detalhada sobre Zustand → `read_file('.cursor/rules/zustand-slice-organization.mdc')` ✅
+4. Todas as regras se aplicam simultaneamente - sem conflitos ✅

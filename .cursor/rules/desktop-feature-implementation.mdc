@@ -1,66 +1,66 @@
 ---
-description: 当要做 electron 相关工作时
+description: Quando trabalhando com electron
 globs:
 alwaysApply: false
 ---
-**桌面端新功能实现指南**
+**Guia de Implementação de Novas Funcionalidades Desktop**
 
-## 桌面端应用架构概述
+## Visão Geral da Arquitetura da Aplicação Desktop
 
-LobeChat 桌面端基于 Electron 框架构建，采用主进程-渲染进程架构：
+O desktop do Agents Chat é construído com base no framework Electron, adotando arquitetura de processo principal-processo de renderização:
 
-1. **主进程 (Main Process)**：
-   - 位置：`apps/desktop/src/main`
-   - 职责：控制应用生命周期、系统API交互、窗口管理、后台服务
+1. **Processo Principal (Main Process)**:
+   - Localização: `apps/desktop/src/main`
+   - Responsabilidades: controle do ciclo de vida da aplicação, interação com API do sistema, gerenciamento de janelas, serviços em background
 
-2. **渲染进程 (Renderer Process)**：
-   - 复用 Web 端代码，位于 `src` 目录
-   - 通过 IPC 与主进程通信
+2. **Processo de Renderização (Renderer Process)**:
+   - Reutiliza código do lado web, localizado no diretório `src`
+   - Comunica com o processo principal através de IPC
 
-3. **预加载脚本 (Preload)**：
-   - 位置：`apps/desktop/src/preload`
-   - 职责：安全地暴露主进程功能给渲染进程
+3. **Script de Preload (Preload)**:
+   - Localização: `apps/desktop/src/preload`
+   - Responsabilidades: expor com segurança funcionalidades do processo principal para o processo de renderização
 
-## 添加新桌面端功能流程
+## Fluxo de Adição de Nova Funcionalidade Desktop
 
-### 1. 确定功能需求与设计
+### 1. Determinar Requisitos e Design da Funcionalidade
 
-首先确定新功能的需求和设计，包括：
-- 功能描述和用例
-- 是否需要系统级API（如文件系统、网络等）
-- UI/UX设计（如必要）
-- 与现有功能的交互方式
+Primeiro determine os requisitos e design da nova funcionalidade, incluindo:
+- Descrição da funcionalidade e casos de uso
+- Se precisa de APIs de nível de sistema (como sistema de arquivos, rede, etc.)
+- Design de UI/UX (se necessário)
+- Forma de interação com funcionalidades existentes
 
-### 2. 在主进程中实现核心功能
+### 2. Implementar Funcionalidade Central no Processo Principal
 
-1. **创建控制器 (Controller)**
-   - 位置：`apps/desktop/src/main/controllers/`
-   - 示例：创建 `NewFeatureCtr.ts`
-   - 规范：按 `_template.ts` 模板格式实现
-   - 注册：在 `apps/desktop/src/main/controllers/index.ts` 导出
+1. **Criar Controlador (Controller)**
+   - Localização: `apps/desktop/src/main/controllers/`
+   - Exemplo: criar `NewFeatureCtr.ts`
+   - Padrão: implementar seguindo formato do template `_template.ts`
+   - Registro: exportar em `apps/desktop/src/main/controllers/index.ts`
 
-2. **定义 IPC 事件处理器**
-   - 使用 `@ipcClientEvent('eventName')` 装饰器注册事件处理函数
-   - 处理函数应接收前端传递的参数并返回结果
-   - 处理可能的错误情况
+2. **Definir Manipuladores de Eventos IPC**
+   - Usar decorador `@ipcClientEvent('eventName')` para registrar função de manipulação de eventos
+   - Função de manipulação deve receber parâmetros passados pelo frontend e retornar resultado
+   - Lidar com possíveis situações de erro
 
-3. **实现业务逻辑**
-   - 可能需要调用 Electron API 或 Node.js 原生模块
-   - 对于复杂功能，可以创建专门的服务类 (`services/`)
+3. **Implementar Lógica de Negócio**
+   - Pode ser necessário chamar APIs do Electron ou módulos nativos do Node.js
+   - Para funcionalidades complexas, pode criar classes de serviço especializadas (`services/`)
 
-### 3. 定义 IPC 通信类型
+### 3. Definir Tipos de Comunicação IPC
 
-1. **在共享类型定义中添加新类型**
-   - 位置：`packages/electron-client-ipc/src/types.ts`
-   - 添加参数类型接口（如 `NewFeatureParams`）
-   - 添加返回结果类型接口（如 `NewFeatureResult`）
+1. **Adicionar novos tipos nas definições de tipo compartilhadas**
+   - Localização: `packages/electron-client-ipc/src/types.ts`
+   - Adicionar interface de tipo de parâmetro (como `NewFeatureParams`)
+   - Adicionar interface de tipo de resultado retornado (como `NewFeatureResult`)
 
-### 4. 在渲染进程实现前端功能
+### 4. Implementar Funcionalidade Frontend no Processo de Renderização
 
-1. **创建服务层**
-   - 位置：`src/services/electron/`
-   - 添加服务方法调用 IPC
-   - 使用 `dispatch` 或 `invoke` 函数
+1. **Criar Camada de Serviço**
+   - Localização: `src/services/electron/`
+   - Adicionar método de serviço para chamar IPC
+   - Usar funções `dispatch` ou `invoke`
 
    ```typescript
    // src/services/electron/newFeatureService.ts
@@ -72,49 +72,49 @@ LobeChat 桌面端基于 Electron 框架构建，采用主进程-渲染进程架
    };
    ```
 
-2. **实现 Store Action**
-   - 位置：`src/store/`
-   - 添加状态更新逻辑和错误处理
+2. **Implementar Store Action**
+   - Localização: `src/store/`
+   - Adicionar lógica de atualização de estado e tratamento de erros
 
-3. **添加 UI 组件**
-   - 根据需要在适当位置添加UI组件
-   - 通过 Store 或 Service 层调用功能
+3. **Adicionar Componentes de UI**
+   - Adicionar componentes de UI em local apropriado conforme necessário
+   - Chamar funcionalidade através de camada Store ou Service
 
-### 5. 如果是新增内置工具，遵循工具实现流程
+### 5. Se for Nova Ferramenta Integrada, Seguir Fluxo de Implementação de Ferramentas
 
-参考 [desktop-local-tools-implement.mdc](mdc:desktop-local-tools-implement.mdc) 了解更多关于添加内置工具的详细步骤。
+Consulte [desktop-local-tools-implement.mdc](mdc:desktop-local-tools-implement.mdc) para saber mais sobre os passos detalhados para adicionar ferramentas integradas.
 
-### 6. 添加测试
+### 6. Adicionar Testes
 
-1. **单元测试**
-   - 位置：`apps/desktop/src/main/controllers/__tests__/`
-   - 测试主进程组件功能
+1. **Testes Unitários**
+   - Localização: `apps/desktop/src/main/controllers/__tests__/`
+   - Testar funcionalidade de componentes do processo principal
 
-2. **集成测试**
-   - 测试 IPC 通信和功能完整流程
+2. **Testes de Integração**
+   - Testar comunicação IPC e fluxo completo de funcionalidade
 
-## 最佳实践
+## Melhores Práticas
 
-1. **安全性考虑**
-   - 谨慎处理用户数据和文件系统访问
-   - 适当验证和清理输入数据
-   - 限制暴露给渲染进程的API范围
+1. **Considerações de Segurança**
+   - Lidar com cuidado com dados do usuário e acesso ao sistema de arquivos
+   - Validar e limpar adequadamente dados de entrada
+   - Limitar escopo de APIs expostas ao processo de renderização
 
-2. **性能优化**
-   - 对于耗时操作，考虑使用异步方法
-   - 大型数据传输考虑分批处理
+2. **Otimização de Performance**
+   - Para operações demoradas, considerar usar métodos assíncronos
+   - Para transferência de grandes volumes de dados, considerar processamento em lotes
 
-3. **用户体验**
-   - 为长时间操作添加进度指示
-   - 提供适当的错误反馈
-   - 考虑操作的可撤销性
+3. **Experiência do Usuário**
+   - Adicionar indicadores de progresso para operações de longa duração
+   - Fornecer feedback de erro apropriado
+   - Considerar reversibilidade de operações
 
-4. **代码组织**
-   - 遵循项目现有的命名和代码风格约定
-   - 为新功能添加适当的文档和注释
-   - 功能模块化，避免过度耦合
+4. **Organização de Código**
+   - Seguir convenções de nomenclatura e estilo de código existentes do projeto
+   - Adicionar documentação e comentários apropriados para novas funcionalidades
+   - Modularização de funcionalidades, evitar acoplamento excessivo
 
-## 示例：实现系统通知功能
+## Exemplo: Implementando Funcionalidade de Notificação do Sistema
 
 ```typescript
 // apps/desktop/src/main/controllers/NotificationCtr.ts

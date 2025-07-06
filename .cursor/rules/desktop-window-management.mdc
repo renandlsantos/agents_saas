@@ -3,33 +3,33 @@ description:
 globs:
 alwaysApply: false
 ---
-**桌面端窗口管理指南**
+**Guia de Gerenciamento de Janelas Desktop**
 
-## 窗口管理概述
+## Visão Geral do Gerenciamento de Janelas
 
-LobeChat 桌面应用使用 Electron 的 `BrowserWindow` 管理应用窗口。主要的窗口管理功能包括：
+A aplicação desktop do Agents Chat usa o `BrowserWindow` do Electron para gerenciar janelas da aplicação. As principais funcionalidades de gerenciamento de janelas incluem:
 
-1. **窗口创建和配置**
-2. **窗口状态管理**（大小、位置、最大化等）
-3. **多窗口协调**
-4. **窗口事件处理**
+1. **Criação e configuração de janelas**
+2. **Gerenciamento de estado de janelas** (tamanho, posição, maximização, etc.)
+3. **Coordenação de múltiplas janelas**
+4. **Tratamento de eventos de janela**
 
-## 相关文件结构
+## Estrutura de Arquivos Relacionados
 
 ```
 apps/desktop/src/main/
-├── appBrowsers.ts               # 窗口管理的核心文件
+├── appBrowsers.ts               # Arquivo central de gerenciamento de janelas
 ├── controllers/
-│   └── BrowserWindowsCtr.ts     # 窗口控制器
+│   └── BrowserWindowsCtr.ts     # Controlador de janelas
 └── modules/
-    └── browserWindowManager.ts  # 窗口管理模块
+    └── browserWindowManager.ts  # Módulo de gerenciamento de janelas
 ```
 
-## 窗口管理流程
+## Fluxo de Gerenciamento de Janelas
 
-### 1. 窗口创建
+### 1. Criação de Janelas
 
-在 `appBrowsers.ts` 或 `BrowserWindowsCtr.ts` 中定义窗口创建逻辑：
+Defina a lógica de criação de janelas em `appBrowsers.ts` ou `BrowserWindowsCtr.ts`:
 
 ```typescript
 export const createMainWindow = () => {
@@ -43,10 +43,10 @@ export const createMainWindow = () => {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    // 其他窗口配置项...
+    // Outras opções de configuração de janela...
   });
 
-  // 加载应用内容
+  // Carregar conteúdo da aplicação
   if (isDev) {
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
@@ -58,11 +58,11 @@ export const createMainWindow = () => {
 };
 ```
 
-### 2. 窗口状态管理
+### 2. Gerenciamento de Estado de Janelas
 
-实现窗口状态持久化保存和恢复：
+Implementar persistência e restauração de estado de janelas:
 
-1. **保存窗口状态**
+1. **Salvar estado da janela**
    ```typescript
    const saveWindowState = (window: BrowserWindow) => {
      if (!window.isMinimized() && !window.isMaximized()) {
@@ -79,7 +79,7 @@ export const createMainWindow = () => {
    };
    ```
 
-2. **恢复窗口状态**
+2. **Restaurar estado da janela**
    ```typescript
    const restoreWindowState = (window: BrowserWindow) => {
      const savedState = settings.get('windowState');
@@ -95,18 +95,18 @@ export const createMainWindow = () => {
    };
    ```
 
-3. **监听窗口事件**
+3. **Monitorar eventos de janela**
    ```typescript
    window.on('close', () => saveWindowState(window));
    window.on('moved', () => saveWindowState(window));
    window.on('resized', () => saveWindowState(window));
    ```
 
-### 3. 实现多窗口管理
+### 3. Implementar Gerenciamento de Múltiplas Janelas
 
-对于需要多窗口支持的功能：
+Para funcionalidades que requerem suporte a múltiplas janelas:
 
-1. **跟踪窗口**
+1. **Rastrear janelas**
    ```typescript
    export class WindowManager {
      private windows: Map<string, BrowserWindow> = new Map();
@@ -132,9 +132,9 @@ export const createMainWindow = () => {
    }
    ```
 
-2. **窗口间通信**
+2. **Comunicação entre janelas**
    ```typescript
-   // 从一个窗口向另一个窗口发送消息
+   // Enviar mensagem de uma janela para outra
    sendMessageToWindow(targetWindowId, channel, data) {
      const targetWindow = this.getWindow(targetWindowId);
      if (targetWindow) {
@@ -143,11 +143,11 @@ export const createMainWindow = () => {
    }
    ```
 
-### 4. 窗口与渲染进程通信
+### 4. Comunicação entre Janela e Processo de Renderização
 
-通过 IPC 实现窗口操作：
+Implementar operações de janela através de IPC:
 
-1. **在主进程中注册 IPC 处理器**
+1. **Registrar manipuladores IPC no processo principal**
    ```typescript
    // BrowserWindowsCtr.ts
    @ipcClientEvent('minimizeWindow')
@@ -182,7 +182,7 @@ export const createMainWindow = () => {
    }
    ```
 
-2. **在渲染进程中调用**
+2. **Chamar no processo de renderização**
    ```typescript
    // src/services/electron/windowService.ts
    import { dispatch } from '@lobechat/electron-client-ipc';
@@ -194,20 +194,20 @@ export const createMainWindow = () => {
    };
    ```
 
-### 5. 自定义窗口控制 (无边框窗口)
+### 5. Controle Personalizado de Janela (janela sem bordas)
 
-对于自定义窗口标题栏：
+Para barra de título personalizada de janela:
 
-1. **创建无边框窗口**
+1. **Criar janela sem bordas**
    ```typescript
    const window = new BrowserWindow({
      frame: false,
      titleBarStyle: 'hidden',
-     // 其他选项...
+     // Outras opções...
    });
    ```
 
-2. **在渲染进程中实现拖拽区域**
+2. **Implementar área de arraste no processo de renderização**
    ```css
    /* CSS */
    .titlebar {
@@ -219,14 +219,14 @@ export const createMainWindow = () => {
    }
    ```
 
-## 最佳实践
+## Melhores Práticas
 
-1. **性能考虑**
-   - 避免创建过多窗口
-   - 使用 `show: false` 创建窗口，在内容加载完成后再显示，避免白屏
+1. **Considerações de Performance**
+   - Evitar criar muitas janelas
+   - Usar `show: false` ao criar janela, mostrar após carregamento do conteúdo para evitar tela branca
 
-2. **安全性**
-   - 始终设置适当的 `webPreferences` 确保安全
+2. **Segurança**
+   - Sempre definir `webPreferences` adequadas para garantir segurança
    ```typescript
    webPreferences: {
      preload: path.join(__dirname, '../preload/index.js'),
@@ -236,38 +236,38 @@ export const createMainWindow = () => {
    }
    ```
 
-3. **跨平台兼容性**
-   - 考虑不同操作系统的窗口行为差异
-   - 使用 `process.platform` 为不同平台提供特定实现
+3. **Compatibilidade Multiplataforma**
+   - Considerar diferenças de comportamento de janela entre sistemas operacionais
+   - Usar `process.platform` para fornecer implementações específicas para diferentes plataformas
 
-4. **崩溃恢复**
-   - 监听 `webContents.on('crashed')` 事件处理崩溃
-   - 提供崩溃恢复选项
+4. **Recuperação de Falhas**
+   - Monitorar evento `webContents.on('crashed')` para lidar com falhas
+   - Fornecer opções de recuperação de falhas
 
-5. **内存管理**
-   - 确保窗口关闭时清理所有相关资源
-   - 使用 `window.on('closed')` 而不是 `window.on('close')` 进行最终清理
+5. **Gerenciamento de Memória**
+   - Garantir limpeza de todos os recursos relacionados quando janela fechar
+   - Usar `window.on('closed')` ao invés de `window.on('close')` para limpeza final
 
-## 示例：创建设置窗口
+## Exemplo: Criando Janela de Configurações
 
 ```typescript
 // apps/desktop/src/main/controllers/BrowserWindowsCtr.ts
 
 @ipcClientEvent('openSettings')
 handleOpenSettings() {
-  // 检查设置窗口是否已经存在
+  // Verificar se janela de configurações já existe
   if (this.settingsWindow && !this.settingsWindow.isDestroyed()) {
-    // 如果窗口已存在，将其置于前台
+    // Se janela já existe, trazê-la para frente
     this.settingsWindow.focus();
     return { success: true };
   }
 
-  // 创建新窗口
+  // Criar nova janela
   this.settingsWindow = new BrowserWindow({
     width: 800,
     height: 600,
     title: 'Settings',
-    parent: this.mainWindow, // 设置父窗口，使其成为模态窗口
+    parent: this.mainWindow, // Definir janela pai, tornando-a janela modal
     modal: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -276,7 +276,7 @@ handleOpenSettings() {
     },
   });
 
-  // 加载设置页面
+  // Carregar página de configurações
   if (isDev) {
     this.settingsWindow.loadURL('http://localhost:3000/settings');
   } else {
@@ -286,7 +286,7 @@ handleOpenSettings() {
     );
   }
 
-  // 监听窗口关闭事件
+  // Monitorar evento de fechamento de janela
   this.settingsWindow.on('closed', () => {
     this.settingsWindow = null;
   });
