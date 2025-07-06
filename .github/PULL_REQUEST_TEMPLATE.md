@@ -1,20 +1,20 @@
-#### 💻 变更类型 | Change Type
+#### 💻 Tipo de Mudança | Change Type
 
-<!-- For change type, change [ ] to [x]. -->
+<!-- Para tipo de mudança, altere [ ] para [x]. -->
 
-- [ ] ✨ feat
-- [ ] 🐛 fix
-- [ ] ♻️ refactor
-- [ ] 💄 style
-- [ ] 👷 build
-- [ ] ⚡️ perf
-- [ ] 📝 docs
-- [ ] 🔨 chore
+- [ ] ✨ feat (nova funcionalidade)
+- [ ] 🐛 fix (correção de bug)
+- [ ] ♻️ refactor (refatoração)
+- [ ] 💄 style (estilo)
+- [ ] 👷 build (build)
+- [ ] ⚡️ perf (performance)
+- [ ] 📝 docs (documentação)
+- [ ] 🔨 chore (manutenção)
 
-#### 🔀 变更说明 | Description of Change
+#### 🔀 Descrição da Mudança | Description of Change
 
-<!-- Thank you for your Pull Request. Please provide a description above. -->
+<!-- Obrigado pelo seu Pull Request. Por favor, forneça uma descrição acima. -->
 
-#### 📝 补充信息 | Additional Information
+#### 📝 Informações Adicionais | Additional Information
 
-<!-- Add any other context about the Pull Request here. -->
+<!-- Adicione qualquer outro contexto sobre o Pull Request aqui. -->

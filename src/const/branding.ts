@@ -18,7 +18,7 @@ export const SOCIAL_URL = {
   discord: undefined,
   github: 'https://github.com/agentssaas',
   medium: undefined,
-  x: undefined,
+  x: 'https://x.com/agentssaas',
   youtube: undefined,
 };
 
