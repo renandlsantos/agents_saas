@@ -1,0 +1,214 @@
+# Guia de Configuração do Ambiente de Desenvolvimento
+
+Bem-vindo ao guia de configuração do ambiente de desenvolvimento do Agents Chat.
+
+## Desenvolvimento Online
+
+Se você tem acesso ao GitHub Codespaces, pode clicar no botão abaixo para entrar no ambiente de desenvolvimento online com apenas um clique:
+
+[![][codespaces-shield]][codespaces-link]
+
+## Desenvolvimento Local
+
+Antes de começar o desenvolvimento no Agents Chat, você precisa instalar e configurar alguns softwares e ferramentas necessários em seu ambiente local. Este documento irá guiá-lo através desses passos.
+
+### Requisitos do Ambiente de Desenvolvimento
+
+Primeiro, você precisa instalar os seguintes softwares:
+
+- Node.js: O Agents Chat é construído em Node.js, então você precisa instalar o Node.js. Recomendamos instalar a versão estável mais recente.
+- Yarn: Usamos Yarn como gerenciador de pacotes preferido. Você pode baixar e instalá-lo do site oficial do Yarn.
+- PNPM: Usamos PNPM como gerenciador de pacotes auxiliar. Você pode baixar e instalá-lo do site oficial do PNPM.
+- Git: Usamos Git para controle de versão. Você pode baixar e instalá-lo do site oficial do Git.
+- IDE: Você pode escolher seu ambiente de desenvolvimento integrado (IDE) preferido. Recomendamos usar WebStorm, um IDE poderoso particularmente adequado para desenvolvimento TypeScript.
+
+### Configuração do Projeto
+
+Após instalar o software acima, você pode começar a configurar o projeto Agents Chat.
+
+1. **Obter o código**: Primeiro, você precisa clonar o código base do Agents Chat do GitHub. Execute o seguinte comando no terminal:
+
+```bash
+git clone https://github.com/agentssaas/agents-chat.git
+```
+
+2. **Instalar dependências**: Em seguida, navegue até o diretório do projeto e use o Yarn para instalar as dependências do projeto:
+
+```bash
+cd agents-chat
+yarn install
+```
+
+Se você estiver usando PNPM, pode executar:
+
+```bash
+cd agents-chat
+pnpm install
+```
+
+3. **Iniciar o servidor de desenvolvimento**: Após instalar as dependências, você pode iniciar o servidor de desenvolvimento:
+
+```bash
+pnpm dev
+```
+
+Isso iniciará o servidor de desenvolvimento local, e você pode acessar a aplicação através do navegador em `http://localhost:3010`.
+
+### Configuração de Variáveis de Ambiente
+
+O Agents Chat requer algumas variáveis de ambiente para funcionar corretamente. Você pode copiar o arquivo `.env.example` para `.env.local` e configurar as variáveis conforme necessário:
+
+```bash
+cp .env.example .env.local
+```
+
+Edite o arquivo `.env.local` e configure as seguintes variáveis principais:
+
+```bash
+# Configuração de autenticação
+NEXTAUTH_SECRET=sua-chave-secreta-aleatoria
+NEXTAUTH_URL=http://localhost:3010
+
+# Configuração do banco de dados
+DATABASE_URL=postgresql://usuario:senha@localhost:5432/agentschat
+
+# Configuração de APIs de IA
+OPENAI_API_KEY=sua-chave-openai
+ANTHROPIC_API_KEY=sua-chave-anthropic
+
+# Configuração de email (opcional)
+EMAIL_FROM=noreply@agentssaas.com
+SMTP_HOST=seu-servidor-smtp
+SMTP_PORT=587
+SMTP_USER=seu-usuario
+SMTP_PASSWORD=sua-senha
+```
+
+### Configuração do Banco de Dados
+
+O Agents Chat suporta dois modos de banco de dados:
+
+#### Modo Local (PGLite)
+Para desenvolvimento rápido, você pode usar o modo local que não requer configuração adicional:
+
+```bash
+pnpm dev
+```
+
+#### Modo PostgreSQL
+Para desenvolvimento mais avançado ou teste de funcionalidades de servidor:
+
+1. **Instalar PostgreSQL**: Instale PostgreSQL localmente ou use Docker:
+
+```bash
+# Usando Docker
+docker run --name agentschat-postgres -e POSTGRES_PASSWORD=senha123 -e POSTGRES_DB=agentschat -p 5432:5432 -d postgres:15
+```
+
+2. **Configurar a URL do banco**: Atualize a variável `DATABASE_URL` no seu `.env.local`:
+
+```bash
+DATABASE_URL=postgresql://postgres:senha123@localhost:5432/agentschat
+```
+
+3. **Executar migrações**: Execute as migrações do banco de dados:
+
+```bash
+pnpm db:migrate
+```
+
+### Scripts de Desenvolvimento Úteis
+
+Aqui estão alguns scripts úteis para desenvolvimento:
+
+```bash
+# Desenvolvimento
+pnpm dev              # Inicia servidor de desenvolvimento (porta 3010)
+pnpm dev:desktop      # Inicia servidor para app desktop (porta 3015)
+
+# Build e Produção
+pnpm build           # Compila a aplicação
+pnpm start           # Inicia servidor de produção (porta 3210)
+
+# Testes
+pnpm test            # Executa todos os testes
+pnpm test-app        # Executa testes do cliente
+pnpm test-server     # Executa testes do servidor
+
+# Qualidade de Código
+pnpm lint            # Executa linting completo
+pnpm type-check      # Verificação de tipos TypeScript
+pnpm prettier        # Formata todos os arquivos
+
+# Banco de Dados
+pnpm db:generate     # Gera schema e cliente do banco
+pnpm db:studio       # Abre Drizzle Studio (GUI do banco)
+pnpm db:push         # Aplica mudanças do schema
+
+# Internacionalização
+pnpm i18n            # Gera arquivos de tradução
+```
+
+### Estrutura do Projeto
+
+Familiarize-se com a estrutura principal do projeto:
+
+```
+agents-chat/
+├── src/
+│   ├── app/           # Rotas Next.js App Router
+│   ├── components/    # Componentes React reutilizáveis
+│   ├── features/      # Funcionalidades específicas
+│   ├── hooks/         # Hooks React customizados
+│   ├── libs/          # Integrações de bibliotecas
+│   ├── services/      # Camada de serviços
+│   ├── store/         # Gerenciamento de estado Zustand
+│   ├── database/      # Modelos e schemas do banco
+│   └── server/        # APIs tRPC
+├── docs/              # Documentação
+├── locales/           # Arquivos de tradução
+├── public/            # Arquivos estáticos
+└── scripts/           # Scripts de automação
+```
+
+### Próximos Passos
+
+Agora que você tem o ambiente configurado:
+
+1. **Explore a documentação**: Leia os guias em `/docs/development/`
+2. **Execute os testes**: Verifique se tudo está funcionando com `pnpm test`
+3. **Crie seu primeiro agente**: Siga o tutorial de criação de agentes
+4. **Contribua**: Leia o guia de contribuição em `CONTRIBUTING.md`
+
+### Solução de Problemas
+
+#### Problemas Comuns
+
+1. **Erro de porta em uso**: Se a porta 3010 estiver em uso, você pode alterar no arquivo `package.json` ou usar:
+   ```bash
+   PORT=3011 pnpm dev
+   ```
+
+2. **Erro de dependências**: Limpe o cache e reinstale:
+   ```bash
+   rm -rf node_modules .next
+   pnpm install
+   ```
+
+3. **Erro de banco de dados**: Verifique se as variáveis de ambiente estão corretas e o PostgreSQL está rodando.
+
+4. **Erro de tipos TypeScript**: Execute a verificação de tipos:
+   ```bash
+   pnpm type-check
+   ```
+
+### Suporte
+
+Se você encontrar problemas durante a configuração:
+
+- Consulte a [documentação completa](/docs/)
+- Abra uma [issue no GitHub](https://github.com/agentssaas/agents-chat/issues)
+- Entre em contato: suporte@agentssaas.com
+
+[codespaces-shield]: https://github.com/codespaces/badge.svg
+[codespaces-link]: https://codespaces.new/agentssaas/agents-chat

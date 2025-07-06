@@ -3,40 +3,40 @@ description:
 globs: src/services/**/*,src/database/**/*,src/server/**/*
 alwaysApply: false
 ---
-# LobeChat 后端技术架构指南
+# Guia de Arquitetura Técnica Backend do Agents Chat
 
-本指南旨在阐述 LobeChat 项目的后端分层架构，重点介绍各核心目录的职责以及它们之间的协作方式。
+Este guia tem como objetivo esclarecer a arquitetura em camadas do backend do projeto Agents Chat, destacando as responsabilidades dos diretórios principais e como eles colaboram entre si.
 
-## 目录结构映射
+## Mapeamento da Estrutura de Diretórios
 
 ```
 src/
 ├── server/
-│   ├── routers/          # tRPC API 路由定义
-│   └── services/         # 业务逻辑服务层
-│       └── */impls/      # 平台特定实现
+│   ├── routers/          # Definições de rotas da API tRPC
+│   └── services/         # Camada de serviços de lógica de negócio
+│       └── */impls/      # Implementações específicas da plataforma
 ├── database/
-│   ├── models/           # 数据模型 (单表 CRUD)
-│   ├── repositories/     # 仓库层 (复杂查询/聚合)
-│   └── schemas/          # Drizzle ORM 表定义
-└── services/             # 客户端服务 (调用 tRPC 或直接访问 Model)
+│   ├── models/           # Modelos de dados (CRUD de tabela única)
+│   ├── repositories/     # Camada de repositório (consultas complexas/agregação)
+│   └── schemas/          # Definições de tabela do Drizzle ORM
+└── services/             # Serviços do cliente (chama tRPC ou acessa Model diretamente)
 ```
 
-## 核心架构分层
+## Arquitetura Principal em Camadas
 
-LobeChat 的后端设计注重模块化、可测试性和灵活性，以适应不同的运行环境（如浏览器端 PGLite、服务端远程 PostgreSQL 以及 Electron 桌面应用）。
+O design backend do Agents Chat foca em modularidade, testabilidade e flexibilidade, para se adaptar a diferentes ambientes de execução (como PGLite no navegador, PostgreSQL remoto no servidor e aplicação desktop Electron).
 
-其主要分层如下：
+Suas principais camadas são:
 
-1.  客户端服务层 (`src/services`):
+1.  Camada de Serviços do Cliente (`src/services`):
 
-    - 位于 src/services/。
-    - 这是客户端业务逻辑的核心层，负责封装各种业务操作和数据处理逻辑。
-    - 环境适配: 根据不同的运行环境，服务层会选择合适的数据访问方式：
-        - 本地数据库模式: 直接调用 `Model` 层进行数据操作，适用于浏览器 PGLite 和本地 Electron 应用。
-        - 远程数据库模式: 通过 `tRPC` 客户端调用服务端 API，适用于需要云同步的场景。
-    - 类型转换: 对于简单的数据类型转换，直接在此层进行类型断言，如 `this.pluginModel.query() as Promise<LobeTool[]>`
-    - 每个服务模块通常包含 `client.ts`（本地模式）、`server.ts`（远程模式）和 `type.ts`（接口定义）文件，在实现时应该确保本地模式和远程模式业务逻辑实现一致，只是数据库不同。
+    - Localizada em src/services/.
+    - Esta é a camada central da lógica de negócio do cliente, responsável por encapsular várias operações de negócio e lógica de processamento de dados.
+    - Adaptação de Ambiente: Dependendo do ambiente de execução, a camada de serviço escolherá o método apropriado de acesso aos dados:
+        - Modo de banco de dados local: Chama diretamente a camada `Model` para operações de dados, adequado para PGLite no navegador e aplicações Electron locais.
+        - Modo de banco de dados remoto: Chama APIs do servidor através do cliente `tRPC`, adequado para cenários que requerem sincronização na nuvem.
+    - Conversão de Tipos: Para conversões simples de tipos de dados, fazemos asserção de tipos diretamente nesta camada, como `this.pluginModel.query() as Promise<LobeTool[]>`
+    - Cada módulo de serviço geralmente contém arquivos `client.ts` (modo local), `server.ts` (modo remoto) e `type.ts` (definições de interface). Na implementação, deve-se garantir que a lógica de negócio do modo local e remoto seja consistente, diferindo apenas no banco de dados.
 
 2.  API 接口层 (`TRPC`):
 

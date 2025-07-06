@@ -2,11 +2,11 @@
 
 [![][image-banner]][vercel-link]
 
-# Lobe Chat
+# Agents Chat
 
-An open-source, modern design ChatGPT/LLMs UI/framework.<br/>
-Supports speech synthesis, multi-modal, and extensible ([function call][docs-function-call]) plugin system.<br/>
-One-click **FREE** deployment of your private OpenAI ChatGPT/Claude/Gemini/Groq/Ollama chat application.
+Uma plataforma SAAS moderna de chat AI com design open-source.<br/>
+Suporta síntese de voz, multimodal e sistema extensível de plugins ([function call][docs-function-call]).<br/>
+Deploy **GRATUITO** com um clique da sua aplicação privada de chat OpenAI ChatGPT/Claude/Gemini/Groq/Ollama.
 
 **English** · [简体中文](./README.zh-CN.md) · [Official Site][official-site] · [Changelog][changelog] · [Documents][docs] · [Blog][blog] · [Feedback][github-issues-link]
 
@@ -27,7 +27,7 @@ One-click **FREE** deployment of your private OpenAI ChatGPT/Claude/Gemini/Groq/
 [![][github-license-shield]][github-license-link]<br>
 [![][sponsor-shield]][sponsor-link]
 
-**Share LobeChat Repository**
+**Compartilhe o Repositório Agents Chat**
 
 [![][share-x-shield]][share-x-link]
 [![][share-telegram-shield]][share-telegram-link]
@@ -92,7 +92,7 @@ One-click **FREE** deployment of your private OpenAI ChatGPT/Claude/Gemini/Groq/
 We are a group of e/acc design-engineers, hoping to provide modern design components and tools for AIGC.
 By adopting the Bootstrapping approach, we aim to provide developers and users with a more open, transparent, and user-friendly product ecosystem.
 
-Whether for users or professional developers, LobeHub will be your AI Agent playground. Please be aware that LobeChat is currently under active development, and feedback is welcome for any [issues][issues-link] encountered.
+Seja para usuários ou desenvolvedores profissionais, Agents SAAS será seu playground de Agentes AI. Por favor, esteja ciente de que o Agents Chat está atualmente em desenvolvimento ativo, e feedback é bem-vindo para quaisquer [problemas][issues-link] encontrados.
 
 | [![][vercel-shield-badge]][vercel-link]   | No installation or registration necessary! Visit our website to experience it firsthand.                           |
 | :---------------------------------------- | :----------------------------------------------------------------------------------------------------------------- |

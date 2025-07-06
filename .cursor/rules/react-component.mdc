@@ -3,17 +3,17 @@ description:
 globs: *.tsx
 alwaysApply: false
 ---
-# react component 编写指南
+# Guia de Escrita de Componentes React
 
-- 如果要写复杂样式的话用 antd-style ，简单的话可以用 style 属性直接写内联样式
-- 如果需要 flex 布局或者居中布局应该使用 react-layout-kit 的 Flexbox 和 Center 组件
-- 选择组件时优先顺序应该是 src/components > 安装的组件 package > lobe-ui > antd
+- Para estilos complexos, use antd-style; para estilos simples, pode usar a propriedade style diretamente com estilos inline
+- Para layouts flex ou centralizados, use os componentes Flexbox e Center do react-layout-kit
+- Ordem de prioridade para seleção de componentes: src/components > pacotes de componentes instalados > lobe-ui > antd
 
-## antd-style token system
+## Sistema de Tokens antd-style
 
-### 访问 token system 的两种方式
+### Duas formas de acessar o sistema de tokens
 
-#### 使用 antd-style 的 useTheme hook
+#### Usando o hook useTheme do antd-style
 
 ```tsx
 import { useTheme } from 'antd-style';
@@ -28,13 +28,13 @@ const MyComponent = () => {
       padding: theme.padding,
       borderRadius: theme.borderRadius
     }}>
-      使用主题 token 的组件
+      Componente usando tokens do tema
     </div>
   );
 }
 ```
 
-#### 使用 antd-style 的 createStyles
+#### Usando createStyles do antd-style
 
 ```tsx
 const useStyles = createStyles(({ css, token }) => {
@@ -69,22 +69,22 @@ const Card: FC<CardProps> = ({ title, content }) => {
 };
 ```
 
-### 一些你经常会忘记使用的 token
+### Alguns tokens que você costuma esquecer de usar
 
-请注意使用下面的 token 而不是 css 字面值。可以访问 https://ant.design/docs/react/customize-theme-cn 了解所有 token
+Use os tokens abaixo ao invés de valores CSS literais. Visite https://ant.design/docs/react/customize-theme-cn para conhecer todos os tokens
 
-- 动画类
+- Animações
     - token.motionDurationMid
     - token.motionEaseInOut
-- 包围盒属性
+- Propriedades de espaçamento
     - token.paddingSM
     - token.marginLG
 
 
-## Lobe UI 包含的组件
+## Componentes Incluídos no Lobe UI
 
-- 不知道 @lobehub/ui 的组件怎么用，有哪些属性，就自己搜下这个项目其它地方怎么用的，不要瞎猜，大部分组件都是在 antd 的基础上扩展了属性
-- 具体用法不懂可以联网搜索，例如 ActionIcon 就爬取 https://ui.lobehub.com/components/action-icon
+- Se não souber como usar os componentes do @lobehub/ui ou quais propriedades eles têm, pesquise como são usados em outras partes do projeto, não adivinhe. A maioria dos componentes são extensões baseadas no antd
+- Se não souber o uso específico, pode pesquisar online, por exemplo, para ActionIcon visite https://ui.lobehub.com/components/action-icon
 
 - General
   ActionIcon

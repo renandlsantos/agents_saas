@@ -4,16 +4,16 @@ globs: *.ts,*.tsx,*.mts
 alwaysApply: false
 ---
 
-TypeScript Code Style Guide:
+Guia de Estilo de Código TypeScript:
 
-- Avoid explicit type annotations when TypeScript can infer types.
-- Avoid defining `any` type variables (e.g., `let a: number;` instead of `let a;`).
-- Use the most accurate type possible (e.g., use `Record<PropertyKey, unknown>` instead of `object`).
-- Prefer `interface` over `type` (e.g., define react component props).
-- Use `as const satisfies XyzInterface` instead of `as const` when suitable
-- import index.ts module(directory module) like `@/db/index` instead of `@/db`
-- Instead of calling Date.now() multiple times, assign it to a constant once and reuse it. This ensures consistency and improves readability
-- Always refactor repeated logic into a reusable function
-- Don't remove meaningful code comments, be sure to keep original comments when providing applied code
-- Update the code comments when needed after you modify the related code
-- Please respect my prettier preferences when you provide code
+- Evite anotações de tipo explícitas quando o TypeScript conseguir inferir os tipos.
+- Evite definir variáveis do tipo `any` (exemplo: `let a: number;` ao invés de `let a;`).
+- Use o tipo mais preciso possível (exemplo: use `Record<PropertyKey, unknown>` ao invés de `object`).
+- Prefira `interface` ao invés de `type` (exemplo: para definir props de componentes React).
+- Use `as const satisfies XyzInterface` ao invés de `as const` quando apropriado
+- importe módulos index.ts (módulos de diretório) como `@/db/index` ao invés de `@/db`
+- Ao invés de chamar Date.now() múltiplas vezes, atribua a uma constante uma vez e reutilize. Isso garante consistência e melhora a legibilidade
+- Sempre refatore lógica repetida em uma função reutilizável
+- Não remova comentários de código significativos, certifique-se de manter os comentários originais ao fornecer código aplicado
+- Atualize os comentários do código quando necessário após modificar o código relacionado
+- Por favor respeite minhas preferências do prettier ao fornecer código

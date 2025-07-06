@@ -3,6 +3,6 @@ description:
 globs: src/database/models/**/*
 alwaysApply: false
 ---
-1. first read [lobe-chat-backend-architecture.mdc](mdc:.cursor/rules/lobe-chat-backend-architecture.mdc)
-2. refer to the [_template.ts](mdc:src/database/models/_template.ts) to create new model
-3. if an operation involves multiple models or complex queries, consider defining it in the `repositories` layer under `src/database/repositories/`
+1. primeiro leia [lobe-chat-backend-architecture.mdc](mdc:.cursor/rules/lobe-chat-backend-architecture.mdc)
+2. consulte o [_template.ts](mdc:src/database/models/_template.ts) para criar um novo model
+3. se uma operação envolver múltiplos models ou consultas complexas, considere defini-la na camada `repositories` em `src/database/repositories/`

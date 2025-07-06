@@ -1,28 +1,28 @@
 ---
-description: cursor rules writing and optimization guide
+description: guia de escrita e otimização de cursor rules
 globs: 
 alwaysApply: false
 ---
-当你编写或修改 Cursor Rule 时，请遵循以下准则：
+Ao escrever ou modificar Cursor Rules, siga as seguintes diretrizes:
 
-- 当你知道 rule 的文件名时，使用 `read_file` 而不是 `fetch_rules` 去读取它们，它们都在项目根目录的 `.cursor/rules/` 文件夹下
+- Quando souber o nome do arquivo de rule, use `read_file` em vez de `fetch_rules` para lê-los, eles estão localizados na pasta `.cursor/rules/` na raiz do projeto
 
-- 代码示例
-  - 示例应尽量精简，仅保留演示核心
-  - 删除与示例无关的导入/导出语句，但保留必要的导入
-  - 同一文件存在多个示例时，若前文已演示模块导入，后续示例可省略重复导入
-  - 无需书写 `export`
-  - 可省略与演示无关或重复的 props、配置对象属性、try/catch、CSS 等代码
-  - 删除无关注释，保留有助理解的注释
+- Exemplos de código
+  - Os exemplos devem ser o mais concisos possível, mantendo apenas o essencial para demonstrar o conceito
+  - Remova declarações de import/export irrelevantes para o exemplo, mas mantenha as importações necessárias
+  - Quando múltiplos exemplos existem no mesmo arquivo, se as importações de módulo já foram demonstradas anteriormente, os exemplos subsequentes podem omitir importações repetidas
+  - Não é necessário escrever `export`
+  - Pode omitir props irrelevantes ou repetitivas, propriedades de objetos de configuração, try/catch, código CSS, etc.
+  - Remova comentários irrelevantes, mantenha comentários que ajudem na compreensão
 
-- 格式
-  - 修改前请先确认原始文档语言，并保持一致
-  - 无序列表统一使用 `-`
-  - 列表末尾的句号是多余的
-  - 非必要不使用加粗、行内代码等样式，Rule 主要供 LLM 阅读
-  - 避免中英文逐句对照。若括号内容为示例而非翻译，可保留
+- Formatação
+  - Antes de modificar, confirme primeiro o idioma do documento original e mantenha consistência
+  - Use `-` uniformemente para listas não ordenadas
+  - Pontos finais no fim de listas são desnecessários
+  - Não use negrito, código inline, etc. desnecessariamente, Rules são principalmente para leitura por LLM
+  - Evite comparações palavra por palavra entre português e inglês. Se o conteúdo entre parênteses for um exemplo e não uma tradução, pode ser mantido
 
-- Review
-  - 修正 Markdown 语法问题
-  - 纠正错别字
-  - 指出示例与说明不一致之处
+- Revisão
+  - Corrija problemas de sintaxe Markdown
+  - Corrija erros de ortografia
+  - Aponte inconsistências entre exemplos e explicações

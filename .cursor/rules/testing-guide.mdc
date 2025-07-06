@@ -5,38 +5,38 @@ alwaysApply: false
 ---
 ---
 type: agent-requested
-title: 测试指南 - LobeChat Testing Guide
-description: LobeChat 项目的 Vitest 测试环境配置、运行方式、修复原则指南
+title: Guia de Testes - LobeChat Testing Guide
+description: Guia de configuração do ambiente de teste Vitest, métodos de execução e princípios de correção para o projeto LobeChat
 ---
 
-# 测试指南 - LobeChat Testing Guide
+# Guia de Testes - LobeChat Testing Guide
 
-## 🧪 测试环境概览
+## 🧪 Visão Geral do Ambiente de Teste
 
-LobeChat 项目使用 Vitest 测试库，配置了两种不同的测试环境：
+O projeto LobeChat usa a biblioteca de testes Vitest, configurada com dois ambientes de teste diferentes:
 
-### 客户端测试环境 (DOM Environment)
+### Ambiente de Teste Cliente (DOM Environment)
 
-- **配置文件**: [vitest.config.ts](mdc:vitest.config.ts)
-- **环境**: Happy DOM (浏览器环境模拟)
-- **数据库**: PGLite (浏览器环境的 PostgreSQL)
-- **用途**: 测试前端组件、客户端逻辑、React 组件等
-- **设置文件**: [tests/setup.ts](mdc:tests/setup.ts)
+- **Arquivo de configuração**: [vitest.config.ts](mdc:vitest.config.ts)
+- **Ambiente**: Happy DOM (simulação de ambiente de navegador)
+- **Banco de dados**: PGLite (PostgreSQL para ambiente de navegador)
+- **Uso**: Testar componentes frontend, lógica cliente, componentes React, etc.
+- **Arquivo de configuração**: [tests/setup.ts](mdc:tests/setup.ts)
 
-### 服务端测试环境 (Node Environment)
+### Ambiente de Teste Servidor (Node Environment)
 
-- **配置文件**: [vitest.config.server.ts](mdc:vitest.config.server.ts)
-- **环境**: Node.js
-- **数据库**: 真实的 PostgreSQL 数据库
-- **并发限制**: 单线程运行 (`singleFork: true`)
-- **用途**: 测试数据库模型、服务端逻辑、API 端点等
-- **设置文件**: [tests/setup-db.ts](mdc:tests/setup-db.ts)
+- **Arquivo de configuração**: [vitest.config.server.ts](mdc:vitest.config.server.ts)
+- **Ambiente**: Node.js
+- **Banco de dados**: Banco de dados PostgreSQL real
+- **Limitação de concorrência**: Execução single-thread (`singleFork: true`)
+- **Uso**: Testar modelos de banco de dados, lógica servidor, endpoints de API, etc.
+- **Arquivo de configuração**: [tests/setup-db.ts](mdc:tests/setup-db.ts)
 
-## 🚀 测试运行命令
+## 🚀 Comandos de Execução de Testes
 
-### package.json 脚本说明
+### Explicação dos Scripts do package.json
 
-查看 [package.json](mdc:package.json) 中的测试相关脚本：
+Veja os scripts relacionados a testes no [package.json](mdc:package.json):
 
 ```json
 {
@@ -48,187 +48,187 @@ LobeChat 项目使用 Vitest 测试库，配置了两种不同的测试环境：
 }
 ```
 
-### 推荐的测试运行方式
+### Forma Recomendada de Execução de Testes
 
-#### ✅ 正确的命令格式
+#### ✅ Formato de Comando Correto
 
 ```bash
-# 运行所有客户端测试
+# Executar todos os testes cliente
 npx vitest run --config vitest.config.ts
 
-# 运行所有服务端测试
+# Executar todos os testes servidor
 npx vitest run --config vitest.config.server.ts
 
-# 运行特定测试文件 (支持模糊匹配)
+# Executar arquivo de teste específico (suporte a correspondência difusa)
 npx vitest run --config vitest.config.ts basic
 npx vitest run --config vitest.config.ts user.test.ts
 
-# 运行特定文件的特定行号
+# Executar linha específica de arquivo específico
 npx vitest run --config vitest.config.ts src/utils/helper.test.ts:25
 npx vitest run --config vitest.config.ts basic/foo.test.ts:10,basic/foo.test.ts:25
 
-# 过滤特定测试用例名称
+# Filtrar casos de teste específicos por nome
 npx vitest -t "test case name" --config vitest.config.ts
 
-# 组合使用文件和测试名称过滤
+# Usar combinação de filtros por arquivo e nome de teste
 npx vitest run --config vitest.config.ts filename.test.ts -t "specific test"
 ```
 
-#### ❌ 避免的命令格式
+#### ❌ Formatos de Comando a Evitar
 
 ```bash
-# ❌ 不要使用 pnpm test xxx (这不是有效的 vitest 命令)
+# ❌ Não use pnpm test xxx (este não é um comando vitest válido)
 pnpm test some-file
 
-# ❌ 不要使用裸 vitest (会进入 watch 模式)
+# ❌ Não use vitest puro (entrará em modo watch)
 vitest test-file.test.ts
 
-# ❌ 不要混淆测试环境
+# ❌ Não confunda ambientes de teste
 npx vitest run --config vitest.config.server.ts client-component.test.ts
 ```
 
-### 关键运行参数说明
+### Explicação dos Parâmetros de Execução Principais
 
-- **`vitest run`**: 运行一次测试然后退出 (避免 watch 模式)
-- **`vitest`**: 默认进入 watch 模式，持续监听文件变化
-- **`--config`**: 指定配置文件，选择正确的测试环境
-- **`-t`**: 过滤测试用例名称，支持正则表达式
-- **`--coverage`**: 生成测试覆盖率报告
+- **`vitest run`**: Executa os testes uma vez e sai (evita modo watch)
+- **`vitest`**: Entra no modo watch por padrão, monitorando continuamente mudanças de arquivo
+- **`--config`**: Especifica arquivo de configuração, escolhendo o ambiente de teste correto
+- **`-t`**: Filtra casos de teste por nome, suporta expressões regulares
+- **`--coverage`**: Gera relatório de cobertura de teste
 
-## 🔧 测试修复原则
+## 🔧 Princípios de Correção de Testes
 
-### 核心原则 ⚠️
+### Princípios Fundamentais ⚠️
 
-1. **充分阅读测试代码**: 在修复测试之前，必须完整理解测试的意图和实现
-2. **测试优先修复**: 如果是测试本身写错了，修改测试而不是实现代码
-3. **专注单一问题**: 只修复指定的测试，不要添加额外测试或功能
-4. **不自作主张**: 不要因为发现其他问题就直接修改，先提出再讨论
+1. **Leia completamente o código de teste**: Antes de corrigir testes, deve compreender totalmente a intenção e implementação do teste
+2. **Priorize a correção do teste**: Se o próprio teste estiver errado, modifique o teste em vez do código de implementação
+3. **Foque em um único problema**: Corrija apenas o teste especificado, não adicione testes ou funcionalidades extras
+4. **Não tome iniciativas próprias**: Não modifique diretamente ao descobrir outros problemas, proponha primeiro para discussão
 
-### 测试修复流程
+### Fluxo de Correção de Testes
 
 ```mermaid
 flowchart TD
-    subgraph "阶段一：分析与复现"
-        A[开始：收到测试失败报告] --> B[定位并运行失败的测试];
-        B --> C{是否能在本地复现?};
-        C -->|否| D[检查测试环境/配置/依赖];
-        C -->|是| E[分析：阅读测试代码、错误日志、Git 历史];
+    subgraph "Etapa 1: Análise e Reprodução"
+        A[Início: Recebido relatório de falha de teste] --> B[Localizar e executar teste com falha];
+        B --> C{Consegue reproduzir localmente?};
+        C -->|Não| D[Verificar ambiente/configuração/dependências de teste];
+        C -->|Sim| E[Analisar: Ler código de teste, logs de erro, histórico Git];
     end
 
-    subgraph "阶段二：诊断与调试"
-        E --> F[建立假设：问题出在测试、代码还是环境?];
-        F --> G["调试：使用 console.log 或 debugger 深入检查"];
-        G --> H{假设是否被证实?};
-        H -->|否, 重新假设| F;
+    subgraph "Etapa 2: Diagnóstico e Debug"
+        E --> F[Estabelecer hipótese: Problema está no teste, código ou ambiente?];
+        F --> G["Debug: Usar console.log ou debugger para inspeção profunda"];
+        G --> H{Hipótese foi confirmada?};
+        H -->|Não, nova hipótese| F;
     end
 
-    subgraph "阶段三：修复与验证"
-        H -->|是| I{确定根本原因};
-        I -->|测试逻辑错误| J[修复测试代码];
-        I -->|实现代码 Bug| K[修复实现代码];
-        I -->|环境/配置问题| L[修复配置或依赖];
-        J --> M[验证修复：重新运行失败的测试];
+    subgraph "Etapa 3: Correção e Validação"
+        H -->|Sim| I{Determinar causa raiz};
+        I -->|Erro lógico no teste| J[Corrigir código de teste];
+        I -->|Bug no código de implementação| K[Corrigir código de implementação];
+        I -->|Problema de ambiente/configuração| L[Corrigir configuração ou dependências];
+        J --> M[Validar correção: Re-executar teste com falha];
         K --> M;
         L --> M;
-        M --> N{测试是否通过?};
-        N -->|否, 修复无效| F;
-        N -->|是| O[扩大验证：运行当前文件内所有测试];
-        O --> P{是否全部通过?};
-        P -->|否, 引入新问题| F;
+        M --> N{Teste passou?};
+        N -->|Não, correção ineficaz| F;
+        N -->|Sim| O[Expandir validação: Executar todos os testes do arquivo atual];
+        O --> P{Todos passaram?};
+        P -->|Não, introduziu novos problemas| F;
     end
 
-    subgraph "阶段四：总结"
-        P -->|是| Q[完成：撰写修复总结];
+    subgraph "Etapa 4: Resumo"
+        P -->|Sim| Q[Concluído: Escrever resumo da correção];
     end
 
     D --> F;
 ```
 
-### 修复完成后的总结
+### Resumo Após Conclusão da Correção
 
-测试修复完成后，应该提供简要说明，包括：
+Após concluir a correção do teste, deve fornecer uma breve explicação, incluindo:
 
-1. **错误原因分析**: 说明测试失败的根本原因
-    - 测试逻辑错误
-    - 实现代码bug
-    - 环境配置问题
-    - 依赖变更导致的问题
+1. **Análise da causa do erro**: Explicar a causa raiz da falha do teste
+    - Erro lógico no teste
+    - Bug no código de implementação
+    - Problema de configuração do ambiente
+    - Problema causado por mudanças de dependências
 
-2. **修复方法说明**: 简述采用的修复方式
-    - 修改了哪些文件
-    - 采用了什么解决方案
-    - 为什么选择这种修复方式
+2. **Explicação do método de correção**: Descrever brevemente o método de correção adotado
+    - Quais arquivos foram modificados
+    - Qual solução foi adotada
+    - Por que escolheu esse método de correção
 
-**示例格式**:
+**Formato de exemplo**:
 
 ```markdown
-## 测试修复总结
+## Resumo da Correção de Teste
 
-**错误原因**: 测试中的 mock 数据格式与实际 API 返回格式不匹配，导致断言失败。
+**Causa do erro**: O formato dos dados mock no teste não correspondia ao formato real de retorno da API, causando falha na asserção.
 
-**修复方法**: 更新了测试文件中的 mock 数据结构，使其与最新的 API 响应格式保持一致。具体修改了 `user.test.ts` 中的 `mockUserData` 对象结构。
+**Método de correção**: Atualizou a estrutura dos dados mock no arquivo de teste para manter consistência com o formato mais recente de resposta da API. Especificamente modificou a estrutura do objeto `mockUserData` em `user.test.ts`.
 ```
 
-## 📂 测试文件组织
+## 📂 Organização de Arquivos de Teste
 
-### 文件命名约定
+### Convenções de Nomenclatura de Arquivos
 
-- **客户端测试**: `*.test.ts`, `*.test.tsx` (任意位置)
-- **服务端测试**: `src/database/models/**/*.test.ts`, `src/database/server/**/*.test.ts` (限定路径)
+- **Testes cliente**: `*.test.ts`, `*.test.tsx` (qualquer localização)
+- **Testes servidor**: `src/database/models/**/*.test.ts`, `src/database/server/**/*.test.ts` (caminhos limitados)
 
-### 测试文件组织风格
+### Estilo de Organização de Arquivos de Teste
 
-项目采用 **测试文件与源文件同目录** 的组织风格：
+O projeto adota o estilo de organização **arquivos de teste no mesmo diretório que os arquivos fonte**:
 
-- 测试文件放在对应源文件的同一目录下
-- 命名格式：`原文件名.test.ts` 或 `原文件名.test.tsx`
+- Arquivos de teste são colocados no mesmo diretório que os arquivos fonte correspondentes
+- Formato de nomenclatura: `nomeArquivoOriginal.test.ts` ou `nomeArquivoOriginal.test.tsx`
 
-例如：
+Por exemplo:
 
 ```
 src/components/Button/
-├── index.tsx           # 源文件
-└── index.test.tsx      # 测试文件
+├── index.tsx           # Arquivo fonte
+└── index.test.tsx      # Arquivo de teste
 ```
 
-## 🛠️ 测试调试技巧
+## 🛠️ Técnicas de Debug de Teste
 
-### 运行失败测试的步骤
+### Passos para Executar Testes com Falha
 
-1. **确定测试类型**: 查看文件路径确定使用哪个配置
-2. **运行单个测试**: 使用 `-t` 参数隔离问题
-3. **检查错误日志**: 仔细阅读错误信息和堆栈跟踪
-4. **查看最近修改记录**: 检查相关文件的最近变更情况
-5. **添加调试日志**: 在测试中添加 `console.log` 了解执行流程
+1. **Determinar tipo de teste**: Verificar o caminho do arquivo para determinar qual configuração usar
+2. **Executar teste individual**: Usar parâmetro `-t` para isolar o problema
+3. **Verificar logs de erro**: Ler cuidadosamente mensagens de erro e stack trace
+4. **Verificar registros de modificações recentes**: Verificar mudanças recentes em arquivos relacionados
+5. **Adicionar logs de debug**: Adicionar `console.log` nos testes para entender o fluxo de execução
 
-### Electron IPC 接口测试策略 🖥️
+### Estratégias de Teste para Interfaces IPC do Electron 🖥️
 
-对于涉及 Electron IPC 接口的测试，由于提供真实的 Electron 环境比较复杂，采用 **Mock 返回值** 的方式进行测试。
+Para testes envolvendo interfaces IPC do Electron, devido à complexidade de fornecer um ambiente Electron real, adotamos a abordagem de **Mock de valores de retorno** para teste.
 
-#### 基本 Mock 设置
+#### Configuração Básica de Mock
 
 ```typescript
 import { vi } from "vitest";
 import { electronIpcClient } from "@/server/modules/ElectronIPCClient";
 
-// Mock Electron IPC 客户端
+// Mock do cliente IPC do Electron
 vi.mock("@/server/modules/ElectronIPCClient", () => ({
     electronIpcClient: {
         getFilePathById: vi.fn(),
         deleteFiles: vi.fn(),
-        // 根据需要添加其他 IPC 方法
+        // Adicionar outros métodos IPC conforme necessário
     },
 }));
 ```
 
-#### 在测试中设置 Mock 行为
+#### Configurando Comportamento Mock nos Testes
 
 ```typescript
 beforeEach(() => {
-    // 重置所有 Mock
+    // Resetar todos os Mocks
     vi.resetAllMocks();
 
-    // 设置默认的 Mock 返回值
+    // Configurar valores de retorno Mock padrão
     vi.mocked(electronIpcClient.getFilePathById).mockResolvedValue(
         "/path/to/file.txt"
     );
@@ -238,11 +238,11 @@ beforeEach(() => {
 });
 ```
 
-#### 测试不同场景的示例
+#### Exemplos de Teste para Diferentes Cenários
 
 ```typescript
-it("应该处理文件删除成功的情况", async () => {
-    // 设置成功场景的 Mock
+it("deve processar situação de exclusão de arquivo bem-sucedida", async () => {
+    // Configurar Mock para cenário de sucesso
     vi.mocked(electronIpcClient.deleteFiles).mockResolvedValue({
         success: true,
     });
@@ -255,10 +255,10 @@ it("应该处理文件删除成功的情况", async () => {
     expect(result.success).toBe(true);
 });
 
-it("应该处理文件删除失败的情况", async () => {
-    // 设置失败场景的 Mock
+it("deve processar situação de falha na exclusão de arquivo", async () => {
+    // Configurar Mock para cenário de falha
     vi.mocked(electronIpcClient.deleteFiles).mockRejectedValue(
-        new Error("删除失败")
+        new Error("Exclusão falhou")
     );
 
     const result = await service.deleteFiles(["desktop://file1.txt"]);
@@ -268,50 +268,50 @@ it("应该处理文件删除失败的情况", async () => {
 });
 ```
 
-#### Mock 策略的优势
+#### Vantagens da Estratégia Mock
 
-1. **环境简化**: 避免了复杂的 Electron 环境搭建
-2. **测试可控**: 可以精确控制 IPC 调用的返回值和行为
-3. **场景覆盖**: 容易测试各种成功/失败场景
-4. **执行速度**: Mock 调用比真实 IPC 调用更快
+1. **Simplificação do ambiente**: Evita a complexidade de configurar um ambiente Electron
+2. **Testes controláveis**: Permite controle preciso dos valores de retorno e comportamentos das chamadas IPC
+3. **Cobertura de cenários**: Fácil de testar vários cenários de sucesso/falha
+4. **Velocidade de execução**: Chamadas Mock são mais rápidas que chamadas IPC reais
 
-#### 注意事项
+#### Considerações Importantes
 
-- **Mock 准确性**: 确保 Mock 的行为与真实 IPC 接口行为一致
-- **类型安全**: 使用 `vi.mocked()` 确保类型安全
-- **Mock 重置**: 在 `beforeEach` 中重置 Mock 状态，避免测试间干扰
-- **调用验证**: 不仅要验证返回值，还要验证 IPC 方法是否被正确调用
+- **Precisão do Mock**: Garantir que o comportamento do Mock seja consistente com o comportamento real da interface IPC
+- **Segurança de tipos**: Usar `vi.mocked()` para garantir segurança de tipos
+- **Reset de Mock**: Resetar estado Mock no `beforeEach` para evitar interferência entre testes
+- **Validação de chamadas**: Não apenas validar valores de retorno, mas também verificar se métodos IPC são chamados corretamente
 
-### 检查最近修改记录 🔍
+### Verificar Registros de Modificações Recentes 🔍
 
-为了更好地判断测试失败的根本原因，需要**系统性地检查相关文件的修改历史**。这是问题定位的关键步骤。
+Para melhor julgar a causa raiz da falha do teste, é necessário **verificar sistematicamente o histórico de modificações de arquivos relacionados**. Este é um passo chave para localizar problemas.
 
-#### 第一步：确定需要检查的文件范围
+#### Primeiro Passo: Determinar o Escopo de Arquivos a Verificar
 
-1. **测试文件本身**: `path/to/component.test.ts`
-2. **对应的实现文件**: `path/to/component.ts` 或 `path/to/component/index.ts`
-3. **相关依赖文件**: 测试或实现中导入的其他模块
+1. **O próprio arquivo de teste**: `path/to/component.test.ts`
+2. **Arquivo de implementação correspondente**: `path/to/component.ts` ou `path/to/component/index.ts`
+3. **Arquivos de dependência relacionados**: Outros módulos importados no teste ou implementação
 
-#### 第二步：检查当前工作目录状态
+#### Segundo Passo: Verificar Status do Diretório de Trabalho Atual
 
 ```bash
-# 查看所有未提交的修改状态
+# Ver status de todas as modificações não commitadas
 git status
 
-# 重点关注测试文件和实现文件是否有未提交的修改
+# Focar se arquivos de teste e implementação têm modificações não commitadas
 git status | grep -E "(test|spec)"
 ```
 
-#### 第三步：检查未提交的修改内容
+#### Terceiro Passo: Verificar Conteúdo de Modificações Não Commitadas
 
 ```bash
-# 查看测试文件的未提交修改 (工作区 vs 暂存区)
+# Ver modificações não commitadas do arquivo de teste (área de trabalho vs área de stage)
 git diff path/to/component.test.ts | cat
 
-# 查看对应实现文件的未提交修改
+# Ver modificações não commitadas do arquivo de implementação correspondente
 git diff path/to/component.ts | cat
 
-# 查看已暂存但未提交的修改
+# Ver modificações em stage mas não commitadas
 git diff --cached path/to/component.test.ts | cat
 git diff --cached path/to/component.ts | cat
 ```
