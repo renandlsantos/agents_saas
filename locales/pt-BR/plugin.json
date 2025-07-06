@@ -188,7 +188,7 @@
       "edit": "Editar Plugin Personalizado"
     },
     "type": {
-      "lobe": "Plugin LobeChat",
+      "lobe": "Plugin Agents Chat",
       "openai": "Plugin OpenAI"
     },
     "update": "Atualizar",

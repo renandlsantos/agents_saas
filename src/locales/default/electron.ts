@@ -2,7 +2,7 @@ const electron = {
   remoteServer: {
     authError: '授权失败: {{error}}',
     authPending: '请在浏览器中完成授权',
-    configDesc: '连接到远程LobeChat服务器，启用数据同步',
+    configDesc: '连接到远程Agents Chat服务器，启用数据同步',
     configError: '配置出错',
     configTitle: '配置云同步',
     connect: '连接并授权',
@@ -24,7 +24,7 @@ const electron = {
     isIniting: '正在初始化...',
     lobehubCloud: {
       description: '官方提供的云版本',
-      title: 'LobeHub Cloud',
+      title: 'Agents SaaS Cloud',
     },
     local: {
       description: '使用本地数据库，完全离线可用',
