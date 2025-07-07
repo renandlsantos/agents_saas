@@ -1,0 +1,67 @@
+## Dockerfile for using pre-built images
+ARG NODEJS_VERSION="22"
+FROM node:${NODEJS_VERSION}-slim
+
+# Create nodejs user
+RUN groupadd -g 1001 -r nodejs && useradd -r -g nodejs -u 1001 nextjs
+
+# Create app directory
+WORKDIR /app
+
+# Copy pre-built application
+# This assumes you've built the application locally and are copying the build artifacts
+COPY .next/standalone ./
+COPY .next/static ./.next/static
+COPY public ./public
+COPY scripts/serverLauncher/startServer.js ./startServer.js
+
+# Set permissions
+RUN chown -R nextjs:nodejs /app
+
+ENV NODE_ENV="production" \
+    NODE_OPTIONS="--dns-result-order=ipv4first --use-openssl-ca" \
+    NODE_EXTRA_CA_CERTS="" \
+    NODE_TLS_REJECT_UNAUTHORIZED="" \
+    SSL_CERT_DIR="/etc/ssl/certs/ca-certificates.crt"
+
+# Make the middleware rewrite through local as default
+ENV MIDDLEWARE_REWRITE_THROUGH_LOCAL="1"
+
+# set hostname to localhost
+ENV HOSTNAME="0.0.0.0" \
+    PORT="3210"
+
+# General Variables
+ENV ACCESS_CODE="" \
+    API_KEY_SELECT_MODE="" \
+    DEFAULT_AGENT_CONFIG="" \
+    SYSTEM_AGENT="" \
+    FEATURE_FLAGS="" \
+    PROXY_URL=""
+
+# Database Variables
+ENV KEY_VAULTS_SECRET="" \
+    DATABASE_DRIVER="node" \
+    DATABASE_URL="" \
+    NEXT_PUBLIC_SERVICE_MODE=""
+
+# Model Variables
+ENV CUSTOM_MODELS="" \
+    CHECK_UPDATES="" \
+    OPENAI_API_KEY="" \
+    OPENAI_BASE_URL="" \
+    OPENAI_MODEL_LIST=""
+
+# switch to user
+USER nextjs
+
+EXPOSE 3210/tcp
+
+# Next.js collects completely anonymous telemetry data about general usage.
+# Learn more here: https://nextjs.org/telemetry
+# Uncomment the following line in case you want to disable telemetry during runtime.
+ENV NEXT_TELEMETRY_DISABLED="1"
+
+ENTRYPOINT ["/usr/local/bin/node"]
+
+CMD ["/app/startServer.js"]

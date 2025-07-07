@@ -202,19 +202,20 @@ const nextConfig: NextConfig = {
 
   transpilePackages: ['pdfjs-dist', 'mermaid'],
 
-  webpack(config, { isServer }) {
+  webpack(config) {
     config.experiments = {
       asyncWebAssembly: true,
       layers: true,
     };
 
     // Work around Next.js 15.3.5 webpack.WebpackError bug in Docker builds
-    if (buildWithDocker && isServer && config.plugins) {
-      config.plugins = config.plugins.filter((plugin: any) => {
-        const pluginName = plugin.constructor?.name || '';
-        // Remove the problematic minify plugin that causes webpack.WebpackError issue
-        return !pluginName.includes('MinifyPlugin');
-      });
+    if (buildWithDocker) {
+      // Completely disable optimization for Docker builds to avoid webpack errors
+      config.optimization = {
+        ...config.optimization,
+        minimize: false,
+        minimizer: [],
+      };
     }
 
     // 开启该插件会导致 pglite 的 fs bundler 被改表
