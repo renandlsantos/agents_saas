@@ -38,7 +38,8 @@ const nextConfig: NextConfig = {
     // but swc minification will remove the name
     // so we need to disable it
     // refs: https://github.com/lobehub/lobe-chat/pull/7430
-    serverMinification: false,
+    // Enable serverMinification for Docker builds to work around webpack error
+    serverMinification: buildWithDocker ? true : false,
     webVitalsAttribution: ['CLS', 'LCP'],
   },
   async headers() {
@@ -202,21 +203,11 @@ const nextConfig: NextConfig = {
 
   transpilePackages: ['pdfjs-dist', 'mermaid'],
 
-  webpack(config, { webpack }) {
+  webpack(config) {
     config.experiments = {
       asyncWebAssembly: true,
       layers: true,
     };
-
-    // Fix webpack.WebpackError not found issue
-    if (!webpack.WebpackError) {
-      webpack.WebpackError = class WebpackError extends Error {
-        constructor(message: string) {
-          super(message);
-          this.name = 'WebpackError';
-        }
-      };
-    }
 
     // 开启该插件会导致 pglite 的 fs bundler 被改表
     if (enableReactScan && !isUsePglite) {
