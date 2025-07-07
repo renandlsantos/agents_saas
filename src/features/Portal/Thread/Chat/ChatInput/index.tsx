@@ -1,7 +1,6 @@
 'use client';
 
 import { Alert } from '@lobehub/ui';
-import Link from 'next/link';
 import { memo } from 'react';
 import { Trans } from 'react-i18next';
 
@@ -36,12 +35,15 @@ const Desktop = memo(() => {
           message={
             <Trans i18nKey={'notSupportMultiModals'} ns={'thread'}>
               子话题暂不支持文件/图片上传，如有需求，欢迎留言：
+              {/* GitHub link removed
               <Link
                 href={'https://github.com/lobehub/lobe-chat/discussions/4717'}
                 style={{ textDecoration: 'underline' }}
               >
                 💬 讨论
               </Link>
+              */}
+              <span style={{ textDecoration: 'underline' }}>联系支持团队</span>
             </Trans>
           }
           onClose={() => {

@@ -7,7 +7,6 @@ import {
   CircleUserRound,
   Cloudy,
   Download,
-  Feather,
   FileClockIcon,
   HardDriveDownload,
   LifeBuoy,
@@ -24,14 +23,7 @@ import type { MenuProps } from '@/components/Menu';
 import { enableAuth } from '@/const/auth';
 import { BRANDING_EMAIL, LOBE_CHAT_CLOUD, SOCIAL_URL } from '@/const/branding';
 import { DEFAULT_HOTKEY_CONFIG } from '@/const/settings';
-import {
-  CHANGELOG,
-  DOCUMENTS_REFER_URL,
-  GITHUB_ISSUES,
-  OFFICIAL_URL,
-  UTM_SOURCE,
-  mailTo,
-} from '@/const/url';
+import { CHANGELOG, OFFICIAL_URL, UTM_SOURCE, mailTo } from '@/const/url';
 import { isDesktop } from '@/const/version';
 import DataImporter from '@/features/DataImporter';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
@@ -150,12 +142,9 @@ export const useMenu = () => {
         {
           icon: <Icon icon={Book} />,
           key: 'docs',
-          label: (
-            <Link href={DOCUMENTS_REFER_URL} target={'_blank'}>
-              {t('userPanel.docs')}
-            </Link>
-          ),
+          label: <Link href={'/documentation'}>{t('userPanel.docs')}</Link>,
         },
+        /* GitHub feedback link removed
         {
           icon: <Icon icon={Feather} />,
           key: 'feedback',
@@ -165,6 +154,7 @@ export const useMenu = () => {
             </Link>
           ),
         },
+        */
         {
           icon: <Icon icon={DiscordIcon} />,
           key: 'discord',

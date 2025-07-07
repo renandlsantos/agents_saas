@@ -1,6 +1,6 @@
 'use client';
 
-import { SiDiscord, SiGithub, SiMedium, SiRss, SiX } from '@icons-pack/react-simple-icons';
+import { SiDiscord, SiMedium, SiRss, SiX } from '@icons-pack/react-simple-icons';
 import { Form } from '@lobehub/ui';
 import { Divider } from 'antd';
 import { createStyles } from 'antd-style';
@@ -76,12 +76,14 @@ const Page = memo<{ mobile?: boolean }>(({ mobile }) => {
                 label: t('blog'),
                 value: 'blog',
               },
+              /* GitHub link removed
               {
                 href: SOCIAL_URL.github,
                 icon: SiGithub,
                 label: 'GitHub',
                 value: 'feedback',
               },
+              */
               {
                 href: SOCIAL_URL.discord,
                 icon: SiDiscord,

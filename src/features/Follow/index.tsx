@@ -1,6 +1,6 @@
 'use client';
 
-import { SiDiscord, SiGithub, SiMedium, SiX } from '@icons-pack/react-simple-icons';
+import { SiDiscord, SiMedium, SiX } from '@icons-pack/react-simple-icons';
 import { ActionIcon } from '@lobehub/ui';
 import { createStyles } from 'antd-style';
 import Link from 'next/link';
@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 import { Flexbox } from 'react-layout-kit';
 
 import { SOCIAL_URL } from '@/const/branding';
-import { GITHUB } from '@/const/url';
 
 const useStyles = createStyles(({ css, token }) => {
   return {
@@ -32,6 +31,7 @@ const Follow = memo(() => {
   const { t } = useTranslation('common');
   return (
     <Flexbox gap={8} horizontal>
+      {/* GitHub link removed
       <Link href={GITHUB} rel="noreferrer" target={'_blank'}>
         <ActionIcon
           className={styles.icon}
@@ -39,6 +39,7 @@ const Follow = memo(() => {
           title={t('follow', { name: 'GitHub' })}
         />
       </Link>
+      */}
       <Link href={SOCIAL_URL.x} rel="noreferrer" target={'_blank'}>
         <ActionIcon className={styles.icon} icon={SiX as any} title={t('follow', { name: 'X' })} />
       </Link>

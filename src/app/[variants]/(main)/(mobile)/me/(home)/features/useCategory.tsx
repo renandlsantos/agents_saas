@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { CellProps } from '@/components/Cell';
 import { enableAuth } from '@/const/auth';
 import { LOBE_CHAT_CLOUD } from '@/const/branding';
-import { DOCUMENTS, FEEDBACK, OFFICIAL_URL, UTM_SOURCE } from '@/const/url';
+import { FEEDBACK, OFFICIAL_URL, UTM_SOURCE } from '@/const/url';
 import { isServerMode } from '@/const/version';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
@@ -100,7 +100,7 @@ export const useCategory = () => {
       icon: Book,
       key: 'docs',
       label: t('document'),
-      onClick: () => window.open(DOCUMENTS, '__blank'),
+      onClick: () => router.push('/documentation'),
     },
     {
       icon: Feather,

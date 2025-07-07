@@ -47,8 +47,9 @@ export const generateMetadata = async (props: DiscoverPageProps) => {
   return {
     authors: [
       { name: meta.title },
-      { name: 'Agents SaaS', url: 'https://github.com/agents-saas' },
-      { name: 'LobeChat', url: 'https://github.com/lobehub/lobe-chat' },
+      { name: 'Agents SaaS', url: 'https://agentssaas.com' },
+      // GitHub link removed
+      // { name: 'LobeChat', url: 'https://github.com/lobehub/lobe-chat' },
     ],
     ...metadataModule.generate({
       alternate: true,

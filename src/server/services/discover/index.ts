@@ -52,8 +52,13 @@ export class DiscoverService {
   getAssistantList = async (locale: Locales): Promise<DiscoverAssistantItem[]> => {
     const json = await this.assistantStore.getAgentIndex(locale, revalidate);
 
+    // Filter to show only agents from "Agents SaaS"
+    const filteredAgents = (json.agents ?? []).filter(
+      (agent: any) => agent.author === 'Agents SaaS',
+    );
+
     // @ts-expect-error 目前类型不一致，未来要统一
-    return json.agents ?? [];
+    return filteredAgents;
   };
 
   getAssistantById = async (

@@ -94,7 +94,7 @@ const config = {
     },
   ],
   win: {
-    executableName: 'LobeHub',
+    executableName: 'Agents SaaS',
   },
 };
 

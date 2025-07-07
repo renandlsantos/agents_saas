@@ -60,12 +60,10 @@ const Header = memo<HeaderProps>(({ identifier, data, mobile }) => {
           <Flexbox gap={6}>
             <h1 className={styles.title}>{data.meta.title}</h1>
             <Flexbox align={'center'} gap={12} horizontal>
-              <Link href={data.homepage} target={'_blank'}>
-                <Flexbox align={'center'} gap={6} horizontal style={{ fontSize: 12 }}>
-                  <GitHubAvatar size={18} username={data.author} />
-                  <span>{data.author}</span>
-                </Flexbox>
-              </Link>
+              <Flexbox align={'center'} gap={6} horizontal style={{ fontSize: 12 }}>
+                <GitHubAvatar size={18} username={data.author} />
+                <span>{data.author}</span>
+              </Flexbox>
               <time className={styles.time} dateTime={new Date(data.createdAt).toISOString()}>
                 {data.createdAt}
               </time>

@@ -1,7 +1,6 @@
 'use client';
 
 import { Button, Text } from '@lobehub/ui';
-import { LobeChat } from '@lobehub/ui/brand';
 import { Col, Flex, Row, Skeleton } from 'antd';
 import { createStyles } from 'antd-style';
 import { AuthError } from 'next-auth';
@@ -11,6 +10,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import BrandWatermark from '@/components/BrandWatermark';
+import { ProductLogo } from '@/components/Branding/ProductLogo';
 import AuthIcons from '@/components/NextAuth/AuthIcons';
 import { DOCUMENTS_REFER_URL, PRIVACY_URL, TERMS_URL } from '@/const/url';
 import { useUserStore } from '@/store/user';
@@ -111,9 +111,9 @@ export default memo(() => {
           <div className={styles.text}>
             <Text as={'h4'} className={styles.title}>
               <div>
-                <LobeChat size={48} />
+                <ProductLogo size={48} />
               </div>
-              {t('signIn.start.title', { applicationName: 'LobeChat' })}
+              {t('signIn.start.title', { applicationName: 'Agents Chat' })}
             </Text>
             <Text as={'p'} className={styles.description}>
               {t('signIn.start.subtitle')}

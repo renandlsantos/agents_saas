@@ -16,7 +16,8 @@ export const BRANDING_URL = {
 
 export const SOCIAL_URL = {
   discord: 'https://discord.gg/AYFPHvv2jT',
-  github: 'https://github.com/lobehub',
+  // GitHub link removed - you can replace with your own GitHub organization
+  github: 'https://agentssaas.com',
   medium: 'https://medium.com/@lobehub',
   x: 'https://x.com/lobehub',
   youtube: 'https://www.youtube.com/@lobehub',

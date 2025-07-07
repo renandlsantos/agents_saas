@@ -1,6 +1,6 @@
 import { Icon, Tag } from '@lobehub/ui';
 import { createStyles } from 'antd-style';
-import { BadgeCheck, CircleUser, Package } from 'lucide-react';
+import { BadgeCheck, Package } from 'lucide-react';
 import { rgba } from 'polished';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -45,12 +45,17 @@ const PluginTag = memo<PluginTagProps>(({ showIcon = true, author, type, showTex
   const isCustom = type === 'customPlugin';
   const isOfficial = author === 'Agents SaaS';
 
+  // Don't render Community tag
+  if (!isCustom && !isOfficial) {
+    return null;
+  }
+
   return (
     <Tag
-      className={cx(isCustom ? styles.custom : isOfficial ? styles.official : styles.community)}
-      icon={showIcon && <Icon icon={isCustom ? Package : isOfficial ? BadgeCheck : CircleUser} />}
+      className={cx(isCustom ? styles.custom : styles.official)}
+      icon={showIcon && <Icon icon={isCustom ? Package : BadgeCheck} />}
     >
-      {showText && (author || t(isCustom ? 'store.customPlugin' : 'store.communityPlugin'))}
+      {showText && (author || t('store.customPlugin'))}
     </Tag>
   );
 });

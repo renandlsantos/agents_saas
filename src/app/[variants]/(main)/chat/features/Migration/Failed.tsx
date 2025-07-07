@@ -3,15 +3,11 @@ import { Popconfirm, Result } from 'antd';
 import { useTheme } from 'antd-style';
 import { createStore, del, get, set } from 'idb-keyval';
 import { ShieldAlert } from 'lucide-react';
-import Link from 'next/link';
 import { lighten } from 'polished';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Flexbox } from 'react-layout-kit';
 import Balancer from 'react-wrap-balancer';
-
-import { GITHUB_ISSUES } from '@/const/url';
-import { githubService } from '@/services/github';
 
 import ExportConfigButton from './ExportConfigButton';
 import UpgradeButton from './UpgradeButton';
@@ -97,6 +93,7 @@ const Failed = memo<FailedProps>(({ error, state, setUpgradeStatus, setError, up
         <Balancer>
           <Trans i18nKey="dbV1.upgrade.error.subTitle" ns={'migration'}>
             非常抱歉，数据库升级过程发生异常。请重试升级，或
+            {/* GitHub link removed
             <Link
               aria-label={'issue'}
               href={GITHUB_ISSUES}
@@ -108,6 +105,8 @@ const Failed = memo<FailedProps>(({ error, state, setUpgradeStatus, setError, up
             >
               提交问题
             </Link>
+            */}
+            <span>联系支持团队</span>
             我们将会第一时间帮你排查问题。
           </Trans>
         </Balancer>

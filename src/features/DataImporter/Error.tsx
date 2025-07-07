@@ -1,14 +1,11 @@
 import { Alert, Button, Highlighter, Icon } from '@lobehub/ui';
 import { Result } from 'antd';
 import { ShieldAlert } from 'lucide-react';
-import Link from 'next/link';
 import React, { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Flexbox } from 'react-layout-kit';
 import Balancer from 'react-wrap-balancer';
 
-import { GITHUB_ISSUES } from '@/const/url';
-import { githubService } from '@/services/github';
 import { ErrorShape } from '@/types/importer';
 
 interface ErrorProps {
@@ -42,6 +39,7 @@ const Error = memo<ErrorProps>(({ error, onClick }) => {
         <Balancer>
           <Trans i18nKey="importModal.error.desc" ns={'common'}>
             非常抱歉，数据库升级过程发生异常。请重试升级，或
+            {/* GitHub link removed
             <Link
               aria-label={'issue'}
               href={GITHUB_ISSUES}
@@ -53,6 +51,8 @@ const Error = memo<ErrorProps>(({ error, onClick }) => {
             >
               提交问题
             </Link>
+            */}
+            <span>联系支持团队</span>
             我们将会第一时间帮你排查问题。
           </Trans>
         </Balancer>

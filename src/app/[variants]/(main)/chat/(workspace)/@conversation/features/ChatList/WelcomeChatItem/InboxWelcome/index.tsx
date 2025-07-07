@@ -12,7 +12,6 @@ import { useGreeting } from '@/hooks/useGreeting';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
 import AddButton from './AddButton';
-import AgentsSuggest from './AgentsSuggest';
 import QuestionSuggest from './QuestionSuggest';
 
 const useStyles = createStyles(({ css, responsive }) => ({
@@ -78,12 +77,7 @@ const InboxWelcome = memo(() => {
             appName: BRANDING_NAME,
           })}
         </Markdown>
-        {showWelcomeSuggest && (
-          <>
-            <AgentsSuggest mobile={mobile} />
-            {!isCustomBranding && <QuestionSuggest mobile={mobile} />}
-          </>
-        )}
+        {showWelcomeSuggest && !isCustomBranding && <QuestionSuggest mobile={mobile} />}
       </Flexbox>
     </Center>
   );
