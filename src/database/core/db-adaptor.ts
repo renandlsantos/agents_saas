@@ -2,8 +2,6 @@ import { isDesktop } from '@/const/version';
 import { getDBInstance } from '@/database/core/web-server';
 import { LobeChatDatabase } from '@/database/type';
 
-import { getPgliteInstance } from './electron';
-
 /**
  * 懒加载数据库实例
  * 避免每次模块导入时都初始化数据库
@@ -16,7 +14,13 @@ export const getServerDB = async (): Promise<LobeChatDatabase> => {
 
   try {
     // 根据环境选择合适的数据库实例
-    cachedDB = isDesktop ? await getPgliteInstance() : getDBInstance();
+    if (isDesktop) {
+      // 动态导入 electron 模块，避免在 Edge Runtime 中加载
+      const { getPgliteInstance } = await import('./electron');
+      cachedDB = await getPgliteInstance();
+    } else {
+      cachedDB = getDBInstance();
+    }
     return cachedDB;
   } catch (error) {
     console.error('❌ Failed to initialize database:', error);

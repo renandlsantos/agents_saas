@@ -122,19 +122,46 @@ export default memo(() => {
           {/* Content */}
           <Flex gap="small" vertical>
             {oAuthSSOProviders ? (
-              oAuthSSOProviders.map((provider) => (
-                <Button
-                  className={styles.button}
-                  icon={AuthIcons(provider, 16)}
-                  key={provider}
-                  onClick={() => handleSignIn(provider)}
-                >
-                  {provider}
-                </Button>
-              ))
+              oAuthSSOProviders.map((provider) => {
+                if (provider === 'credentials') {
+                  return (
+                    <Button
+                      className={styles.button}
+                      key={provider}
+                      onClick={() => router.push('/next-auth/signin/credentials')}
+                    >
+                      Sign in with Email
+                    </Button>
+                  );
+                }
+                return (
+                  <Button
+                    className={styles.button}
+                    icon={AuthIcons(provider, 16)}
+                    key={provider}
+                    onClick={() => handleSignIn(provider)}
+                  >
+                    {provider}
+                  </Button>
+                );
+              })
             ) : (
               <BtnListLoading />
             )}
+            <div className={styles.text}>
+              <Text>
+                Don&apos;t have an account?{' '}
+                <a
+                  onClick={(e) => {
+                    e.preventDefault();
+                    router.push('/next-auth/signup');
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  Sign up
+                </a>
+              </Text>
+            </div>
           </Flex>
         </Flex>
       </div>

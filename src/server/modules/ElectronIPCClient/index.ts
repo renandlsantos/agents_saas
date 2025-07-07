@@ -1,38 +1,56 @@
-import { ElectronIpcClient } from '@lobechat/electron-server-ipc';
+// Only import in desktop environment to avoid Edge Runtime errors
+let ElectronIpcClient: any;
+let packageJSON: any;
 
-import packageJSON from '@/../apps/desktop/package.json';
+if (typeof window === 'undefined' && typeof process !== 'undefined' && process.versions?.electron) {
+  ElectronIpcClient = require('@lobechat/electron-server-ipc').ElectronIpcClient;
+  packageJSON = require('@/../apps/desktop/package.json');
+}
 
-class LobeHubElectronIpcClient extends ElectronIpcClient {
+class LobeHubElectronIpcClient {
+  private client: any;
+
+  constructor() {
+    if (ElectronIpcClient && packageJSON) {
+      this.client = new ElectronIpcClient(packageJSON.name);
+    }
+  }
+
   // 获取数据库路径
   getDatabasePath = async (): Promise<string> => {
-    return this.sendRequest<string>('getDatabasePath');
+    if (!this.client) throw new Error('Electron IPC client not available');
+    return this.client.sendRequest('getDatabasePath');
   };
 
   // 获取用户数据路径
   getUserDataPath = async (): Promise<string> => {
-    return this.sendRequest<string>('getUserDataPath');
+    if (!this.client) throw new Error('Electron IPC client not available');
+    return this.client.sendRequest('getUserDataPath');
   };
 
-  getDatabaseSchemaHash = async () => {
-    return this.sendRequest<string>('setDatabaseSchemaHash');
+  getDatabaseSchemaHash = async (): Promise<string> => {
+    if (!this.client) throw new Error('Electron IPC client not available');
+    return this.client.sendRequest('setDatabaseSchemaHash');
   };
 
-  setDatabaseSchemaHash = async (hash: string | undefined) => {
+  setDatabaseSchemaHash = async (hash: string | undefined): Promise<void> => {
+    if (!this.client) throw new Error('Electron IPC client not available');
     if (!hash) return;
 
-    return this.sendRequest('setDatabaseSchemaHash', hash);
+    return this.client.sendRequest('setDatabaseSchemaHash', hash);
   };
 
-  getFilePathById = async (id: string) => {
-    return this.sendRequest<string>('getStaticFilePath', id);
+  getFilePathById = async (id: string): Promise<string> => {
+    if (!this.client) throw new Error('Electron IPC client not available');
+    return this.client.sendRequest('getStaticFilePath', id);
   };
 
-  deleteFiles = async (paths: string[]) => {
-    return this.sendRequest<{ errors?: { message: string; path: string }[]; success: boolean }>(
-      'deleteFiles',
-      paths,
-    );
+  deleteFiles = async (
+    paths: string[],
+  ): Promise<{ errors?: { message: string; path: string }[]; success: boolean }> => {
+    if (!this.client) throw new Error('Electron IPC client not available');
+    return this.client.sendRequest('deleteFiles', paths);
   };
 }
 
-export const electronIpcClient = new LobeHubElectronIpcClient(packageJSON.name);
+export const electronIpcClient = new LobeHubElectronIpcClient();

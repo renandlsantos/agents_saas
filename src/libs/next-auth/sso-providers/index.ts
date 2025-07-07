@@ -4,6 +4,7 @@ import Authentik from './authentik';
 import AzureAD from './azure-ad';
 import Casdoor from './casdoor';
 import CloudflareZeroTrust from './cloudflare-zero-trust';
+import Credentials from './credentials';
 import GenericOIDC from './generic-oidc';
 import Github from './github';
 import Google from './google';
@@ -28,4 +29,5 @@ export const ssoProviders = [
   WeChat,
   Keycloak,
   Google,
+  Credentials,
 ];

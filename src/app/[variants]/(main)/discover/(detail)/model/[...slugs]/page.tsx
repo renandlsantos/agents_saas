@@ -50,12 +50,7 @@ export const generateMetadata = async (props: DiscoverPageProps) => {
   const { meta, createdAt, providers } = data;
 
   return {
-    authors: [
-      { name: meta.title },
-      { name: 'Agents SaaS', url: 'https://agentssaas.com' },
-      // GitHub link removed
-      // { name: 'LobeChat', url: 'https://github.com/lobehub/lobe-chat' },
-    ],
+    authors: [{ name: meta.title }, { name: 'Agents SaaS', url: 'https://agentssaas.com' }],
     webpage: {
       enable: true,
       search: '/discover/search',

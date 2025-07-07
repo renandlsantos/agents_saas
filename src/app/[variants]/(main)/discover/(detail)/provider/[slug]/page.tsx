@@ -45,12 +45,7 @@ export const generateMetadata = async (props: DiscoverPageProps) => {
   const { meta, createdAt, models } = data;
 
   return {
-    authors: [
-      { name: meta.title },
-      { name: 'Agents SaaS', url: 'https://agentssaas.com' },
-      // GitHub link removed
-      // { name: 'LobeChat', url: 'https://github.com/lobehub/lobe-chat' },
-    ],
+    authors: [{ name: meta.title }, { name: 'Agents SaaS', url: 'https://agentssaas.com' }],
     ...metadataModule.generate({
       alternate: true,
       description: td(`${identifier}.description`) || t('discover.providers.description'),

@@ -17,67 +17,82 @@ export class FileService {
   private userId: string;
   private fileModel: FileModel;
 
-  private impl: FileServiceImpl = createFileServiceModule();
+  private impl: FileServiceImpl | null = null;
 
   constructor(db: LobeChatDatabase, userId: string) {
     this.userId = userId;
     this.fileModel = new FileModel(db, userId);
   }
 
+  private async getImpl(): Promise<FileServiceImpl> {
+    if (!this.impl) {
+      this.impl = await createFileServiceModule();
+    }
+    return this.impl;
+  }
+
   /**
    * 删除文件
    */
   public async deleteFile(key: string) {
-    return this.impl.deleteFile(key);
+    const impl = await this.getImpl();
+    return impl.deleteFile(key);
   }
 
   /**
    * 批量删除文件
    */
   public async deleteFiles(keys: string[]) {
-    return this.impl.deleteFiles(keys);
+    const impl = await this.getImpl();
+    return impl.deleteFiles(keys);
   }
 
   /**
    * 获取文件内容
    */
   public async getFileContent(key: string): Promise<string> {
-    return this.impl.getFileContent(key);
+    const impl = await this.getImpl();
+    return impl.getFileContent(key);
   }
 
   /**
    * 获取文件字节数组
    */
   public async getFileByteArray(key: string): Promise<Uint8Array> {
-    return this.impl.getFileByteArray(key);
+    const impl = await this.getImpl();
+    return impl.getFileByteArray(key);
   }
 
   /**
    * 创建预签名上传URL
    */
   public async createPreSignedUrl(key: string): Promise<string> {
-    return this.impl.createPreSignedUrl(key);
+    const impl = await this.getImpl();
+    return impl.createPreSignedUrl(key);
   }
 
   /**
    * 创建预签名预览URL
    */
   public async createPreSignedUrlForPreview(key: string, expiresIn?: number): Promise<string> {
-    return this.impl.createPreSignedUrlForPreview(key, expiresIn);
+    const impl = await this.getImpl();
+    return impl.createPreSignedUrlForPreview(key, expiresIn);
   }
 
   /**
    * 上传内容
    */
   public async uploadContent(path: string, content: string) {
-    return this.impl.uploadContent(path, content);
+    const impl = await this.getImpl();
+    return impl.uploadContent(path, content);
   }
 
   /**
    * 获取完整文件URL
    */
   public async getFullFileUrl(url?: string | null, expiresIn?: number): Promise<string> {
-    return this.impl.getFullFileUrl(url, expiresIn);
+    const impl = await this.getImpl();
+    return impl.getFullFileUrl(url, expiresIn);
   }
 
   async downloadFileToLocal(

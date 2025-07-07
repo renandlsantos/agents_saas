@@ -1,0 +1,297 @@
+version: '3.8'
+
+services:
+  # PostgreSQL com pgvector para RAG
+  postgresql:
+    image: pgvector/pgvector:pg17
+    container_name: agents-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LOBE_DB_NAME:-agents_chat_prod}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - agents-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${LOBE_DB_NAME:-agents_chat_prod}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # MinIO para armazenamento de arquivos
+  minio:
+    image: minio/minio:latest
+    container_name: agents-minio
+    restart: unless-stopped
+    ports:
+      - "${MINIO_PORT:-9000}:${MINIO_PORT:-9000}"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
+      MINIO_BROWSER_REDIRECT_URL: ${NEXT_PUBLIC_SITE_URL}
+    volumes:
+      - minio_data:/data
+    networks:
+      - agents-network
+    command: server /data --address ":${MINIO_PORT:-9000}" --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${MINIO_PORT:-9000}/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Casdoor para autenticação
+  casdoor:
+    image: casbin/casdoor:v1.843.0
+    container_name: agents-casdoor
+    restart: unless-stopped
+    ports:
+      - "${CASDOOR_PORT:-8000}:${CASDOOR_PORT:-8000}"
+    environment:
+      httpport: ${CASDOOR_PORT:-8000}
+      RUNNING_IN_DOCKER: "true"
+      driverName: "postgres"
+      dataSourceName: "user=postgres password=${POSTGRES_PASSWORD} host=postgresql port=5432 sslmode=disable dbname=casdoor"
+      runmode: "prod"
+      logConfig_console: "true"
+      logConfig_file: "true"
+      logConfig_level: "Info"
+    volumes:
+      - ./init_data.json:/init_data.json
+      - casdoor_logs:/app/logs
+    networks:
+      - agents-network
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CASDOOR_PORT:-8000}/api/get-health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Agents Chat - Aplicação Principal
+  agents-chat:
+    image: ${CUSTOM_IMAGE_NAME:-lobehub/lobe-chat-database:latest}
+    container_name: agents-chat-app
+    restart: unless-stopped
+    ports:
+      - "${LOBE_PORT:-3210}:3210"
+    environment:
+      # Configurações do Banco de Dados
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${LOBE_DB_NAME:-agents_chat_prod}
+      DATABASE_DRIVER: node
+
+      # Configurações de Autenticação
+      NEXT_AUTH_SSO_PROVIDERS: casdoor
+      AUTH_CASDOOR_ISSUER: ${AUTH_CASDOOR_ISSUER:-http://localhost:${CASDOOR_PORT:-8000}}
+      KEY_VAULTS_SECRET: ${KEY_VAULTS_SECRET}
+      NEXT_AUTH_SECRET: ${NEXT_AUTH_SECRET}
+
+      # Configurações do S3/MinIO
+      S3_BUCKET: ${MINIO_LOBE_BUCKET:-agents-chat-files}
+      S3_ENDPOINT: http://minio:${MINIO_PORT:-9000}
+      S3_ENABLE_PATH_STYLE: "1"
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-admin}
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-admin}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      S3_SET_ACL: "0"
+      S3_REGION: us-east-1
+
+      # Configurações de API Keys
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      AZURE_API_KEY: ${AZURE_API_KEY}
+      AZURE_ENDPOINT: ${AZURE_ENDPOINT}
+      AZURE_API_VERSION: ${AZURE_API_VERSION}
+
+      # Configurações de Proxy (opcional)
+      OPENAI_PROXY_URL: ${OPENAI_PROXY_URL}
+      ANTHROPIC_PROXY_URL: ${ANTHROPIC_PROXY_URL}
+      GOOGLE_PROXY_URL: ${GOOGLE_PROXY_URL}
+
+      # Configurações Gerais
+      NODE_ENV: production
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      NEXT_PUBLIC_SERVICE_MODE: server
+
+      # Configurações de Email (opcional)
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+
+      # Configurações de Monitoramento (opcional)
+      SENTRY_DSN: ${SENTRY_DSN}
+
+      # Configurações de Performance
+      NODE_OPTIONS: "--max-old-space-size=2048"
+
+      # Configurações de Segurança
+      ACCESS_CODE: ${ACCESS_CODE}
+
+      # Configurações de Features
+      FEATURE_FLAGS: ${FEATURE_FLAGS}
+
+      # Configurações de Log
+      DEBUG: ${DEBUG:-false}
+
+    volumes:
+      - app_logs:/app/logs
+      - app_cache:/app/.next/cache
+    networks:
+      - agents-network
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      casdoor:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3210/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.agents-chat.rule=Host(`${NEXT_PUBLIC_SITE_URL#https://}`)"
+      - "traefik.http.routers.agents-chat.tls=true"
+      - "traefik.http.services.agents-chat.loadbalancer.server.port=3210"
+
+  # Redis para cache (opcional, para melhor performance)
+  redis:
+    image: redis:7-alpine
+    container_name: agents-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - agents-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Nginx para proxy reverso (alternativa ao Traefik)
+  nginx:
+    image: nginx:alpine
+    container_name: agents-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - agents-network
+    depends_on:
+      - agents-chat
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/agents-chat/data/postgres
+  minio_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/agents-chat/data/minio
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/agents-chat/data/redis
+  app_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/agents-chat/logs/app
+  app_cache:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/agents-chat/cache
+  casdoor_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/agents-chat/logs/casdoor
+  nginx_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/agents-chat/logs/nginx
+
+networks:
+  agents-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

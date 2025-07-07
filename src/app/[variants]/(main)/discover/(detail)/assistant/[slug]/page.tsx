@@ -48,8 +48,6 @@ export const generateMetadata = async (props: DiscoverPageProps) => {
     authors: [
       { name: author, url: homepage },
       { name: 'Agents SaaS', url: 'https://agentssaas.com' },
-      // GitHub link removed
-      // { name: 'LobeChat', url: 'https://github.com/lobehub/lobe-chat' },
     ],
     keywords: meta.tags,
     ...metadataModule.generate({

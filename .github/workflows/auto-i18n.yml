@@ -19,7 +19,7 @@ jobs:
       - name: Configure Git
         run: |
           git config --global user.name "lobehubbot"
-          git config --global user.email "i@lobehub.com"
+          git config --global user.email "contato@agentssaas.com"
 
       - uses: actions/checkout@v4
         with:

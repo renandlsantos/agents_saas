@@ -12,6 +12,6 @@ export const isDesktop = process.env.NEXT_PUBLIC_IS_DESKTOP_APP === '1';
 export const isDeprecatedEdition = !isServerMode && !isUsePgliteDB;
 
 // @ts-ignore
-export const isCustomBranding = BRANDING_NAME !== 'Agents Chat';
+export const isCustomBranding = BRANDING_NAME !== 'LobeChat';
 // @ts-ignore
-export const isCustomORG = ORG_NAME !== 'Agents SAAS';
+export const isCustomORG = ORG_NAME !== 'LobeHub';
