@@ -1,9 +1,12 @@
 import NextAuth from 'next-auth';
 
-import authConfig from './auth.config';
+import authConfig from './auth.config.edge';
 
 /**
- * NextAuth initialization without Database adapter
+ * NextAuth initialization for Edge Runtime
+ *
+ * This version uses an Edge-compatible configuration that excludes
+ * providers requiring database access (like credentials provider).
  *
  * @example
  * ```ts

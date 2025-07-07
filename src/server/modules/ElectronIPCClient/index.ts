@@ -2,9 +2,22 @@
 let ElectronIpcClient: any;
 let packageJSON: any;
 
-if (typeof window === 'undefined' && typeof process !== 'undefined' && process.versions?.electron) {
-  ElectronIpcClient = require('@lobechat/electron-server-ipc').ElectronIpcClient;
-  packageJSON = require('@/../apps/desktop/package.json');
+// Check for Node.js runtime and electron environment
+// Avoid dynamic imports in Edge Runtime
+if (
+  typeof window === 'undefined' &&
+  typeof process !== 'undefined' &&
+  process.versions?.electron &&
+  // Additional check to ensure we're not in Edge Runtime
+  process.versions?.node !== undefined
+) {
+  try {
+    ElectronIpcClient = require('@lobechat/electron-server-ipc').ElectronIpcClient;
+    packageJSON = require('@/../apps/desktop/package.json');
+  } catch (error) {
+    // Silently fail if modules cannot be loaded
+    console.warn('Failed to load electron modules:', error);
+  }
 }
 
 class LobeHubElectronIpcClient {

@@ -195,7 +195,9 @@ const nextConfig: NextConfig = {
     },
   ],
   // when external packages in dev mode with turbopack, this config will lead to bundle error
-  serverExternalPackages: isProd ? ['@electric-sql/pglite'] : undefined,
+  serverExternalPackages: isProd
+    ? ['@electric-sql/pglite', '@lobechat/electron-server-ipc', 'pg']
+    : undefined,
 
   transpilePackages: ['pdfjs-dist', 'mermaid'],
 
@@ -223,12 +225,31 @@ const nextConfig: NextConfig = {
     // https://github.com/pinojs/pino/issues/688#issuecomment-637763276
     config.externals.push('pino-pretty');
 
+    // Exclude electron-specific packages and database packages from Edge Runtime
+    if (typeof config.externals === 'object' && !Array.isArray(config.externals)) {
+      config.externals['@lobechat/electron-server-ipc'] = '@lobechat/electron-server-ipc';
+      config.externals['electron'] = 'electron';
+      config.externals['pg'] = 'pg';
+      config.externals['pg-native'] = 'pg-native';
+    } else {
+      config.externals = config.externals || [];
+      if (Array.isArray(config.externals)) {
+        config.externals.push('@lobechat/electron-server-ipc', 'electron', 'pg', 'pg-native');
+      }
+    }
+
     config.resolve.alias.canvas = false;
 
     // to ignore epub2 compile error
     // refs: https://github.com/lobehub/lobe-chat/discussions/6769
     config.resolve.fallback = {
       ...config.resolve.fallback,
+      
+crypto: false,
+      
+      // Add fallbacks for Node.js modules that might be used by electron packages
+fs: false,
+      path: false,
       zipfile: false,
     };
     return config;

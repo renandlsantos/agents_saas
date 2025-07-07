@@ -8,11 +8,28 @@ import { LobeChatDatabase } from '@/database/type';
  */
 let cachedDB: LobeChatDatabase | null = null;
 
+/**
+ * Check if we're in Edge Runtime
+ */
+const isEdgeRuntime = () => {
+  // Check for Edge Runtime
+  // In Edge Runtime, process and many Node globals are undefined
+  return (
+    typeof process === 'undefined' || (typeof process !== 'undefined' && !process.versions?.node)
+  );
+};
+
 export const getServerDB = async (): Promise<LobeChatDatabase> => {
   // 如果已经有缓存的实例，直接返回
   if (cachedDB) return cachedDB;
 
   try {
+    // In Edge Runtime, always use the web server database
+    if (isEdgeRuntime()) {
+      cachedDB = getDBInstance();
+      return cachedDB;
+    }
+
     // 根据环境选择合适的数据库实例
     if (isDesktop) {
       // 动态导入 electron 模块，避免在 Edge Runtime 中加载
