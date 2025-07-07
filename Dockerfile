@@ -15,20 +15,7 @@ RUN \
     fi \
     # Add required package
     && apt update \
-    && apt install ca-certificates proxychains-ng -qy \
-    # Prepare required package to distroless
-    && mkdir -p /distroless/bin /distroless/etc /distroless/etc/ssl/certs /distroless/lib \
-    # Copy proxychains to distroless
-    && cp /usr/lib/$(arch)-linux-gnu/libproxychains.so.4 /distroless/lib/libproxychains.so.4 \
-    && cp /usr/lib/$(arch)-linux-gnu/libdl.so.2 /distroless/lib/libdl.so.2 \
-    && cp /usr/bin/proxychains4 /distroless/bin/proxychains \
-    && cp /etc/proxychains4.conf /distroless/etc/proxychains4.conf \
-    # Copy node to distroless
-    && cp /usr/lib/$(arch)-linux-gnu/libstdc++.so.6 /distroless/lib/libstdc++.so.6 \
-    && cp /usr/lib/$(arch)-linux-gnu/libgcc_s.so.1 /distroless/lib/libgcc_s.so.1 \
-    && cp /usr/local/bin/node /distroless/bin/node \
-    # Copy CA certificates to distroless
-    && cp /etc/ssl/certs/ca-certificates.crt /distroless/etc/ssl/certs/ca-certificates.crt \
+    && apt install ca-certificates -qy \
     # Cleanup temp files
     && rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
 
@@ -95,30 +82,18 @@ COPY . .
 # run build standalone for docker version
 RUN npm run build:docker
 
-## Application image, copy all the files for production
-FROM node:22-slim AS app
-
-COPY --from=base /distroless/ /
-
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder /app/.next/standalone /app/
-
-# Copy server launcher
-COPY --from=builder /app/scripts/serverLauncher/startServer.js /app/startServer.js
-
-RUN \
-    # Add nextjs:nodejs to run the app
-    groupadd -g 1001 -r nodejs \
-    && useradd -r -g nodejs -u 1001 nextjs \
-    # Set permission for nextjs:nodejs
-    && chown -R nextjs:nodejs /app /etc/proxychains4.conf
-
-## Production image, copy all the files and run next
+## Production image - simplified approach
 FROM node:22-slim
 
-# Copy all the files from app, set the correct permission for prerender cache
-COPY --from=app / /
+# Create nodejs user
+RUN groupadd -g 1001 -r nodejs && useradd -r -g nodejs -u 1001 nextjs
+
+# Copy application files
+COPY --from=builder /app/.next/standalone /app/
+COPY --from=builder /app/scripts/serverLauncher/startServer.js /app/startServer.js
+
+# Set permissions
+RUN chown -R nextjs:nodejs /app
 
 ENV NODE_ENV="production" \
     NODE_OPTIONS="--dns-result-order=ipv4first --use-openssl-ca" \
