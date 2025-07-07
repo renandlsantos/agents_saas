@@ -70,27 +70,39 @@ services:
     container_name: agents-chat-app
     restart: unless-stopped
     ports:
-      - "${LOBE_PORT}:${LOBE_PORT}"
+      - "${LOBE_PORT:-3210}:3210"
     environment:
+      # Fix para erros de CSP (Three.js)
+      - NEXT_PUBLIC_CSP_DISABLED=true
       # Banco de Dados
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/${LOBE_DB_NAME}
+      - DATABASE_DRIVER=node
       # Redis
       - REDIS_URL=redis://redis:6379
       # MinIO/S3
       - S3_ENDPOINT=http://minio:9000
-      - S3_ACCESS_KEY=minioadmin
-      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - S3_ACCESS_KEY_ID=minioadmin
+      - S3_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - S3_BUCKET=${MINIO_LOBE_BUCKET}
-      - S3_REGION=us-east-1
-      - S3_FORCE_PATH_STYLE=true
-      # Autenticação
+      - S3_PUBLIC_DOMAIN=${NEXT_PUBLIC_SITE_URL}:9000
+      - NEXT_PUBLIC_S3_DOMAIN=${NEXT_PUBLIC_SITE_URL}:9000
+      # Autenticação Casdoor
       - AUTH_CASDOOR_ISSUER=${AUTH_CASDOOR_ISSUER}
-      - AUTH_CASDOOR_CLIENT_ID=agents-chat
-      - AUTH_CASDOOR_CLIENT_SECRET=agents-chat-secret
+      - AUTH_CASDOOR_ID=${AUTH_CASDOOR_ID}
+      - AUTH_CASDOOR_SECRET=${AUTH_CASDOOR_SECRET}
+      - AUTH_CASDOOR_ENDPOINT=http://casdoor:8000
+      - AUTH_CASDOOR_PUBLIC_ENDPOINT=${AUTH_CASDOOR_ISSUER}
+      - NEXT_AUTH_SSO_PROVIDERS=casdoor
+      - NEXTAUTH_URL=${NEXT_PUBLIC_SITE_URL}
       # Aplicação
+      - APP_URL=${NEXT_PUBLIC_SITE_URL}
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
-      - LOBE_PORT=${LOBE_PORT}
+      - NEXT_PUBLIC_SERVICE_MODE=server
+      - NEXT_PUBLIC_ENABLE_NEXT_AUTH=1
+      - HOSTNAME=0.0.0.0
+      - PORT=3210
       - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=2048
       # Segurança
       - NEXT_AUTH_SECRET=${NEXT_AUTH_SECRET}
       - KEY_VAULTS_SECRET=${KEY_VAULTS_SECRET}
@@ -103,6 +115,7 @@ services:
       - AZURE_API_VERSION=${AZURE_API_VERSION}
       # Configurações opcionais
       - ACCESS_CODE=${ACCESS_CODE}
+      - FEATURE_FLAGS=${FEATURE_FLAGS}
       - DEBUG=${DEBUG}
     depends_on:
       - postgres
