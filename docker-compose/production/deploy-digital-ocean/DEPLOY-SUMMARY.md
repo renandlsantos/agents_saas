@@ -1,256 +1,263 @@
-# 🚀 Agents Chat - Resumo dos Scripts de Deploy
+# 📋 Resumo dos Scripts de Deploy - Agents Chat
 
-## 📁 Arquivos Criados
+## 🎯 Visão Geral
 
-### 1. `deploy-production.sh` - Script Principal de Deploy
+Esta pasta contém todos os scripts necessários para deploy do Agents Chat em produção no Digital Ocean, com soluções específicas para problemas de memória durante builds Docker.
 
-**Função:** Deploy completo do zero em produção
+## 📁 Estrutura dos Arquivos
 
-- ✅ Instalação completa do ambiente
-- ✅ Configuração de segurança
-- ✅ **Build personalizado do seu código**
-- ✅ Configuração de SSL
-- ✅ Backup e monitoramento
+```
+docker-compose/production/deploy-digital-ocean/
+├── deploy-production.sh      # Deploy completo com build local otimizado
+├── deploy-prebuilt.sh        # Deploy rápido com imagem pré-construída
+├── setup-swap.sh            # Configuração de swap e otimização
+├── diagnose.sh              # Diagnóstico completo do sistema
+├── README.md                # Documentação principal
+└── DEPLOY-SUMMARY.md        # Este arquivo
+```
 
-**Uso:**
+## 🚀 Fluxo de Deploy Recomendado
+
+### Para VMs com 2GB RAM (Recomendado)
 
 ```bash
-chmod +x deploy-production.sh
-./deploy-production.sh
+# 1. Diagnóstico inicial
+./diagnose.sh
+
+# 2. Configurar swap (se necessário)
+sudo ./setup-swap.sh
+
+# 3. Deploy com imagem pré-construída
+./deploy-prebuilt.sh meusite.com admin@meusite.com
 ```
 
-### 2. `quick-deploy.sh` - Deploy Rápido
-
-**Função:** Deploy rápido em servidor já configurado
-
-- ✅ Para servidores com Docker já instalado
-- ✅ **Build personalizado opcional**
-- ✅ Configuração básica
-
-**Uso:**
+### Para VMs com 4GB+ RAM
 
 ```bash
-chmod +x quick-deploy.sh
-./quick-deploy.sh
+# 1. Diagnóstico inicial
+./diagnose.sh
+
+# 2. Deploy completo com build local
+./deploy-production.sh meusite.com admin@meusite.com
 ```
 
-### 3. `update-deploy.sh` - Atualização de Deploy
+## 🔧 Scripts Detalhados
 
-**Função:** Atualizar deploy com novas versões
+### 1. `diagnose.sh` - Diagnóstico do Sistema
 
-- ✅ Backup automático antes da atualização
-- ✅ Atualização do código do repositório
-- ✅ **Build da nova versão personalizada**
-- ✅ Reinicialização dos serviços
+**Uso:** `./diagnose.sh`
 
-**Uso:**
+**O que faz:**
+
+- ✅ Verifica sistema operacional e recursos
+- ✅ Analisa memória, CPU, disco e swap
+- ✅ Verifica Docker e permissões
+- ✅ Testa conectividade de rede
+- ✅ Verifica serviços do sistema
+- ✅ Analisa logs recentes
+- ✅ Fornece recomendações específicas
+
+**Quando usar:** Sempre antes de qualquer deploy
+
+### 2. `setup-swap.sh` - Configuração de Swap
+
+**Uso:** `sudo ./setup-swap.sh`
+
+**O que faz:**
+
+- ✅ Configura swap permanente baseado na RAM
+- ✅ Otimiza configurações do sistema (swappiness, cache pressure)
+- ✅ Configura Docker para usar menos memória
+- ✅ Reinicia Docker com configurações otimizadas
+
+**Quando usar:** Se RAM < 4GB ou se `diagnose.sh` recomendar
+
+### 3. `deploy-prebuilt.sh` - Deploy Rápido
+
+**Uso:** `./deploy-prebuilt.sh <dominio> [email]`
+
+**O que faz:**
+
+- ✅ Usa imagem oficial do Docker Hub (sem build local)
+- ✅ Configura Nginx, SSL, firewall, fail2ban
+- ✅ Muito mais rápido e usa menos recursos
+- ✅ Ideal para VMs com 2GB de RAM
+
+**Vantagens:**
+
+- ⚡ Muito rápido (5-10 minutos)
+- 💾 Usa pouca memória
+- 🔧 Configuração completa
+- 🛡️ Segurança incluída
+
+**Desvantagens:**
+
+- ❌ Não inclui suas modificações personalizadas
+- ❌ Usa versão oficial do projeto
+
+### 4. `deploy-production.sh` - Deploy Completo
+
+**Uso:** `./deploy-production.sh <dominio> [email]`
+
+**O que faz:**
+
+- ✅ Verifica memória disponível
+- ✅ Configura swap temporário se necessário
+- ✅ Tenta build otimizado com configurações de memória
+- ✅ Fallback para build alternativo com menos recursos
+- ✅ Fallback para imagem pré-construída se tudo falhar
+- ✅ Configura Nginx, SSL, firewall, fail2ban
+
+**Vantagens:**
+
+- ✅ Inclui suas modificações personalizadas
+- ✅ Controle total sobre o código
+- ✅ Configuração completa
+- 🛡️ Segurança incluída
+
+**Desvantagens:**
+
+- ⏱️ Mais lento (15-30 minutos)
+- 💾 Usa mais memória
+- 🔧 Pode falhar em VMs pequenas
+
+## 🛠️ Solução para Erro de Memória (Exit Code 137)
+
+### Problema
+
+```
+ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build:docker" did not complete successfully: exit code: 137
+```
+
+### Soluções (em ordem de prioridade)
+
+#### 1. **Configurar Swap (Recomendado)**
 
 ```bash
-chmod +x update-deploy.sh
-./update-deploy.sh
+sudo ./setup-swap.sh
 ```
 
-### 4. `docker-compose-production.yml` - Configuração Docker
-
-**Função:** Configuração otimizada para produção
-
-- ✅ PostgreSQL com pgvector
-- ✅ MinIO para armazenamento
-- ✅ Casdoor para autenticação
-- ✅ **Imagem personalizada configurável**
-- ✅ Redis para cache (opcional)
-- ✅ Nginx como proxy reverso
-
-### 5. `nginx-production.conf` - Configuração Nginx
-
-**Função:** Proxy reverso otimizado
-
-- ✅ SSL/TLS configurado
-- ✅ Rate limiting
-- ✅ Headers de segurança
-- ✅ Cache para assets estáticos
-- ✅ WebSocket support
-
-### 6. `README-DEPLOY-PROD.md` - Documentação Completa
-
-**Função:** Guia detalhado de deploy
-
-- ✅ Passo a passo completo
-- ✅ Configurações avançadas
-- ✅ Troubleshooting
-- ✅ Workflow de desenvolvimento
-
-## 🎯 Fluxo de Deploy com Build Personalizado
-
-### Primeira Vez (Deploy Completo)
+#### 2. **Usar Imagem Pré-construída**
 
 ```bash
-# 1. No servidor
-./deploy-production.sh
-
-# 2. Responder perguntas:
-# - "Deseja fazer build da sua versão personalizada?" → y
-# - "Deseja configurar SSL?" → y
-# - Digite seu domínio
-
-# 3. Configurar API keys no .env
-nano /opt/agents-chat/.env
-
-# 4. Reiniciar serviços
-cd /opt/agents-chat
-docker-compose restart
+./deploy-prebuilt.sh <seu-dominio> <seu-email>
 ```
 
-### Atualizações (Com Suas Modificações)
+#### 3. **Aumentar RAM da VM**
+
+- No Digital Ocean Dashboard
+- Resize Droplet para plano com mais RAM
+- Mínimo recomendado: 4GB
+
+#### 4. **Build Manual com Configurações Específicas**
 
 ```bash
-# 1. Desenvolvimento local
-git add .
-git commit -m "Nova funcionalidade"
-git push origin main
-
-# 2. No servidor de produção
-./update-deploy.sh
-
-# 3. Responder "y" para build personalizado
+export NODE_OPTIONS="--max-old-space-size=1024"
+export DOCKER_BUILDKIT=1
+docker build --no-cache --memory=2g --memory-swap=4g -t agents-chat:latest .
 ```
 
-## 🔧 Configurações Importantes
+## 📊 Comparação de Requisitos
 
-### Build Personalizado vs Imagem Oficial
+| Aspecto             | Imagem Pré-construída | Build Local | Build Local + Swap |
+| ------------------- | --------------------- | ----------- | ------------------ |
+| **RAM Mínima**      | 1GB                   | 2GB         | 1GB                |
+| **RAM Recomendada** | 2GB                   | 4GB         | 2GB                |
+| **Tempo**           | 5-10 min              | 15-30 min   | 20-40 min          |
+| **Seu Código**      | ❌ Não                | ✅ Sim      | ✅ Sim             |
+| **Velocidade**      | ⚡ Muito rápido       | 🐌 Lento    | 🐌 Muito lento     |
+| **Confiabilidade**  | ✅ Alta               | ⚠️ Média    | ⚠️ Baixa           |
 
-| Aspecto           | Build Personalizado      | Imagem Oficial   |
-| ----------------- | ------------------------ | ---------------- |
-| **Seu código**    | ✅ Incluído              | ❌ Não incluído  |
-| **Customizações** | ✅ Funcionam             | ❌ Não funcionam |
-| **Velocidade**    | ⚠️ Mais lento            | ✅ Mais rápido   |
-| **Controle**      | ✅ Total                 | ⚠️ Limitado      |
-| **Estabilidade**  | ⚠️ Depende do seu código | ✅ Testada       |
+## 🎯 Recomendação Final
 
-### Variáveis de Ambiente Importantes
+### Para Produção com Modificações Personalizadas
 
-```env
-# Configuração da Imagem
-CUSTOM_IMAGE_NAME=agents-chat-custom:latest
-USE_CUSTOM_BUILD=true
+1. **Use VM com 4GB+ RAM**
+2. **Execute:** `./deploy-production.sh <dominio> <email>`
 
-# API Keys (CONFIGURE!)
-OPENAI_API_KEY=sk-your-key
-ANTHROPIC_API_KEY=sk-ant-your-key
+### Para Produção Rápida ou VMs Pequenas
 
-# Domínio (CONFIGURE!)
-NEXT_PUBLIC_SITE_URL=https://seu-dominio.com
-```
+1. **Execute:** `./diagnose.sh`
+2. **Se necessário:** `sudo ./setup-swap.sh`
+3. **Execute:** `./deploy-prebuilt.sh <dominio> <email>`
 
-## 📊 Monitoramento e Logs
+### Para Desenvolvimento/Teste
+
+1. **Execute:** `./deploy-prebuilt.sh localhost`
+
+## 🔍 Monitoramento Pós-Deploy
 
 ### Comandos Úteis
 
 ```bash
 # Status dos serviços
+cd /opt/agents-chat
 docker-compose ps
 
 # Logs em tempo real
 docker-compose logs -f
 
-# Logs de um serviço específico
-docker-compose logs -f agents-chat
-
-# Uso de recursos
+# Verificar recursos
+free -h
 docker stats
 
-# Backup manual
-./backup.sh
+# Backup
+docker-compose exec db pg_dump -U postgres > backup.sql
 ```
 
-### Logs Importantes
+### Atualizações
 
-- **Aplicação:** `/opt/agents-chat/logs/app/`
-- **Nginx:** `/opt/agents-chat/logs/nginx/`
-- **Casdoor:** `/opt/agents-chat/logs/casdoor/`
-- **Monitoramento:** `/opt/agents-chat/monitor.log`
-- **Backup:** `/opt/agents-chat/backup.log`
+```bash
+# Atualizar código
+cd /opt/agents-chat
+git pull origin main
 
-## 🚨 Troubleshooting
+# Rebuild (se usando build local)
+docker-compose down
+docker-compose up -d --build
+
+# Ou usar imagem pré-construída atualizada
+docker pull lobehub/lobe-chat:latest
+docker-compose up -d
+```
+
+## 🆘 Troubleshooting
 
 ### Problemas Comuns
 
-1. **Build falha:**
+1. **Erro de permissão Docker:**
 
    ```bash
-   # Verificar Docker
-   docker --version
-   
-   # Verificar espaço em disco
-   df -h
-   
-   # Limpar cache Docker
-   docker system prune -a
+   sudo usermod -aG docker $USER
+   newgrp docker
    ```
 
-2. **Serviços não iniciam:**
+2. **Pouca memória:**
 
    ```bash
-   # Verificar logs
+   sudo ./setup-swap.sh
+   ```
+
+3. **Build falha:**
+
+   ```bash
+   ./deploy-prebuilt.sh <dominio> <email>
+   ```
+
+4. **Serviços não iniciam:**
+   ```bash
+   cd /opt/agents-chat
    docker-compose logs
-   
-   # Verificar configuração
-   docker-compose config
-   
-   # Reiniciar tudo
    docker-compose down && docker-compose up -d
    ```
 
-3. **SSL não funciona:**
-
-   ```bash
-   # Verificar certificados
-   sudo certbot certificates
-   
-   # Renovar manualmente
-   sudo certbot renew
-   ```
-
-## 🎉 Benefícios do Build Personalizado
-
-### ✅ Vantagens
-
-- **Seu código atualizado** sempre em produção
-- **Customizações funcionando** corretamente
-- **Controle total** sobre a versão
-- **Testes locais** refletem produção
-- **Deploy consistente** com desenvolvimento
-
-### ⚠️ Considerações
-
-- **Tempo de build** maior
-- **Espaço em disco** necessário
-- **Dependência** do seu código estar estável
-- **Responsabilidade** de manter funcionando
-
 ## 📞 Suporte
 
-### Recursos
-
-- **Documentação:** `README-DEPLOY-PROD.md`
-- **Scripts:** Todos os arquivos `.sh`
-- **Configurações:** `docker-compose-production.yml`
-- **Logs:** Diretório `/opt/agents-chat/logs/`
-
-### Comandos de Emergência
-
-```bash
-# Parar tudo
-docker-compose down
-
-# Voltar para imagem oficial
-sed -i 's/CUSTOM_IMAGE_NAME=.*/CUSTOM_IMAGE_NAME=lobehub\/lobe-chat-database:latest/' .env
-docker-compose up -d
-
-# Restaurar backup
-./backup.sh
-```
+- **Diagnóstico:** `./diagnose.sh`
+- **Documentação:** `README.md`
+- **Logs:** `docker-compose logs -f`
+- **Sistema:** `sudo journalctl -u docker -f`
 
 ---
 
-**🎯 Resultado Final:** Deploy completo do Agents Chat com **seu código personalizado** funcionando em produção com todas as melhores práticas de segurança, monitoramento e backup implementadas.
+**🎉 Pronto para deploy em produção!**

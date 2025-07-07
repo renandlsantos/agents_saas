@@ -1,190 +1,240 @@
-# 🚀 Agents Chat - Deploy Digital Ocean
+# 🚀 Deploy Agents Chat - Digital Ocean
 
-Esta pasta contém todos os scripts e configurações necessárias para fazer o deploy do Agents Chat em produção na Digital Ocean.
-
-## 📁 Estrutura dos Arquivos
-
-```
-docker-compose/production/deploy-digital-ocean/
-├── deploy-production.sh      # Script principal de deploy completo
-├── quick-deploy.sh           # Script de deploy rápido
-├── update-deploy.sh          # Script para atualizar deploy
-├── docker-compose-production.yml  # Configuração Docker otimizada
-├── nginx-production.conf     # Configuração Nginx para produção
-├── README-DEPLOY-PROD.md     # Documentação completa
-├── DEPLOY-SUMMARY.md         # Resumo dos scripts
-└── README.md                 # Este arquivo
-```
-
-## 🎯 Opções de Deploy
-
-### 1. Deploy Completo (Primeira Vez)
-
-```bash
-# No servidor Ubuntu 22.04
-chmod +x deploy-production.sh
-./deploy-production.sh
-```
-
-**O que faz:**
-
-- ✅ Instala Docker, Docker Compose, Nginx
-- ✅ Configura firewall e segurança
-- ✅ **Build personalizado do seu código**
-- ✅ Configura SSL com Let's Encrypt
-- ✅ Configura backup e monitoramento
-
-### 2. Deploy Rápido (Servidor já configurado)
-
-```bash
-# No servidor com Docker já instalado
-chmod +x quick-deploy.sh
-./quick-deploy.sh
-```
-
-**O que faz:**
-
-- ✅ Configuração básica
-- ✅ **Build personalizado opcional**
-- ✅ Inicia serviços
-
-### 3. Atualização (Com suas modificações)
-
-```bash
-# No servidor de produção
-chmod +x update-deploy.sh
-./update-deploy.sh
-```
-
-**O que faz:**
-
-- ✅ Backup automático
-- ✅ Atualiza código do repositório
-- ✅ **Build da nova versão personalizada**
-- ✅ Reinicia serviços
-
-## 🔧 Build Personalizado vs Imagem Oficial
-
-| Aspecto           | Build Personalizado | Imagem Oficial   |
-| ----------------- | ------------------- | ---------------- |
-| **Seu código**    | ✅ Incluído         | ❌ Não incluído  |
-| **Customizações** | ✅ Funcionam        | ❌ Não funcionam |
-| **Velocidade**    | ⚠️ Mais lento       | ✅ Mais rápido   |
-| **Controle**      | ✅ Total            | ⚠️ Limitado      |
+Guia completo para deploy do Agents Chat em produção no Digital Ocean.
 
 ## 📋 Pré-requisitos
 
-- Droplet Ubuntu 22.04 LTS na Digital Ocean
-- Domínio configurado e apontando para o IP
-- Acesso SSH ao servidor
-- Conhecimento básico de Linux
+- VM Ubuntu 22.04+ no Digital Ocean
+- Mínimo 2GB RAM (recomendado 4GB+)
+- Domínio configurado (opcional)
+- Acesso SSH à VM
 
-## 🚀 Fluxo de Trabalho
+## 🛠️ Scripts Disponíveis
 
-### Desenvolvimento Local
+### 1. `setup-swap.sh` - Configuração de Swap e Otimização
+
+**Execute PRIMEIRO se sua VM tem menos de 4GB de RAM:**
 
 ```bash
-# 1. Fazer suas modificações
-git add .
-git commit -m "Nova funcionalidade"
-git push origin main
+sudo ./setup-swap.sh
 ```
 
-### Deploy em Produção
+Este script:
+
+- Configura swap permanente baseado na RAM disponível
+- Otimiza configurações do sistema para builds Docker
+- Configura Docker para usar menos memória
+- Reinicia o Docker com configurações otimizadas
+
+### 2. `deploy-production.sh` - Deploy Completo com Build Local
+
+**Para builds personalizados (requer mais memória):**
 
 ```bash
-# 2. No servidor - Primeira vez
-./deploy-production.sh
-# Responder "y" para build personalizado
-
-# 3. Atualizações futuras
-./update-deploy.sh
-# Responder "y" para build da nova versão
+./deploy-production.sh < dominio > [email]
 ```
 
-## 📊 Monitoramento
+Este script:
 
-### Comandos Úteis
+- ✅ Verifica memória disponível
+- ✅ Configura swap temporário se necessário
+- ✅ Tenta build otimizado com configurações de memória
+- ✅ Fallback para build alternativo com menos recursos
+- ✅ Fallback para imagem pré-construída se tudo falhar
+- ✅ Configura Nginx, SSL, firewall, fail2ban
+
+### 3. `deploy-prebuilt.sh` - Deploy com Imagem Pré-construída
+
+**Recomendado para VMs com pouca RAM:**
 
 ```bash
-# Status dos serviços
+./deploy-prebuilt.sh < dominio > [email]
+```
+
+Este script:
+
+- ✅ Usa imagem oficial do Docker Hub (sem build local)
+- ✅ Muito mais rápido e usa menos recursos
+- ✅ Ideal para VMs com 2GB de RAM
+- ✅ Configura Nginx, SSL, firewall, fail2ban
+
+## 🔧 Solução para Erro de Memória (Exit Code 137)
+
+Se você encontrar o erro:
+
+```
+ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build:docker" did not complete successfully: exit code: 137
+```
+
+### Soluções em Ordem de Prioridade:
+
+#### 1. **Configurar Swap (Recomendado)**
+
+```bash
+sudo ./setup-swap.sh
+```
+
+#### 2. **Usar Imagem Pré-construída**
+
+```bash
+./deploy-prebuilt.sh <seu-dominio> <seu-email>
+```
+
+#### 3. **Aumentar RAM da VM**
+
+- No Digital Ocean Dashboard
+- Resize Droplet para plano com mais RAM
+- Mínimo recomendado: 4GB
+
+#### 4. **Build Manual com Configurações Específicas**
+
+```bash
+# Configurar variáveis de ambiente para usar menos memória
+export NODE_OPTIONS="--max-old-space-size=1024"
+export DOCKER_BUILDKIT=1
+
+# Build com limitações de memória
+docker build --no-cache --memory=2g --memory-swap=4g -t agents-chat:latest .
+```
+
+## 📊 Requisitos de Memória
+
+| Tipo de Deploy        | RAM Mínima | RAM Recomendada | Tempo Estimado |
+| --------------------- | ---------- | --------------- | -------------- |
+| Imagem Pré-construída | 1GB        | 2GB             | 5-10 min       |
+| Build Local           | 2GB        | 4GB             | 15-30 min      |
+| Build Local + Swap    | 1GB        | 2GB             | 20-40 min      |
+
+## 🚀 Deploy Rápido (Recomendado)
+
+Para a maioria dos casos, use o deploy com imagem pré-construída:
+
+```bash
+# 1. Configurar swap (se RAM < 4GB)
+sudo ./setup-swap.sh
+
+# 2. Deploy com imagem pré-construída
+./deploy-prebuilt.sh meusite.com admin@meusite.com
+```
+
+## 🔍 Monitoramento e Logs
+
+### Verificar Status dos Serviços
+
+```bash
+cd /opt/agents-chat
 docker-compose ps
-
-# Logs em tempo real
 docker-compose logs -f
+```
 
-# Backup manual
-./backup.sh
+### Verificar Uso de Memória
 
-# Verificar recursos
+```bash
+free -h
 docker stats
 ```
 
-### Logs Importantes
+### Verificar Logs do Sistema
 
-- **Aplicação:** `/opt/agents-chat/logs/app/`
-- **Nginx:** `/opt/agents-chat/logs/nginx/`
-- **Monitoramento:** `/opt/agents-chat/monitor.log`
-- **Backup:** `/opt/agents-chat/backup.log`
+```bash
+sudo journalctl -u docker -f
+sudo journalctl -u nginx -f
+```
 
-## 🔒 Segurança
+## 🔧 Comandos Úteis
+
+### Gerenciar Serviços
+
+```bash
+cd /opt/agents-chat
+
+# Parar serviços
+docker-compose down
+
+# Iniciar serviços
+docker-compose up -d
+
+# Reiniciar serviços
+docker-compose restart
+
+# Ver logs
+docker-compose logs -f
+```
+
+### Backup e Restore
+
+```bash
+# Backup
+docker-compose exec db pg_dump -U postgres > backup.sql
+
+# Restore
+docker-compose exec -T db psql -U postgres < backup.sql
+```
+
+### Atualizações
+
+```bash
+# Atualizar código
+cd /opt/agents-chat
+git pull origin main
+
+# Rebuild (se usando build local)
+docker-compose down
+docker-compose up -d --build
+
+# Ou usar imagem pré-construída atualizada
+docker pull lobehub/lobe-chat:latest
+docker-compose up -d
+```
+
+## 🛡️ Segurança
+
+O deploy inclui:
 
 - ✅ Firewall UFW configurado
-- ✅ Fail2ban para proteção
+- ✅ Fail2ban para proteção contra ataques
 - ✅ SSL/TLS com Let's Encrypt
-- ✅ Headers de segurança no Nginx
-- ✅ Rate limiting configurado
-
-## 📈 Escalabilidade
-
-### Para Alta Demanda
-
-1. **Aumentar recursos:** 4GB RAM, 4 vCPUs mínimo
-2. **Load balancer:** Digital Ocean Load Balancer
-3. **Banco gerenciado:** Digital Ocean Managed Databases
-4. **CDN:** Cloudflare para assets
-
-## 🚨 Troubleshooting
-
-### Problemas Comuns
-
-1. **Build falha:**
-
-   ```bash
-   docker system prune -a
-   df -h # Verificar espaço
-   ```
-
-2. **Serviços não iniciam:**
-
-   ```bash
-   docker-compose logs
-   docker-compose down && docker-compose up -d
-   ```
-
-3. **SSL não funciona:**
-   ```bash
-   sudo certbot certificates
-   sudo certbot renew
-   ```
+- ✅ Nginx como proxy reverso
+- ✅ Containers isolados
 
 ## 📞 Suporte
 
-- **Documentação:** `README-DEPLOY-PROD.md`
-- **Resumo:** `DEPLOY-SUMMARY.md`
-- **Issues:** GitHub do projeto
+Se encontrar problemas:
 
-## 🎉 Resultado
+1. **Verifique logs**: `docker-compose logs -f`
+2. **Verifique memória**: `free -h`
+3. **Verifique Docker**: `docker system df`
+4. **Limpe cache**: `docker system prune -a`
 
-Após o deploy, você terá:
+## 🔄 Atualizações Automáticas
 
-- ✅ **Seu código personalizado** funcionando em produção
-- ✅ Ambiente seguro e otimizado
-- ✅ Backup automático
-- ✅ Monitoramento básico
-- ✅ SSL/TLS ativo
-- ✅ Fácil atualização
+Para configurar atualizações automáticas:
 
----
+```bash
+# Criar script de atualização
+sudo nano /opt/agents-chat/update.sh
+```
 
-**🎯 Pronto para produção com suas modificações!**
+```bash
+#!/bin/bash
+cd /opt/agents-chat
+git pull origin main
+docker-compose down
+docker-compose up -d
+```
+
+```bash
+# Tornar executável
+chmod +x /opt/agents-chat/update.sh
+
+# Adicionar ao crontab (atualizar diariamente às 2h)
+crontab -e
+# Adicionar: 0 2 * * * /opt/agents-chat/update.sh
+```
+
+## 📝 Notas Importantes
+
+- **Backup**: Sempre faça backup antes de atualizações
+- **Monitoramento**: Configure alertas de uso de memória
+- **Segurança**: Mantenha o sistema atualizado
+- **Performance**: Use imagem pré-construída para VMs pequenas
