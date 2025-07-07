@@ -38,8 +38,7 @@ const nextConfig: NextConfig = {
     // but swc minification will remove the name
     // so we need to disable it
     // refs: https://github.com/lobehub/lobe-chat/pull/7430
-    // Enable serverMinification for Docker builds to work around webpack error
-    serverMinification: buildWithDocker ? true : false,
+    serverMinification: false,
     webVitalsAttribution: ['CLS', 'LCP'],
   },
   async headers() {
@@ -203,11 +202,20 @@ const nextConfig: NextConfig = {
 
   transpilePackages: ['pdfjs-dist', 'mermaid'],
 
-  webpack(config) {
+  webpack(config, { isServer }) {
     config.experiments = {
       asyncWebAssembly: true,
       layers: true,
     };
+
+    // Work around Next.js 15.3.5 webpack.WebpackError bug in Docker builds
+    if (buildWithDocker && isServer && config.plugins) {
+      config.plugins = config.plugins.filter((plugin: any) => {
+        const pluginName = plugin.constructor?.name || '';
+        // Remove the problematic minify plugin that causes webpack.WebpackError issue
+        return !pluginName.includes('MinifyPlugin');
+      });
+    }
 
     // 开启该插件会导致 pglite 的 fs bundler 被改表
     if (enableReactScan && !isUsePglite) {
