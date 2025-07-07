@@ -1,0 +1,155 @@
+version: '3.8'
+
+services:
+  # PostgreSQL otimizado para baixo consumo de memória
+  postgresql:
+    image: pgvector/pgvector:pg16
+    container_name: lobe-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-lobe}
+      POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-uSeBetterPassword}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c work_mem=4MB
+      -c max_connections=50
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c min_wal_size=1GB
+      -c max_wal_size=2GB
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME:-postgres}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  # Aplicação Lobe Chat
+  lobe-chat:
+    image: agents-chat-custom:latest
+    container_name: lobe-chat
+    restart: unless-stopped
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3210}:3210"
+    environment:
+      # Node.js otimizações para 8GB RAM
+      NODE_OPTIONS: "--max-old-space-size=2048 --optimize-for-size --gc-interval=100"
+      NODE_ENV: production
+      
+      # Database
+      DATABASE_URL: postgresql://${DATABASE_USERNAME:-postgres}:${DATABASE_PASSWORD:-uSeBetterPassword}@postgresql:5432/${DATABASE_NAME:-lobe}
+      DATABASE_DRIVER: node
+      KEY_VAULTS_SECRET: ${KEY_VAULTS_SECRET:-changeThis}
+      
+      # App configs
+      APP_URL: ${APP_URL:-http://localhost:3210}
+      NEXT_AUTH_SECRET: ${NEXT_AUTH_SECRET:-changeThisSecret}
+      NEXT_AUTH_SSO_PROVIDERS: ${NEXT_AUTH_SSO_PROVIDERS:-}
+      
+      # Feature flags
+      FEATURE_FLAGS: ${FEATURE_FLAGS:-}
+      DEFAULT_AGENT_CONFIG: ${DEFAULT_AGENT_CONFIG:-}
+      
+      # Model providers (adicione conforme necessário)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      
+      # S3 Storage (opcional)
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '2'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3210/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Redis para cache e sessões (opcional mas recomendado)
+  redis:
+    image: redis:7-alpine
+    container_name: lobe-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --save 300 10
+      --save 900 1
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  # MinIO para storage local (opcional - substitui S3)
+  minio:
+    image: minio/minio:latest
+    container_name: lobe-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9001:9001" # Console MinIO
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1450

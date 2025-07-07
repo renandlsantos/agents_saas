@@ -1,0 +1,168 @@
+## Dockerfile otimizado para VMs com 8GB RAM
+ARG NODEJS_VERSION="22"
+
+## Base image com otimizações
+FROM node:${NODEJS_VERSION}-slim AS base
+
+ARG USE_CN_MIRROR
+
+ENV DEBIAN_FRONTEND="noninteractive"
+
+# Instalar apenas o essencial
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    if [ "${USE_CN_MIRROR:-false}" = "true" ]; then \
+        sed -i "s/deb.debian.org/mirrors.ustc.edu.cn/g" "/etc/apt/sources.list.d/debian.sources"; \
+    fi \
+    && apt update \
+    && apt install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+## Stage de dependências otimizado
+FROM base AS deps
+
+ARG USE_CN_MIRROR
+
+WORKDIR /app
+
+# Configurar Node.js para usar menos memória durante instalação
+ENV NODE_OPTIONS="--max-old-space-size=2048"
+
+COPY package.json pnpm-workspace.yaml .npmrc ./
+COPY packages ./packages
+
+# Instalar dependências com otimizações
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    if [ "${USE_CN_MIRROR:-false}" = "true" ]; then \
+        export SENTRYCLI_CDNURL="https://npmmirror.com/mirrors/sentry-cli"; \
+        npm config set registry "https://registry.npmmirror.com/"; \
+        echo 'canvas_binary_host_mirror=https://npmmirror.com/mirrors/canvas' >> .npmrc; \
+    fi \
+    && export COREPACK_NPM_REGISTRY=$(npm config get registry | sed 's/\/$//') \
+    && npm i -g corepack@latest \
+    && corepack enable \
+    && corepack use $(sed -n 's/.*"packageManager": "\(.*\)".*/\1/p' package.json) \
+    && pnpm config set store-dir /root/.local/share/pnpm/store \
+    && pnpm i --frozen-lockfile --prefer-offline \
+    && pnpm store prune
+
+## Builder otimizado para build
+FROM deps AS builder
+
+# Variáveis essenciais apenas
+ARG NEXT_PUBLIC_SERVICE_MODE="server"
+ARG NEXT_PUBLIC_ENABLE_NEXT_AUTH="1"
+
+ENV NEXT_PUBLIC_SERVICE_MODE="${NEXT_PUBLIC_SERVICE_MODE}" \
+    NEXT_PUBLIC_ENABLE_NEXT_AUTH="${NEXT_PUBLIC_ENABLE_NEXT_AUTH}" \
+    APP_URL="http://app.com" \
+    DATABASE_DRIVER="node" \
+    DATABASE_URL="postgres://postgres:password@localhost:5432/postgres" \
+    KEY_VAULTS_SECRET="use-for-build"
+
+# Limitar memória durante o build
+ENV NODE_OPTIONS="--max-old-space-size=3072 --optimize-for-size"
+
+# Desabilitar telemetria e features desnecessárias no build
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_STANDALONE=true \
+    NEXT_SHARP_PATH=/tmp
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages ./packages
+COPY . .
+
+# Build otimizado
+RUN --mount=type=cache,target=/app/.next/cache \
+    # Desabilitar source maps em produção para economizar memória
+    npm run build:docker -- --no-lint --experimental-build-mode=compile \
+    && rm -rf .next/cache/* \
+    && find .next -name "*.map" -delete
+
+## Preparar arquivos para produção
+FROM base AS production-deps
+
+WORKDIR /app
+
+# Copiar apenas runtime dependencies
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+# Remover arquivos desnecessários
+RUN find . -name "*.d.ts" -delete \
+    && find . -name "*.map" -delete \
+    && find . -name "test" -type d -exec rm -rf {} + 2>/dev/null || true \
+    && find . -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true \
+    && find . -name "__tests__" -type d -exec rm -rf {} + 2>/dev/null || true
+
+## Imagem final minimalista
+FROM gcr.io/distroless/nodejs22-debian12:nonroot
+
+# Configurações de produção otimizadas para 8GB RAM
+ENV NODE_ENV="production" \
+    NODE_OPTIONS="--max-old-space-size=2048 --optimize-for-size --gc-interval=100 --expose-gc --no-deprecation --no-warnings" \
+    HOSTNAME="0.0.0.0" \
+    PORT="3210"
+
+# Configurações essenciais
+ENV ACCESS_CODE="" \
+    APP_URL="" \
+    DEFAULT_AGENT_CONFIG="" \
+    FEATURE_FLAGS="" \
+    DATABASE_DRIVER="node" \
+    DATABASE_URL="" \
+    KEY_VAULTS_SECRET="" \
+    NEXT_AUTH_SECRET="" \
+    NEXT_PUBLIC_SERVICE_MODE="server"
+
+# Desabilitar funcionalidades pesadas por padrão
+ENV NEXT_PUBLIC_UPLOAD_MAX_SIZE="10" \
+    NEXT_SHARP_PATH="/tmp" \
+    BODY_SIZE_LIMIT="10mb"
+
+# Workers do cluster Node.js (para 8GB, usar 2 workers)
+ENV NODE_CLUSTER_WORKERS="2"
+
+# Copiar aplicação
+COPY --from=production-deps --chown=nonroot:nonroot /app /app
+
+WORKDIR /app
+
+EXPOSE 3210
+
+# Script de inicialização otimizado
+COPY --chown=nonroot:nonroot <<'EOF' /app/start-optimized.js
+const cluster = require('cluster');
+const os = require('os');
+
+if (cluster.isMaster) {
+  const workers = parseInt(process.env.NODE_CLUSTER_WORKERS || '2');
+  console.log(`Master ${process.pid} configurando ${workers} workers...`);
+  
+  // Criar workers
+  for (let i = 0; i < workers; i++) {
+    cluster.fork();
+  }
+  
+  // Restart worker se morrer
+  cluster.on('exit', (worker, code, signal) => {
+    console.log(`Worker ${worker.process.pid} morreu. Reiniciando...`);
+    cluster.fork();
+  });
+  
+  // Monitorar memória
+  setInterval(() => {
+    const used = process.memoryUsage();
+    console.log(`Master - Memória: RSS ${Math.round(used.rss / 1024 / 1024)}MB, Heap ${Math.round(used.heapUsed / 1024 / 1024)}MB`);
+  }, 60000);
+} else {
+  // Worker process
+  require('./server.js');
+}
+EOF
+
+USER nonroot
+
+ENTRYPOINT ["node", "/app/start-optimized.js"]
