@@ -148,7 +148,7 @@ services:
 
   # Casdoor para autenticação
   casdoor:
-    image: casdoor/casdoor:latest
+    image: casbin/casdoor:latest
     container_name: agents-chat-casdoor
     restart: unless-stopped
     environment:
