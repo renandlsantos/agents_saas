@@ -38,7 +38,8 @@ const nextConfig: NextConfig = {
     // but swc minification will remove the name
     // so we need to disable it
     // refs: https://github.com/lobehub/lobe-chat/pull/7430
-    serverMinification: false,
+    // Enable serverMinification for Docker builds to avoid webpack errors
+    serverMinification: buildWithDocker ? true : false,
     webVitalsAttribution: ['CLS', 'LCP'],
   },
   async headers() {
@@ -227,7 +228,8 @@ const nextConfig: NextConfig = {
     config.externals.push('pino-pretty');
 
     // Configure aliases to use stubs in web/Edge Runtime environments
-    if (!isDesktop) {
+    // Skip stubs for Docker builds to avoid webpack issues
+    if (!isDesktop && !buildWithDocker) {
       const stubsDir = path.resolve(__dirname, './src/server/modules/stubs');
 
       config.resolve = config.resolve || {};
@@ -254,8 +256,8 @@ const nextConfig: NextConfig = {
     }
 
     // Exclude electron-specific packages and database packages from Edge Runtime
-    // Only apply externals in desktop mode
-    if (isDesktop) {
+    // Only apply externals in desktop mode or Docker builds
+    if (isDesktop || buildWithDocker) {
       if (typeof config.externals === 'object' && !Array.isArray(config.externals)) {
         config.externals['@lobechat/electron-server-ipc'] = '@lobechat/electron-server-ipc';
         config.externals['electron'] = 'electron';

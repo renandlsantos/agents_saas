@@ -171,6 +171,109 @@ create_project_directory() {
     log_success "Diretório criado: $PROJECT_DIR"
 }
 
+# Função para verificar memória disponível
+check_memory() {
+    local available_mem=$(free -m | awk 'NR==2{printf "%.0f", $7}')
+    local total_mem=$(free -m | awk 'NR==2{printf "%.0f", $2}')
+
+    log_info "Memória total: ${total_mem}MB"
+    log_info "Memória disponível: ${available_mem}MB"
+
+    if [ "$available_mem" -lt 2048 ]; then
+        log_error "Memória insuficiente! Disponível: ${available_mem}MB, Mínimo recomendado: 2048MB"
+        log_info "Sugestões:"
+        log_info "1. Aumente a RAM da VM para pelo menos 4GB"
+        log_info "2. Feche outros processos"
+        log_info "3. Use swap temporário"
+        log_info "4. Use build sem cache: --no-cache"
+        return 1
+    fi
+
+    log_success "Memória suficiente para build"
+    return 0
+}
+
+# Função para configurar swap temporário
+setup_temp_swap() {
+    if ! check_memory; then
+        log_info "Configurando swap temporário..."
+        sudo fallocate -l 2G /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+        log_success "Swap temporário ativado: 2GB"
+    fi
+}
+
+# Função para limpar swap temporário
+cleanup_temp_swap() {
+    if [ -f /swapfile ]; then
+        log_info "Removendo swap temporário..."
+        sudo swapoff /swapfile
+        sudo rm /swapfile
+    fi
+}
+
+# Função para build otimizado
+build_optimized_image() {
+    local build_args=""
+
+    # Configurações para otimizar memória
+    export DOCKER_BUILDKIT=1
+    export BUILDKIT_PROGRESS=plain
+
+    # Argumentos para reduzir uso de memória
+    build_args="--no-cache --progress=plain"
+
+    # Se memória for baixa, usar configurações mais conservadoras
+    local available_mem=$(free -m | awk 'NR==2{printf "%.0f", $7}')
+    if [ "$available_mem" -lt 4096 ]; then
+        build_args="$build_args --memory=2g --memory-swap=4g"
+        log_info "Usando configurações de memória conservadoras"
+    fi
+
+    log_info "Iniciando build otimizado..."
+    log_info "Comandos: docker build $build_args -t agents-chat:latest ."
+
+    if docker build $build_args -t agents-chat:latest .; then
+        log_success "Build concluído com sucesso!"
+        return 0
+    else
+        log_error "Build falhou. Tentando alternativas..."
+        return 1
+    fi
+}
+
+# Função para build alternativo (sem cache e com menos paralelismo)
+build_alternative() {
+    log_info "Tentando build alternativo com configurações mínimas..."
+
+    # Desabilitar paralelismo e usar menos memória
+    export NODE_OPTIONS="--max-old-space-size=1024"
+
+    if docker build --no-cache --progress=plain --memory=1g --memory-swap=2g -t agents-chat:latest .; then
+        log_success "Build alternativo concluído!"
+        return 0
+    else
+        log_error "Build alternativo também falhou"
+        return 1
+    fi
+}
+
+# Função para usar imagem pré-construída
+use_prebuilt_image() {
+    log_info "Usando imagem pré-construída do Docker Hub..."
+
+    if docker pull lobehub/lobe-chat:latest; then
+        docker tag lobehub/lobe-chat:latest agents-chat:latest
+        log_success "Imagem pré-construída configurada"
+        return 0
+    else
+        log_error "Falha ao baixar imagem pré-construída"
+        return 1
+    fi
+}
+
 # Função para baixar e configurar o projeto
 setup_project() {
     log_info "Configurando projeto Agents Chat..."
@@ -198,9 +301,33 @@ setup_project() {
             install_docker
         fi
 
-        # Fazer build da imagem personalizada
-        log_info "Fazendo build da imagem personalizada..."
-        docker build -t agents-chat-custom:latest .
+        # Verificar memória antes do build
+        check_memory
+
+        # Configurar swap temporário se necessário
+        setup_temp_swap
+
+        # Tentar build otimizado
+        if ! build_optimized_image; then
+            warning "Build otimizado falhou, tentando alternativo..."
+
+            if ! build_alternative; then
+                warning "Build alternativo falhou, usando imagem pré-construída..."
+
+                if ! use_prebuilt_image; then
+                    error "Todas as tentativas de build falharam"
+                    error "Sugestões:"
+                    error "1. Aumente a RAM da VM para pelo menos 4GB"
+                    error "2. Use uma VM com mais recursos"
+                    error "3. Configure swap permanente"
+                    cleanup_temp_swap
+                    exit 1
+                fi
+            fi
+        fi
+
+        # Limpar swap temporário
+        cleanup_temp_swap
 
         if [ $? -eq 0 ]; then
             log_success "Build da imagem personalizada concluído"
