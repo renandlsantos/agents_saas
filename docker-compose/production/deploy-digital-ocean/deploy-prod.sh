@@ -104,8 +104,135 @@ setup_docker_compose() {
 
     cd "$PROJECT_DIR"
 
-    # Copiar arquivo de configuração corrigido
-    cp ~/agents_saas/docker-compose/production/deploy-digital-ocean/docker-compose-production.yml docker-compose.yml
+    # Criar docker-compose.yml para produção
+    cat > docker-compose.yml << 'EOF'
+version: '3.8'
+
+services:
+  # Banco de Dados PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: agents-chat-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${LOBE_DB_NAME}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - agents-chat
+
+  # Redis para cache
+  redis:
+    image: redis:7-alpine
+    container_name: agents-chat-redis
+    restart: unless-stopped
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - agents-chat
+
+  # MinIO para armazenamento de arquivos
+  minio:
+    image: minio/minio:latest
+    container_name: agents-chat-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - ./data/minio:/data
+    networks:
+      - agents-chat
+
+  # Casdoor para autenticação
+  casdoor:
+    image: casdoor/casdoor:latest
+    container_name: agents-chat-casdoor
+    restart: unless-stopped
+    environment:
+      - CASDOOR_DATABASE_TYPE=postgres
+      - CASDOOR_DATABASE_HOST=postgres
+      - CASDOOR_DATABASE_PORT=5432
+      - CASDOOR_DATABASE_USER=postgres
+      - CASDOOR_DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - CASDOOR_DATABASE_NAME=casdoor
+      - CASDOOR_APPNAME=agents-chat
+      - CASDOOR_ORIGIN=${NEXT_PUBLIC_SITE_URL}
+    volumes:
+      - ./data/casdoor:/app/conf
+    depends_on:
+      - postgres
+    networks:
+      - agents-chat
+
+  # Aplicação principal
+  app:
+    image: agents-chat:latest
+    container_name: agents-chat-app
+    restart: unless-stopped
+    environment:
+      # Banco de Dados
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/${LOBE_DB_NAME}
+
+      # Redis
+      - REDIS_URL=redis://redis:6379
+
+      # MinIO/S3
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - S3_BUCKET=${MINIO_LOBE_BUCKET}
+      - S3_REGION=us-east-1
+      - S3_FORCE_PATH_STYLE=true
+
+      # Autenticação
+      - AUTH_CASDOOR_ISSUER=${AUTH_CASDOOR_ISSUER}
+      - AUTH_CASDOOR_CLIENT_ID=agents-chat
+      - AUTH_CASDOOR_CLIENT_SECRET=agents-chat-secret
+
+      # Aplicação
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+      - LOBE_PORT=${LOBE_PORT}
+      - NODE_ENV=production
+
+      # Segurança
+      - NEXT_AUTH_SECRET=${NEXT_AUTH_SECRET}
+      - KEY_VAULTS_SECRET=${KEY_VAULTS_SECRET}
+
+      # API Keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - AZURE_API_KEY=${AZURE_API_KEY}
+      - AZURE_ENDPOINT=${AZURE_ENDPOINT}
+      - AZURE_API_VERSION=${AZURE_API_VERSION}
+
+      # Configurações opcionais
+      - ACCESS_CODE=${ACCESS_CODE}
+      - DEBUG=${DEBUG}
+    ports:
+      - "${LOBE_PORT}:${LOBE_PORT}"
+    depends_on:
+      - postgres
+      - redis
+      - minio
+      - casdoor
+    networks:
+      - agents-chat
+    volumes:
+      - ./logs/app:/app/logs
+
+networks:
+  agents-chat:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+EOF
 
     # Criar .env básico
     cat > .env << EOF
@@ -154,11 +281,72 @@ EOF
 setup_nginx() {
     log "Configurando Nginx..."
 
-    # Copiar configuração do Nginx
-    cp ~/agents_saas/docker-compose/production/deploy-digital-ocean/nginx.conf /tmp/nginx-agents-chat.conf
+    # Criar configuração do Nginx
+    cat > /tmp/nginx-agents-chat.conf << EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
 
-    # Substituir domínio
-    sed -i "s/localhost/$DOMAIN/g" /tmp/nginx-agents-chat.conf
+    # Logs
+    access_log /var/log/nginx/agents-chat-access.log;
+    error_log /var/log/nginx/agents-chat-error.log;
+
+    # Proxy para aplicação
+    location / {
+        proxy_pass http://localhost:3210;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 86400;
+    }
+
+    # Proxy para Casdoor
+    location /casdoor/ {
+        proxy_pass http://localhost:8000/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    # Proxy para MinIO Console
+    location /minio/ {
+        proxy_pass http://localhost:9001/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    # Configurações de segurança
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+
+    # Limite de upload
+    client_max_body_size 100M;
+
+    # Timeouts
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+}
+EOF
 
     # Mover para local correto
     sudo mv /tmp/nginx-agents-chat.conf /etc/nginx/sites-available/agents-chat
