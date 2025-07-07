@@ -202,18 +202,19 @@ const nextConfig: NextConfig = {
 
   transpilePackages: ['pdfjs-dist', 'mermaid'],
 
-  webpack(config, { isServer }) {
+  webpack(config, { webpack }) {
     config.experiments = {
       asyncWebAssembly: true,
       layers: true,
     };
 
-    // Fix webpack minification error in Docker builds
-    if (buildWithDocker && isServer) {
-      // Disable problematic optimizations for Docker builds
-      config.optimization = {
-        ...config.optimization,
-        minimize: false,
+    // Fix webpack.WebpackError not found issue
+    if (!webpack.WebpackError) {
+      webpack.WebpackError = class WebpackError extends Error {
+        constructor(message: string) {
+          super(message);
+          this.name = 'WebpackError';
+        }
       };
     }
 
@@ -236,8 +237,7 @@ const nextConfig: NextConfig = {
     config.externals.push('pino-pretty');
 
     // Configure aliases to use stubs in web/Edge Runtime environments
-    // Skip stubs for Docker builds to avoid webpack issues
-    if (!isDesktop && !buildWithDocker) {
+    if (!isDesktop) {
       const stubsDir = path.resolve(__dirname, './src/server/modules/stubs');
 
       config.resolve = config.resolve || {};
