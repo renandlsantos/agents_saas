@@ -41,8 +41,6 @@ const nextConfig: NextConfig = {
     serverMinification: false,
     webVitalsAttribution: ['CLS', 'LCP'],
   },
-  // Disable SWC minification in Docker builds to avoid webpack errors
-  ...(buildWithDocker ? { swcMinify: false } : {}),
   async headers() {
     return [
       {
@@ -204,28 +202,35 @@ const nextConfig: NextConfig = {
 
   transpilePackages: ['pdfjs-dist', 'mermaid'],
 
-  webpack(config) {
+  webpack(config, { webpack }) {
     config.experiments = {
       asyncWebAssembly: true,
       layers: true,
     };
 
-    // Work around Next.js 15.3.5 webpack.WebpackError bug in Docker builds
+    // Fix webpack.WebpackError for Next.js 15.3.5 in Docker builds
+    if (buildWithDocker && webpack && !webpack.WebpackError) {
+      // Provide WebpackError class if it's missing
+      webpack.WebpackError = class WebpackError extends Error {
+        error?: Error;
+        details?: string;
+
+        constructor(message: string, error?: Error) {
+          super(message);
+          this.name = 'WebpackError';
+          this.error = error;
+          this.details = error?.stack;
+        }
+      };
+    }
+
+    // Additionally disable optimization for Docker builds
     if (buildWithDocker) {
-      // Completely disable optimization for Docker builds to avoid webpack errors
       config.optimization = {
+        ...config.optimization,
         minimize: false,
         minimizer: [],
-        runtimeChunk: false,
-        splitChunks: false,
       };
-      // Remove all minification plugins
-      if (config.plugins) {
-        config.plugins = config.plugins.filter((plugin: any) => {
-          const name = plugin.constructor?.name || '';
-          return !name.toLowerCase().includes('minif') && !name.toLowerCase().includes('uglif');
-        });
-      }
     }
 
     // 开启该插件会导致 pglite 的 fs bundler 被改表
