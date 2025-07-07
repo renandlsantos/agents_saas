@@ -152,14 +152,14 @@ services:
     container_name: agents-chat-casdoor
     restart: unless-stopped
     environment:
-      - CASDOOR_DATABASE_TYPE=postgres
-      - CASDOOR_DATABASE_HOST=postgres
-      - CASDOOR_DATABASE_PORT=5432
-      - CASDOOR_DATABASE_USER=postgres
-      - CASDOOR_DATABASE_PASSWORD=${POSTGRES_PASSWORD}
-      - CASDOOR_DATABASE_NAME=casdoor
-      - CASDOOR_APPNAME=agents-chat
-      - CASDOOR_ORIGIN=${NEXT_PUBLIC_SITE_URL}
+      - httpport=8000
+      - RUNNING_IN_DOCKER=true
+      - driverName=postgres
+      - dataSourceName=user=postgres password=${POSTGRES_PASSWORD} host=postgres port=5432 sslmode=disable dbname=casdoor
+      - runmode=prod
+      - logConfig_console=true
+      - logConfig_file=true
+      - logConfig_level=Info
     volumes:
       - ./data/casdoor:/app/conf
     depends_on:
