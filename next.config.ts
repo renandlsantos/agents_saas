@@ -2,6 +2,7 @@ import analyzer from '@next/bundle-analyzer';
 import { withSentryConfig } from '@sentry/nextjs';
 import withSerwistInit from '@serwist/next';
 import type { NextConfig } from 'next';
+import path from 'node:path';
 import ReactComponentName from 'react-scan/react-component-name/webpack';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -225,16 +226,46 @@ const nextConfig: NextConfig = {
     // https://github.com/pinojs/pino/issues/688#issuecomment-637763276
     config.externals.push('pino-pretty');
 
+    // Configure aliases to use stubs in web/Edge Runtime environments
+    if (!isDesktop) {
+      const stubsDir = path.resolve(__dirname, './src/server/modules/stubs');
+
+      config.resolve = config.resolve || {};
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // Replace desktop package.json
+        '@/../apps/desktop/package.json': path.join(stubsDir, 'desktop-package.json'),
+        // Replace the electron database core
+        '@/database/core/electron': path.join(stubsDir, 'database-electron.ts'),
+        // Replace ElectronIPCClient imports
+        '@/server/modules/ElectronIPCClient': path.join(stubsDir, 'ElectronIPCClient.ts'),
+        // Replace electron-related modules with stubs
+        '@lobechat/electron-server-ipc': path.join(stubsDir, 'electron-server-ipc.ts'),
+        'electron': path.join(stubsDir, 'electron.ts'),
+        'fs': path.join(stubsDir, 'fs.ts'),
+        'node:fs': path.join(stubsDir, 'fs.ts'),
+        'node:path': path.join(stubsDir, 'path.ts'),
+        'path': path.join(stubsDir, 'path.ts'),
+        'pg': path.join(stubsDir, 'pg.ts'),
+        'pg-native': path.join(stubsDir, 'pg-native.ts'),
+        'pino-pretty': path.join(stubsDir, 'pino-pretty.ts'),
+        'ts-md5': path.join(stubsDir, 'ts-md5.ts'),
+      };
+    }
+
     // Exclude electron-specific packages and database packages from Edge Runtime
-    if (typeof config.externals === 'object' && !Array.isArray(config.externals)) {
-      config.externals['@lobechat/electron-server-ipc'] = '@lobechat/electron-server-ipc';
-      config.externals['electron'] = 'electron';
-      config.externals['pg'] = 'pg';
-      config.externals['pg-native'] = 'pg-native';
-    } else {
-      config.externals = config.externals || [];
-      if (Array.isArray(config.externals)) {
-        config.externals.push('@lobechat/electron-server-ipc', 'electron', 'pg', 'pg-native');
+    // Only apply externals in desktop mode
+    if (isDesktop) {
+      if (typeof config.externals === 'object' && !Array.isArray(config.externals)) {
+        config.externals['@lobechat/electron-server-ipc'] = '@lobechat/electron-server-ipc';
+        config.externals['electron'] = 'electron';
+        config.externals['pg'] = 'pg';
+        config.externals['pg-native'] = 'pg-native';
+      } else {
+        config.externals = config.externals || [];
+        if (Array.isArray(config.externals)) {
+          config.externals.push('@lobechat/electron-server-ipc', 'electron', 'pg', 'pg-native');
+        }
       }
     }
 
@@ -244,11 +275,9 @@ const nextConfig: NextConfig = {
     // refs: https://github.com/lobehub/lobe-chat/discussions/6769
     config.resolve.fallback = {
       ...config.resolve.fallback,
-      
-crypto: false,
-      
+      crypto: false,
       // Add fallbacks for Node.js modules that might be used by electron packages
-fs: false,
+      fs: false,
       path: false,
       zipfile: false,
     };

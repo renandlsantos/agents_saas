@@ -1,16 +1,25 @@
+/**
+ * ElectronIPCClient module with Edge Runtime safety
+ *
+ * This module conditionally loads electron-specific dependencies only in
+ * Node.js environments with Electron, preventing Edge Runtime errors.
+ */
+
+// Edge Runtime detection - check for lack of Node.js globals
+const isEdgeRuntime = typeof process === 'undefined' || !process.versions?.node;
+const isElectronEnvironment =
+  !isEdgeRuntime &&
+  typeof window === 'undefined' &&
+  typeof process !== 'undefined' &&
+  process.versions?.electron &&
+  process.versions?.node !== undefined;
+
 // Only import in desktop environment to avoid Edge Runtime errors
 let ElectronIpcClient: any;
 let packageJSON: any;
 
-// Check for Node.js runtime and electron environment
-// Avoid dynamic imports in Edge Runtime
-if (
-  typeof window === 'undefined' &&
-  typeof process !== 'undefined' &&
-  process.versions?.electron &&
-  // Additional check to ensure we're not in Edge Runtime
-  process.versions?.node !== undefined
-) {
+// Only attempt to load electron modules in actual Electron environment
+if (isElectronEnvironment) {
   try {
     ElectronIpcClient = require('@lobechat/electron-server-ipc').ElectronIpcClient;
     packageJSON = require('@/../apps/desktop/package.json');
@@ -24,7 +33,7 @@ class LobeHubElectronIpcClient {
   private client: any;
 
   constructor() {
-    if (ElectronIpcClient && packageJSON) {
+    if (isElectronEnvironment && ElectronIpcClient && packageJSON) {
       this.client = new ElectronIpcClient(packageJSON.name);
     }
   }
@@ -66,4 +75,7 @@ class LobeHubElectronIpcClient {
   };
 }
 
+// Export the appropriate client based on environment
+// In Edge Runtime, this will be a stub that throws errors
+// In Electron environment, this will be the real client
 export const electronIpcClient = new LobeHubElectronIpcClient();
