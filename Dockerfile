@@ -96,7 +96,7 @@ COPY . .
 RUN npm run build:docker
 
 ## Application image, copy all the files for production
-FROM busybox:latest AS app
+FROM node:22-slim AS app
 
 COPY --from=base /distroless/ /
 
@@ -109,13 +109,13 @@ COPY --from=builder /app/scripts/serverLauncher/startServer.js /app/startServer.
 
 RUN \
     # Add nextjs:nodejs to run the app
-    addgroup -S -g 1001 nodejs \
-    && adduser -D -G nodejs -H -S -h /app -u 1001 nextjs \
+    groupadd -g 1001 -r nodejs \
+    && useradd -r -g nodejs -u 1001 nextjs \
     # Set permission for nextjs:nodejs
     && chown -R nextjs:nodejs /app /etc/proxychains4.conf
 
 ## Production image, copy all the files and run next
-FROM scratch
+FROM node:22-slim
 
 # Copy all the files from app, set the correct permission for prerender cache
 COPY --from=app / /
