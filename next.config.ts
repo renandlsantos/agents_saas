@@ -214,10 +214,18 @@ const nextConfig: NextConfig = {
     if (buildWithDocker) {
       // Completely disable optimization for Docker builds to avoid webpack errors
       config.optimization = {
-        ...config.optimization,
         minimize: false,
         minimizer: [],
+        runtimeChunk: false,
+        splitChunks: false,
       };
+      // Remove all minification plugins
+      if (config.plugins) {
+        config.plugins = config.plugins.filter((plugin: any) => {
+          const name = plugin.constructor?.name || '';
+          return !name.toLowerCase().includes('minif') && !name.toLowerCase().includes('uglif');
+        });
+      }
     }
 
     // 开启该插件会导致 pglite 的 fs bundler 被改表
