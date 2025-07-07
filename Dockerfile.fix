@@ -1,0 +1,82 @@
+# ========== Base Stage ==========
+FROM node:22-slim AS base
+
+WORKDIR /app
+
+# Instalar certificados CA
+RUN apt-get update && \
+    apt-get install -y ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# ========== Builder Stage ==========
+FROM base AS builder
+
+ARG USE_CN_MIRROR
+
+# Configurar npm registry se usar mirror chinês
+RUN if [ "${USE_CN_MIRROR:-false}" = "true" ]; then \
+        npm config set registry "https://registry.npmmirror.com/"; \
+    fi
+
+# Instalar pnpm
+RUN npm i -g corepack@latest && \
+    corepack enable
+
+WORKDIR /app
+
+# Copiar arquivos de configuração
+COPY package.json pnpm-workspace.yaml ./
+COPY .npmrc ./
+COPY packages ./packages
+
+# Instalar dependências
+RUN --mount=type=cache,id=pnpm-store,target=/root/.pnpm-store \
+    pnpm install --frozen-lockfile
+
+# Copiar código fonte
+COPY . .
+
+# Definir variável DOCKER e aplicar fix
+ENV DOCKER=true
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Aplicar fix do webpack antes do build
+RUN chmod +x ./scripts/fix-docker-build.sh && \
+    ./scripts/fix-docker-build.sh
+
+# Build com configurações mínimas
+RUN pnpm run build:docker || \
+    (echo "Build falhou, tentando sem otimizações..." && \
+     NODE_OPTIONS="--max-old-space-size=8192" \
+     NEXT_TELEMETRY_DISABLED=1 \
+     npm run build)
+
+# ========== Runtime Stage ==========
+FROM base AS runtime
+
+# Criar usuário não-root
+RUN groupadd -g 1001 -r nodejs && \
+    useradd -r -g nodejs -u 1001 nextjs
+
+WORKDIR /app
+
+# Copiar arquivos necessários
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/scripts/serverLauncher/startServer.js ./startServer.js
+
+# Ajustar permissões
+RUN chown -R nextjs:nodejs /app
+
+# Configurações de runtime
+ENV NODE_ENV=production
+ENV HOSTNAME="0.0.0.0"
+ENV PORT=3210
+
+USER nextjs
+
+EXPOSE 3210/tcp
+
+CMD ["node", "startServer.js"]
