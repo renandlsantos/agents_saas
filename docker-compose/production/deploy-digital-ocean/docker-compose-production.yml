@@ -189,11 +189,8 @@ services:
         reservations:
           memory: 1G
           cpus: '1.0'
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.agents-chat.rule=Host(`${NEXT_PUBLIC_SITE_URL#https://}`)"
-      - "traefik.http.routers.agents-chat.tls=true"
-      - "traefik.http.services.agents-chat.loadbalancer.server.port=3210"
+    # Labels removidas para evitar problemas de interpolação
+    # Use Nginx como proxy reverso em vez de Traefik
 
   # Redis para cache (opcional, para melhor performance)
   redis:

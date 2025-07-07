@@ -41,6 +41,8 @@ const nextConfig: NextConfig = {
     serverMinification: false,
     webVitalsAttribution: ['CLS', 'LCP'],
   },
+  // Disable SWC minification in Docker builds to avoid webpack errors
+  ...(buildWithDocker ? { swcMinify: false } : {}),
   async headers() {
     return [
       {

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# AGENTS CHAT - DEPLOY COM IMAGEM PRÉ-CONSTRUÍDA (SEM BUILD LOCAL)
+# AGENTS CHAT - DEPLOY PRODUÇÃO AUTOMATIZADO
 # ==============================================================================
 
 set -e
@@ -32,10 +32,10 @@ error() {
 # Configurações
 PROJECT_DIR="/opt/agents-chat"
 DOMAIN="${1:-localhost}"
-EMAIL="${2:-admin@example.com}"
+EMAIL="${2:-admin@localhost.com}"
 
 echo "=============================================================================="
-echo "AGENTS CHAT - DEPLOY COM IMAGEM PRÉ-CONSTRUÍDA"
+echo "AGENTS CHAT - DEPLOY PRODUÇÃO AUTOMATIZADO"
 echo "=============================================================================="
 echo "Domínio: $DOMAIN"
 echo "Email: $EMAIL"
@@ -56,7 +56,7 @@ if ! groups | grep -q docker; then
     exit 1
 fi
 
-# Função para baixar e configurar o projeto
+# Função para configurar projeto
 setup_project() {
     log "Configurando projeto Agents Chat..."
 
@@ -102,15 +102,50 @@ download_prebuilt_image() {
 setup_docker_compose() {
     log "Configurando Docker Compose..."
 
-    # Copiar arquivo de configuração
-    cp docker-compose/production/docker-compose.yml .
+    cd "$PROJECT_DIR"
 
-    # Substituir variáveis no arquivo
-    sed -i "s/localhost/$DOMAIN/g" docker-compose.yml
-    sed -i "s/admin@example.com/$EMAIL/g" docker-compose.yml
+    # Copiar arquivo de configuração corrigido
+    cp ~/agents_saas/docker-compose/production/deploy-digital-ocean/docker-compose-production.yml docker-compose.yml
 
-    # Usar imagem pré-construída
-    sed -i 's/image: agents-chat:latest/image: lobehub\/lobe-chat:latest/g' docker-compose.yml
+    # Criar .env básico
+    cat > .env << EOF
+# Configurações do Banco de Dados
+POSTGRES_PASSWORD=agents_chat_password_123
+LOBE_DB_NAME=agents_chat_prod
+
+# Configurações do MinIO
+MINIO_ROOT_PASSWORD=minio_password_123
+MINIO_PORT=9000
+
+# Configurações do Casdoor
+CASDOOR_PORT=8000
+
+# Configurações da Aplicação
+LOBE_PORT=3210
+NEXT_PUBLIC_SITE_URL=http://$DOMAIN
+
+# Configurações de Segurança
+NEXT_AUTH_SECRET=your-secret-key-here-123
+KEY_VAULTS_SECRET=your-key-vault-secret-123
+
+# Configurações de Autenticação
+AUTH_CASDOOR_ISSUER=http://$DOMAIN:8000
+
+# Configurações do S3/MinIO
+MINIO_LOBE_BUCKET=agents-chat-files
+
+# API Keys (configure depois)
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GOOGLE_API_KEY=
+AZURE_API_KEY=
+AZURE_ENDPOINT=
+AZURE_API_VERSION=
+
+# Configurações Opcionais
+ACCESS_CODE=
+DEBUG=false
+EOF
 
     success "Docker Compose configurado"
 }
@@ -120,7 +155,7 @@ setup_nginx() {
     log "Configurando Nginx..."
 
     # Copiar configuração do Nginx
-    cp docker-compose/production/nginx.conf /tmp/nginx-agents-chat.conf
+    cp ~/agents_saas/docker-compose/production/deploy-digital-ocean/nginx.conf /tmp/nginx-agents-chat.conf
 
     # Substituir domínio
     sed -i "s/localhost/$DOMAIN/g" /tmp/nginx-agents-chat.conf
@@ -171,6 +206,19 @@ setup_ssl() {
     fi
 }
 
+# Função para criar diretórios
+create_directories() {
+    log "Criando diretórios necessários..."
+
+    cd "$PROJECT_DIR"
+
+    mkdir -p data/{postgres,minio,redis}
+    mkdir -p logs/{app,casdoor,nginx}
+    mkdir -p cache
+
+    success "Diretórios criados"
+}
+
 # Função para iniciar serviços
 start_services() {
     log "Iniciando serviços..."
@@ -189,7 +237,7 @@ start_services() {
         docker-compose ps
 
         echo
-        success "Deploy concluído!"
+        success "Deploy de produção concluído!"
         echo
         log "Acesse: http://$DOMAIN"
         if [ "$DOMAIN" != "localhost" ]; then
@@ -221,6 +269,7 @@ main() {
     setup_project
     download_prebuilt_image
     setup_docker_compose
+    create_directories
     setup_nginx
     setup_ssl
     start_services

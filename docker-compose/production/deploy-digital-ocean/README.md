@@ -1,154 +1,180 @@
-# 🚀 Deploy Agents Chat - Digital Ocean
+# Agents Chat - Deploy Digital Ocean
 
-Guia completo para deploy do Agents Chat em produção no Digital Ocean.
+Scripts automatizados para deploy do Agents Chat em servidores Ubuntu/Digital Ocean.
 
 ## 📋 Pré-requisitos
 
-- VM Ubuntu 22.04+ no Digital Ocean
-- Mínimo 2GB RAM (recomendado 4GB+)
-- Domínio configurado (opcional)
-- Acesso SSH à VM
+- Ubuntu 20.04+ ou Digital Ocean Droplet
+- Docker e Docker Compose instalados
+- Usuário com permissões sudo
+- Usuário adicionado ao grupo docker
 
-## 🛠️ Scripts Disponíveis
-
-### 1. `setup-swap.sh` - Configuração de Swap e Otimização
-
-**Execute PRIMEIRO se sua VM tem menos de 4GB de RAM:**
+### Instalação do Docker (se necessário)
 
 ```bash
-sudo ./setup-swap.sh
+# Atualizar sistema
+sudo apt update && sudo apt upgrade -y
+
+# Instalar Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Adicionar usuário ao grupo docker
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Instalar Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
 ```
 
-Este script:
+## 🚀 Scripts Disponíveis
 
-- Configura swap permanente baseado na RAM disponível
-- Otimiza configurações do sistema para builds Docker
-- Configura Docker para usar menos memória
-- Reinicia o Docker com configurações otimizadas
+### 1. Deploy Produção (`deploy-prod.sh`)
 
-### 2. `deploy-production.sh` - Deploy Completo com Build Local
+Deploy completo para produção com Nginx, SSL e configurações otimizadas.
 
-**Para builds personalizados (requer mais memória):**
+**Uso:**
 
 ```bash
-./deploy-production.sh < dominio > [email]
+# Com domínio real
+./deploy-prod.sh meusite.com admin@meusite.com
+
+# Para testes locais
+./deploy-prod.sh localhost
 ```
 
-Este script:
+**Características:**
 
-- ✅ Verifica memória disponível
-- ✅ Configura swap temporário se necessário
-- ✅ Tenta build otimizado com configurações de memória
-- ✅ Fallback para build alternativo com menos recursos
-- ✅ Fallback para imagem pré-construída se tudo falhar
-- ✅ Configura Nginx, SSL, firewall, fail2ban
+- ✅ Imagem pré-construída (rápido)
+- ✅ Nginx configurado
+- ✅ SSL automático com Let's Encrypt
+- ✅ Configurações de produção
+- ✅ Logs organizados
+- ✅ Reinicialização automática
 
-### 3. `deploy-prebuilt.sh` - Deploy com Imagem Pré-construída
+### 2. Deploy Desenvolvimento (`deploy-dev.sh`)
 
-**Recomendado para VMs com pouca RAM:**
+Deploy simplificado para testes e desenvolvimento.
+
+**Uso:**
 
 ```bash
-./deploy-prebuilt.sh < dominio > [email]
+# Porta padrão (3210)
+./deploy-dev.sh
+
+# Porta customizada
+./deploy-dev.sh 3000
 ```
 
-Este script:
+**Características:**
 
-- ✅ Usa imagem oficial do Docker Hub (sem build local)
-- ✅ Muito mais rápido e usa menos recursos
-- ✅ Ideal para VMs com 2GB de RAM
-- ✅ Configura Nginx, SSL, firewall, fail2ban
+- ✅ Imagem pré-construída (rápido)
+- ✅ Configuração simplificada
+- ✅ Acesso direto via porta
+- ✅ Ideal para testes
+- ✅ Sem Nginx/SSL
 
-## 🔧 Solução para Erro de Memória (Exit Code 137)
+## 📁 Estrutura de Diretórios
 
-Se você encontrar o erro:
+### Produção
 
 ```
-ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build:docker" did not complete successfully: exit code: 137
+/opt/agents-chat/
+├── docker-compose.yml
+├── .env
+├── data/
+│   ├── postgres/
+│   ├── minio/
+│   └── redis/
+└── logs/
+    ├── app/
+    ├── casdoor/
+    └── nginx/
 ```
 
-### Soluções em Ordem de Prioridade:
+### Desenvolvimento
 
-#### 1. **Configurar Swap (Recomendado)**
+```
+/opt/agents-chat-dev/
+├── docker-compose.yml
+├── data/
+│   ├── postgres/
+│   ├── minio/
+│   ├── redis/
+│   └── casdoor/
+└── logs/
+    └── app/
+```
+
+## 🔧 Configuração Pós-Deploy
+
+### 1. Configurar API Keys
+
+Edite o arquivo `.env` no diretório do projeto:
 
 ```bash
-sudo ./setup-swap.sh
+# Produção
+sudo nano /opt/agents-chat/.env
+
+# Desenvolvimento
+sudo nano /opt/agents-chat-dev/.env
 ```
 
-#### 2. **Usar Imagem Pré-construída**
+Adicione suas chaves de API:
+
+```env
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_API_KEY=...
+AZURE_API_KEY=...
+```
+
+### 2. Reiniciar Serviços
 
 ```bash
-./deploy-prebuilt.sh <seu-dominio> <seu-email>
+# Produção
+cd /opt/agents-chat
+docker-compose restart app
+
+# Desenvolvimento
+cd /opt/agents-chat-dev
+docker-compose restart app
 ```
 
-#### 3. **Aumentar RAM da VM**
-
-- No Digital Ocean Dashboard
-- Resize Droplet para plano com mais RAM
-- Mínimo recomendado: 4GB
-
-#### 4. **Build Manual com Configurações Específicas**
-
-```bash
-# Configurar variáveis de ambiente para usar menos memória
-export NODE_OPTIONS="--max-old-space-size=1024"
-export DOCKER_BUILDKIT=1
-
-# Build com limitações de memória
-docker build --no-cache --memory=2g --memory-swap=4g -t agents-chat:latest .
-```
-
-## 📊 Requisitos de Memória
-
-| Tipo de Deploy        | RAM Mínima | RAM Recomendada | Tempo Estimado |
-| --------------------- | ---------- | --------------- | -------------- |
-| Imagem Pré-construída | 1GB        | 2GB             | 5-10 min       |
-| Build Local           | 2GB        | 4GB             | 15-30 min      |
-| Build Local + Swap    | 1GB        | 2GB             | 20-40 min      |
-
-## 🚀 Deploy Rápido (Recomendado)
-
-Para a maioria dos casos, use o deploy com imagem pré-construída:
-
-```bash
-# 1. Configurar swap (se RAM < 4GB)
-sudo ./setup-swap.sh
-
-# 2. Deploy com imagem pré-construída
-./deploy-prebuilt.sh meusite.com admin@meusite.com
-```
-
-## 🔍 Monitoramento e Logs
+## 📊 Monitoramento
 
 ### Verificar Status dos Serviços
 
 ```bash
+# Produção
 cd /opt/agents-chat
 docker-compose ps
+
+# Desenvolvimento
+cd /opt/agents-chat-dev
+docker-compose ps
+```
+
+### Ver Logs
+
+```bash
+# Todos os serviços
 docker-compose logs -f
+
+# Apenas aplicação
+docker-compose logs -f app
+
+# Apenas banco de dados
+docker-compose logs -f postgres
 ```
 
-### Verificar Uso de Memória
+## 🛠️ Comandos Úteis
+
+### Gerenciamento de Serviços
 
 ```bash
-free -h
-docker stats
-```
-
-### Verificar Logs do Sistema
-
-```bash
-sudo journalctl -u docker -f
-sudo journalctl -u nginx -f
-```
-
-## 🔧 Comandos Úteis
-
-### Gerenciar Serviços
-
-```bash
-cd /opt/agents-chat
-
-# Parar serviços
+# Parar todos os serviços
 docker-compose down
 
 # Iniciar serviços
@@ -157,84 +183,139 @@ docker-compose up -d
 # Reiniciar serviços
 docker-compose restart
 
-# Ver logs
-docker-compose logs -f
+# Reconstruir e iniciar
+docker-compose up -d --build
 ```
 
 ### Backup e Restore
 
 ```bash
-# Backup
-docker-compose exec db pg_dump -U postgres > backup.sql
+# Backup do banco de dados
+docker-compose exec postgres pg_dump -U postgres agents_chat_prod > backup.sql
 
-# Restore
-docker-compose exec -T db psql -U postgres < backup.sql
+# Restore do banco de dados
+docker-compose exec -T postgres psql -U postgres agents_chat_prod < backup.sql
 ```
 
-### Atualizações
+### Limpeza
 
 ```bash
-# Atualizar código
-cd /opt/agents-chat
-git pull origin main
+# Remover containers parados
+docker container prune
 
-# Rebuild (se usando build local)
-docker-compose down
-docker-compose up -d --build
+# Remover imagens não utilizadas
+docker image prune
 
-# Ou usar imagem pré-construída atualizada
-docker pull lobehub/lobe-chat:latest
-docker-compose up -d
+# Limpeza completa
+docker system prune -a
 ```
 
-## 🛡️ Segurança
+## 🔒 Segurança
 
-O deploy inclui:
+### Firewall (UFW)
 
-- ✅ Firewall UFW configurado
-- ✅ Fail2ban para proteção contra ataques
-- ✅ SSL/TLS com Let's Encrypt
-- ✅ Nginx como proxy reverso
-- ✅ Containers isolados
+```bash
+# Instalar UFW
+sudo apt install ufw
+
+# Configurar regras básicas
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow ssh
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# Ativar firewall
+sudo ufw enable
+```
+
+### Atualizações Automáticas
+
+```bash
+# Instalar unattended-upgrades
+sudo apt install unattended-upgrades
+
+# Configurar
+sudo dpkg-reconfigure -plow unattended-upgrades
+```
+
+## 🆘 Troubleshooting
+
+### Problemas Comuns
+
+1. **Erro de permissão Docker**
+
+   ```bash
+   sudo usermod -aG docker $USER
+   newgrp docker
+   ```
+
+2. **Porta já em uso**
+
+   ```bash
+   # Verificar o que está usando a porta
+   sudo netstat -tulpn | grep :3210
+
+   # Parar processo
+   sudo kill -9 <PID>
+   ```
+
+3. **SSL não funciona**
+
+   ```bash
+   # Verificar se o domínio aponta para o servidor
+   nslookup meusite.com
+   
+   # Verificar logs do certbot
+   sudo certbot certificates
+   ```
+
+4. **Aplicação não inicia**
+
+   ```bash
+   # Verificar logs
+   docker-compose logs app
+   
+   # Verificar variáveis de ambiente
+   docker-compose config
+   ```
+
+### Logs de Diagnóstico
+
+```bash
+# Status do sistema
+systemctl status docker
+systemctl status nginx
+
+# Uso de recursos
+df -h
+free -h
+docker system df
+```
 
 ## 📞 Suporte
 
-Se encontrar problemas:
+Para problemas específicos:
 
-1. **Verifique logs**: `docker-compose logs -f`
-2. **Verifique memória**: `free -h`
-3. **Verifique Docker**: `docker system df`
-4. **Limpe cache**: `docker system prune -a`
+1. Verifique os logs: `docker-compose logs -f`
+2. Verifique o status: `docker-compose ps`
+3. Verifique recursos: `htop` ou `top`
+4. Verifique conectividade: `ping` e `curl`
 
-## 🔄 Atualizações Automáticas
+## 🔄 Atualizações
 
-Para configurar atualizações automáticas:
-
-```bash
-# Criar script de atualização
-sudo nano /opt/agents-chat/update.sh
-```
+Para atualizar o Agents Chat:
 
 ```bash
-#!/bin/bash
+# Produção
 cd /opt/agents-chat
 git pull origin main
 docker-compose down
 docker-compose up -d
+
+# Desenvolvimento
+cd /opt/agents-chat-dev
+git pull origin main
+docker-compose down
+docker-compose up -d
 ```
-
-```bash
-# Tornar executável
-chmod +x /opt/agents-chat/update.sh
-
-# Adicionar ao crontab (atualizar diariamente às 2h)
-crontab -e
-# Adicionar: 0 2 * * * /opt/agents-chat/update.sh
-```
-
-## 📝 Notas Importantes
-
-- **Backup**: Sempre faça backup antes de atualizações
-- **Monitoramento**: Configure alertas de uso de memória
-- **Segurança**: Mantenha o sistema atualizado
-- **Performance**: Use imagem pré-construída para VMs pequenas
