@@ -63,7 +63,7 @@ AUTH_MODE="${AUTH_MODE:-credentials}"
 # Se rebuild rápido:
 if [[ "$1" == "rebuild" ]]; then
   log "♻️  Rebuild rápido da aplicação..."
-  docker build -t agents-chat:local .
+  docker build -f docker-compose/Dockerfile -t agents-chat:local .
   docker rm -f agents-chat || true
   docker-compose -f docker-compose.complete.yml up -d app
   docker logs agents-chat --tail 20
