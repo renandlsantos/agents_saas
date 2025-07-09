@@ -11,6 +11,8 @@
 #   AUTH_MODE=github ./deploy-complete-local.sh
 # Para rebuild rápido:
 #   ./deploy-complete-local.sh rebuild
+# Para usar imagem do Docker Hub (sem build local):
+#   USE_PREBUILT=true ./deploy-complete-local.sh
 # =====================================================
 
 # ============================================================================
@@ -59,6 +61,9 @@ fi
 
 # Modo de autenticação (padrão: credentials)
 AUTH_MODE="${AUTH_MODE:-credentials}"
+
+# Usar imagem pré-buildada do Docker Hub
+USE_PREBUILT="${USE_PREBUILT:-false}"
 
 # Se rebuild rápido:
 if [[ "$1" == "rebuild" ]]; then
@@ -239,79 +244,103 @@ success "Arquivo .env configurado com senhas seguras!"
 # 4. INSTALAÇÃO OTIMIZADA DE DEPENDÊNCIAS
 # =============================================================================
 
-log "📦 Instalando dependências com otimizações para 32GB RAM..."
+if [[ "$USE_PREBUILT" == "false" ]]; then
+    log "📦 Instalando dependências com otimizações para 32GB RAM..."
 
-# Configurar variáveis de ambiente para build
-export NODE_OPTIONS="--max-old-space-size=28672"
-export UV_THREADPOOL_SIZE=128
-export LIBUV_THREAD_COUNT=16
+    # Configurar variáveis de ambiente para build
+    export NODE_OPTIONS="--max-old-space-size=28672"
+    export UV_THREADPOOL_SIZE=128
+    export LIBUV_THREAD_COUNT=16
 
-# Instalar dependências
-pnpm install --no-frozen-lockfile
+    # Instalar dependências
+    pnpm install --no-frozen-lockfile
 
-success "Dependências instaladas!"
+    success "Dependências instaladas!"
+else
+    log "📦 Pulando instalação de dependências (usando imagem pré-buildada)"
+fi
 
 # =============================================================================
 # 5. BUILD LOCAL DA APLICAÇÃO
 # =============================================================================
 
-log "🔨 Executando build local otimizado..."
+if [[ "$USE_PREBUILT" == "false" ]]; then
+    log "🔨 Executando build local otimizado..."
 
-# Configurar variáveis para build
-export DOCKER=true
-export NODE_ENV=production
-export NEXT_TELEMETRY_DISABLED=1
+    # Configurar variáveis para build
+    export DOCKER=true
+    export NODE_ENV=production
+    export NEXT_TELEMETRY_DISABLED=1
 
-# Build da aplicação
-highlight "Executando build local..."
-pnpm run build
+    # Build da aplicação
+    highlight "Executando build local..."
+    pnpm run build
 
-# Verificar se build foi bem-sucedido
-if [ -d ".next" ]; then
-    success "Build local concluído com sucesso!"
+    # Verificar se build foi bem-sucedido
+    if [ -d ".next" ]; then
+        success "Build local concluído com sucesso!"
 
-    # Estatísticas do build
-    if [ -d ".next/standalone" ]; then
-        BUILD_SIZE=$(du -sh .next/standalone 2>/dev/null | cut -f1 || echo "N/A")
-        highlight "Build standalone: ${BUILD_SIZE}"
-    fi
-    if [ -d ".next/static" ]; then
-        STATIC_SIZE=$(du -sh .next/static 2>/dev/null | cut -f1 || echo "N/A")
-        highlight "Static files: ${STATIC_SIZE}"
+        # Estatísticas do build
+        if [ -d ".next/standalone" ]; then
+            BUILD_SIZE=$(du -sh .next/standalone 2>/dev/null | cut -f1 || echo "N/A")
+            highlight "Build standalone: ${BUILD_SIZE}"
+        fi
+        if [ -d ".next/static" ]; then
+            STATIC_SIZE=$(du -sh .next/static 2>/dev/null | cut -f1 || echo "N/A")
+            highlight "Static files: ${STATIC_SIZE}"
+        fi
+    else
+        error "Build falhou! Verifique os logs acima."
     fi
 else
-    error "Build falhou! Verifique os logs acima."
+    log "🔨 Pulando build local (usando imagem pré-buildada)"
 fi
 
 # =============================================================================
 # 6. BUILD DA IMAGEM DOCKER LOCAL
 # =============================================================================
 
-log "🐳 Criando imagem Docker local..."
+if [[ "$USE_PREBUILT" == "false" ]]; then
+    log "🐳 Criando imagem Docker local..."
 
-# Verificar se Dockerfile existe
-if [ ! -f "docker-compose/Dockerfile" ]; then
-    error "Dockerfile não encontrado em docker-compose/Dockerfile!"
-fi
+    # Verificar se Dockerfile existe
+    if [ ! -f "docker-compose/Dockerfile" ]; then
+        error "Dockerfile não encontrado em docker-compose/Dockerfile!"
+    fi
 
-# Build da imagem Docker local
-highlight "Buildando imagem Docker local..."
-DOCKER_BUILDKIT=1 docker build \
-    --build-arg BUILDKIT_INLINE_CACHE=1 \
-    --build-arg NODE_OPTIONS="--max-old-space-size=28672" \
-    -f docker-compose/Dockerfile \
-    -t agents-chat:local \
-    .
+    # Build da imagem Docker local
+    highlight "Buildando imagem Docker local..."
+    DOCKER_BUILDKIT=1 docker build \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        --build-arg NODE_OPTIONS="--max-old-space-size=28672" \
+        -f docker-compose/Dockerfile \
+        -t agents-chat:local \
+        .
 
-# Verificar se imagem foi criada
-if docker images | grep -q "agents-chat.*local"; then
-    success "Imagem Docker local criada com sucesso!"
+    # Verificar se imagem foi criada
+    if docker images | grep -q "agents-chat.*local"; then
+        success "Imagem Docker local criada com sucesso!"
 
-    # Mostrar tamanho da imagem
-    IMAGE_SIZE=$(docker images agents-chat:local --format "{{.Size}}")
-    highlight "Tamanho da imagem: ${IMAGE_SIZE}"
+        # Mostrar tamanho da imagem
+        IMAGE_SIZE=$(docker images agents-chat:local --format "{{.Size}}")
+        highlight "Tamanho da imagem: ${IMAGE_SIZE}"
+    else
+        error "Falha ao criar imagem Docker!"
+    fi
+    
+    # Definir imagem a ser usada
+    DOCKER_IMAGE="agents-chat:local"
 else
-    error "Falha ao criar imagem Docker!"
+    log "🐳 Usando imagem pré-buildada do Docker Hub..."
+    
+    # Usar a imagem oficial do Lobe Chat
+    DOCKER_IMAGE="lobehub/lobe-chat:latest"
+    
+    # Baixar a imagem
+    log "Baixando imagem ${DOCKER_IMAGE}..."
+    docker pull ${DOCKER_IMAGE}
+    
+    success "Imagem Docker pronta!"
 fi
 
 # ===================== GERAÇÃO DO DOCKER-COMPOSE =====================
@@ -423,7 +452,7 @@ services:
 
   # Aplicação Agents Chat
   app:
-    image: agents-chat:local
+    image: ${DOCKER_IMAGE}
     container_name: agents-chat
     restart: unless-stopped
     ports:
