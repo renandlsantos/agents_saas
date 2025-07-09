@@ -63,6 +63,12 @@ AUTH_MODE="${AUTH_MODE:-credentials}"
 # Se rebuild rápido:
 if [[ "$1" == "rebuild" ]]; then
   log "♻️  Rebuild rápido da aplicação..."
+  
+  # Verificar se docker-compose.complete.yml existe
+  if [ ! -f "docker-compose.complete.yml" ]; then
+    error "docker-compose.complete.yml não encontrado! Execute o deploy completo primeiro: ./deploy-complete-local.sh"
+  fi
+  
   docker build -f docker-compose/Dockerfile -t agents-chat:local .
   docker rm -f agents-chat || true
   docker-compose -f docker-compose.complete.yml up -d app
