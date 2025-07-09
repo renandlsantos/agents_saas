@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# ===================== COMO USAR =====================
+# Para login local (usuário/senha):
+#   AUTH_MODE=credentials ./deploy-complete-local.sh
+# Para login via Casdoor:
+#   AUTH_MODE=casdoor ./deploy-complete-local.sh
+# Para login via Google:
+#   AUTH_MODE=google ./deploy-complete-local.sh
+# Para login via GitHub:
+#   AUTH_MODE=github ./deploy-complete-local.sh
+# Para rebuild rápido:
+#   ./deploy-complete-local.sh rebuild
+# =====================================================
+
 # ============================================================================
 # 🚀 DEPLOY COMPLETO LOCAL - AGENTS CHAT
 # ============================================================================
@@ -42,8 +55,6 @@ fi
 #   casdoor      -> Casdoor (SSO local)
 #   google       -> Google OAuth (requer CLIENT_ID/SECRET)
 #   github       -> GitHub OAuth (requer CLIENT_ID/SECRET)
-# Exemplo de uso: AUTH_MODE=credentials ./deploy-complete-local.sh
-# Para rebuild rápido: ./deploy-complete-local.sh rebuild
 # ================================================================
 
 # Modo de autenticação (padrão: credentials)
