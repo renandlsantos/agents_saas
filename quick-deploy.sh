@@ -41,14 +41,14 @@ NEXT_AUTH_SECRET=$(openssl rand -hex 32)
 NEXT_PUBLIC_ENABLE_NEXT_AUTH=1
 NEXT_PUBLIC_SITE_URL=http://localhost:3210
 NEXT_PUBLIC_SERVICE_MODE=server
-NODE_OPTIONS=--max-old-space-size=16384
+NODE_OPTIONS=--max-old-space-size=28672
 NEXT_TELEMETRY_DISABLED=1
 EOF
 
 # 6. Instalar dependências
 echo "📦 Instalando dependências do projeto..."
-export NODE_OPTIONS="--max-old-space-size=16384"
-pnpm install --frozen-lockfile
+export NODE_OPTIONS="--max-old-space-size=28672"
+pnpm install --no-frozen-lockfile
 
 # 7. Build da aplicação
 echo "🔨 Fazendo build..."

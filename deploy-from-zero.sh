@@ -192,8 +192,8 @@ S3_ACCESS_KEY_ID=
 S3_SECRET_ACCESS_KEY=
 S3_BUCKET=
 
-# Performance
-NODE_OPTIONS=--max-old-space-size=16384
+# Performance (32GB RAM optimization)
+NODE_OPTIONS=--max-old-space-size=28672
 NEXT_TELEMETRY_DISABLED=1
 
 # Security
@@ -218,9 +218,9 @@ success "Ambiente configurado!"
 
 log "📦 Instalando dependências..."
 
-# Instalar dependências com configurações otimizadas
-export NODE_OPTIONS="--max-old-space-size=16384"
-pnpm install --frozen-lockfile
+# Instalar dependências com configurações otimizadas para 32GB RAM
+export NODE_OPTIONS="--max-old-space-size=28672"
+pnpm install --no-frozen-lockfile
 
 success "Dependências instaladas!"
 
@@ -237,7 +237,7 @@ rm -rf .next out
 log "Executando build de produção..."
 export DOCKER=true
 export NODE_ENV=production
-export NODE_OPTIONS="--max-old-space-size=16384"
+export NODE_OPTIONS="--max-old-space-size=28672"
 
 pnpm run build:docker
 
