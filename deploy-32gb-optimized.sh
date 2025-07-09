@@ -220,11 +220,21 @@ OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
 GOOGLE_API_KEY=
 
-# S3 Storage
-S3_ENDPOINT=
-S3_ACCESS_KEY_ID=
-S3_SECRET_ACCESS_KEY=
-S3_BUCKET=
+# MinIO Storage (S3-compatible)
+S3_ENDPOINT=http://localhost:9000
+S3_ACCESS_KEY=minioadmin
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=minio-super-secret-password-123
+S3_SECRET_KEY=minio-super-secret-password-123
+S3_BUCKET=lobe
+S3_REGION=us-east-1
+S3_FORCE_PATH_STYLE=true
+
+# MinIO Configuration
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=minio-super-secret-password-123
+MINIO_LOBE_BUCKET=lobe
+MINIO_PORT=9000
 
 # Security
 ACCESS_CODE=
@@ -234,9 +244,11 @@ EOF
 # Gerar secrets seguros
 KEY_VAULTS_SECRET=$(openssl rand -hex 32)
 NEXT_AUTH_SECRET=$(openssl rand -hex 32)
+MINIO_PASSWORD=$(openssl rand -hex 16)
 
 sed -i "s/KEY_VAULTS_SECRET=change-this-secret-key-in-production/KEY_VAULTS_SECRET=${KEY_VAULTS_SECRET}/" .env
 sed -i "s/NEXT_AUTH_SECRET=change-this-nextauth-secret-in-production/NEXT_AUTH_SECRET=${NEXT_AUTH_SECRET}/" .env
+sed -i "s/minio-super-secret-password-123/${MINIO_PASSWORD}/g" .env
 
 success "Ambiente configurado para máxima performance!"
 
@@ -371,18 +383,94 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    networks:
+      - agents-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: agents-chat-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minio-super-secret-password-123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
+        reservations:
+          memory: 512M
+          cpus: '1'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - agents-network
+
+  # Inicializador do bucket MinIO
+  minio-init:
+    image: minio/mc:latest
+    container_name: agents-chat-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minio-super-secret-password-123;
+      if ! mc ls myminio/lobe > /dev/null 2>&1; then
+        echo 'Creating bucket lobe...';
+        mc mb myminio/lobe;
+        mc anonymous set download myminio/lobe;
+        echo 'Bucket lobe created successfully!';
+      else
+        echo 'Bucket lobe already exists';
+      fi;
+      exit 0;
+      "
+    networks:
+      - agents-network
 
 volumes:
   postgres_data:
+  minio_data:
+
+networks:
+  agents-network:
+    driver: bridge
 EOF
 
-# Iniciar banco otimizado
+# Atualizar senhas no docker-compose.db.yml
+sed -i "s/minio-super-secret-password-123/${MINIO_PASSWORD}/g" docker-compose.db.yml
+
+# Iniciar banco e MinIO otimizados
 docker-compose -f docker-compose.db.yml up -d
 
-log "Aguardando PostgreSQL otimizado inicializar..."
+log "Aguardando PostgreSQL e MinIO inicializarem..."
 sleep 30
 
-success "PostgreSQL otimizado para 32GB RAM configurado!"
+# Aguardar PostgreSQL
+log "Verificando PostgreSQL..."
+until docker exec agents-chat-postgres pg_isready -U postgres; do
+    log "PostgreSQL ainda inicializando..."
+    sleep 5
+done
+
+# Aguardar MinIO
+log "Verificando MinIO..."
+until curl -f http://localhost:9000/minio/health/live >/dev/null 2>&1; do
+    log "MinIO ainda inicializando..."
+    sleep 5
+done
+
+success "PostgreSQL e MinIO otimizados para 32GB RAM configurados!"
 
 # =============================================================================
 # 10. EXECUÇÃO OTIMIZADA DA APLICAÇÃO
@@ -450,19 +538,27 @@ echo ""
 echo -e "${PURPLE}📊 OTIMIZAÇÕES APLICADAS:${NC}"
 echo "   • Node.js: 28GB heap size"
 echo "   • PostgreSQL: 8GB shared_buffers, 24GB effective_cache_size"
+echo "   • MinIO: 2GB memory limit, bucket 'lobe' criado automaticamente"
 echo "   • Docker: 16GB memory limit, 6 CPUs, 4GB shm-size"
 echo "   • Sistema: Kernel otimizado, ulimits aumentados"
 echo ""
 echo -e "${BLUE}📋 INFORMAÇÕES:${NC}"
-echo "   • URL: http://$(curl -s ipinfo.io/ip):3210"
+echo "   • App URL: http://$(curl -s ipinfo.io/ip):3210"
+echo "   • MinIO Console: http://$(curl -s ipinfo.io/ip):9001"
 echo "   • Container: agents-chat (32GB optimized)"
 echo "   • Database: agents-chat-postgres (32GB optimized)"
+echo "   • Storage: agents-chat-minio (2GB optimized)"
 echo ""
 echo -e "${GREEN}🔧 COMANDOS OTIMIZADOS:${NC}"
 echo "   • Monitorar: docker logs -f agents-chat"
 echo "   • Stats: docker stats"
 echo "   • Reiniciar: docker restart agents-chat"
 echo "   • Performance: htop"
+echo ""
+echo -e "${YELLOW}🔐 CREDENCIAIS MinIO:${NC}"
+echo "   • Usuário: minioadmin"
+echo "   • Senha: ${MINIO_PASSWORD}"
+echo "   • Bucket: lobe (criado automaticamente)"
 echo ""
 echo -e "${YELLOW}⚡ PERFORMANCE MONITORING:${NC}"
 echo "   • Memória total: $(free -h | grep Mem | awk '{print $2}')"
@@ -495,6 +591,7 @@ echo ""
 
 echo "🔍 HEALTH CHECK:"
 curl -f http://localhost:3210/api/health 2>/dev/null && echo "✅ API OK" || echo "❌ API Down"
+curl -f http://localhost:9000/minio/health/live 2>/dev/null && echo "✅ MinIO OK" || echo "❌ MinIO Down"
 EOF
 
 chmod +x /opt/agents-chat/monitor-32gb.sh
