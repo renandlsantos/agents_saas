@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  # Banco de Dados PostgreSQL
+  # Banco de Dados PostgreSQL com pgvector
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg16
     container_name: agents-chat-postgres
     restart: unless-stopped
     environment:
@@ -98,7 +98,7 @@ services:
       - APP_URL=${NEXT_PUBLIC_SITE_URL}
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
       - NEXT_PUBLIC_SERVICE_MODE=server
-      - NEXT_PUBLIC_ENABLE_NEXT_AUTH=1
+      - NEXT_PUBLIC_ENABLE_NEXT_AUTH=0
       - HOSTNAME=0.0.0.0
       - PORT=3210
       - NODE_ENV=production
