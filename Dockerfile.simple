@@ -1,0 +1,9 @@
+# Usar a imagem oficial do Lobe Chat
+FROM lobehub/lobe-chat:latest
+
+# Apenas sobrescrever variáveis de ambiente necessárias
+ENV NODE_ENV=production
+ENV PORT=3210
+ENV HOSTNAME=0.0.0.0
+
+EXPOSE 3210
