@@ -184,12 +184,18 @@ EOF
 fi
 
 # Verificar qual Dockerfile usar
-if [ -f "docker-compose/Dockerfile" ]; then
+if [ -f "Dockerfile.production" ]; then
+    DOCKERFILE="Dockerfile.production"
+    log "Usando Dockerfile.production (recomendado)"
+elif [ -f "docker-compose/Dockerfile" ]; then
     DOCKERFILE="docker-compose/Dockerfile"
+    log "Usando docker-compose/Dockerfile"
 elif [ -f "Dockerfile" ]; then
     DOCKERFILE="Dockerfile"
+    log "Usando Dockerfile"
 else
     # Criar Dockerfile básico
+    warn "Nenhum Dockerfile encontrado, criando básico..."
     cat > Dockerfile << 'EOF'
 FROM lobehub/lobe-chat:latest
 
