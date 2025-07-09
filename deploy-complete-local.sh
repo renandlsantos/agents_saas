@@ -91,6 +91,7 @@ command -v docker >/dev/null 2>&1 || error "Docker não está instalado!"
 command -v docker-compose >/dev/null 2>&1 || error "Docker Compose não está instalado!"
 command -v node >/dev/null 2>&1 || error "Node.js não está instalado!"
 command -v pnpm >/dev/null 2>&1 || error "PNPM não está instalado!"
+command -v tsx >/dev/null 2>&1 || error "TSX não está instalado! Execute: pnpm install -g tsx"
 
 success "Ambiente preparado!"
 
@@ -313,9 +314,9 @@ cat > docker-compose.complete.yml << EOF
 version: '3.8'
 
 services:
-  # PostgreSQL otimizado para 32GB RAM
+  # PostgreSQL com pgvector otimizado para 32GB RAM
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg16
     container_name: agents-chat-postgres
     restart: unless-stopped
     environment:
@@ -503,6 +504,15 @@ for i in {1..30}; do
     sleep 5
 done
 
+# Instalar extensão pgvector no PostgreSQL
+log "Instalando extensão pgvector..."
+docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTENSION IF NOT EXISTS vector;" >/dev/null 2>&1 || warn "Extensão pgvector já existe ou erro ao instalar"
+
+# Executar migrações do banco de dados
+log "Executando migrações do banco de dados..."
+cd "$WORK_DIR"
+MIGRATION_DB=1 DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/agents_chat" tsx ./scripts/migrateServerDB/index.ts || warn "Erro ao executar migrações - verifique manualmente"
+
 # Aguardar aplicação
 log "Verificando aplicação..."
 for i in {1..60}; do
@@ -545,9 +555,10 @@ echo "==========================================================================
 echo ""
 echo -e "${PURPLE}📊 COMPONENTES INSTALADOS:${NC}"
 echo "   • ✅ Aplicação Agents Chat (build local)"
-echo "   • ✅ PostgreSQL (otimizado 32GB RAM)"
+echo "   • ✅ PostgreSQL com pgvector (otimizado 32GB RAM)"
 echo "   • ✅ MinIO (S3-compatible storage)"
 echo "   • ✅ Bucket 'lobe' (configurado automaticamente)"
+echo "   • ✅ Migrações do banco de dados executadas"
 echo ""
 echo -e "${BLUE}📋 ACESSO AOS SERVIÇOS:${NC}"
 echo "   • 🌐 App: http://localhost:3210"
