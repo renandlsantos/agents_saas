@@ -68,12 +68,12 @@ USE_PREBUILT="${USE_PREBUILT:-false}"
 # Se rebuild rápido:
 if [[ "$1" == "rebuild" ]]; then
   log "♻️  Rebuild rápido da aplicação..."
-  
+
   # Verificar se docker-compose.complete.yml existe
   if [ ! -f "docker-compose.complete.yml" ]; then
     error "docker-compose.complete.yml não encontrado! Execute o deploy completo primeiro: ./deploy-complete-local.sh"
   fi
-  
+
   docker build -f docker-compose/Dockerfile -t agents-chat:local .
   docker rm -f agents-chat || true
   docker-compose -f docker-compose.complete.yml up -d app
@@ -222,19 +222,19 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 LOBE_DB_NAME=agents_chat
 
 # Feature Flags
-FEATURE_FLAGS=
+# FEATURE_FLAGS=
 
 # Model Providers (adicione suas chaves)
 OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
-GOOGLE_API_KEY=
-AZURE_API_KEY=
-AZURE_ENDPOINT=
-AZURE_API_VERSION=
+# ANTHROPIC_API_KEY=
+# GOOGLE_API_KEY=
+# AZURE_API_KEY=
+# AZURE_ENDPOINT=
+# AZURE_API_VERSION=
 
 # Optional
-ACCESS_CODE=
-DEBUG=0
+# ACCESS_CODE=
+# DEBUG=0
 
 EOF
 
@@ -327,19 +327,19 @@ if [[ "$USE_PREBUILT" == "false" ]]; then
     else
         error "Falha ao criar imagem Docker!"
     fi
-    
+
     # Definir imagem a ser usada
     DOCKER_IMAGE="agents-chat:local"
 else
     log "🐳 Usando imagem pré-buildada do Docker Hub..."
-    
+
     # Usar a imagem oficial do Lobe Chat
     DOCKER_IMAGE="lobehub/lobe-chat:latest"
-    
+
     # Baixar a imagem
     log "Baixando imagem ${DOCKER_IMAGE}..."
     docker pull ${DOCKER_IMAGE}
-    
+
     success "Imagem Docker pronta!"
 fi
 
@@ -546,7 +546,7 @@ docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTE
 # Executar migrações do banco de dados
 log "Executando migrações do banco de dados..."
 cd "$WORK_DIR"
-MIGRATION_DB=1 DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/agents_chat" tsx ./scripts/migrateServerDB/index.ts || warn "Erro ao executar migrações - verifique manualmente"
+MIGRATION_DB=1 DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@agents-chat-postgres:5432/agents_chat" tsx ./scripts/migrateServerDB/index.ts || warn "Erro ao executar migrações - verifique manualmente"
 
 # Aguardar aplicação
 log "Verificando aplicação..."
