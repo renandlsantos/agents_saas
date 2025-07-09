@@ -176,7 +176,7 @@ success "Arquivo .env configurado com senhas seguras!"
 log "📦 Instalando dependências com otimizações para 32GB RAM..."
 
 # Configurar variáveis de ambiente para build
-export NODE_OPTIONS="--max-old-space-size=28672 --optimize-for-size"
+export NODE_OPTIONS="--max-old-space-size=28672"
 export UV_THREADPOOL_SIZE=128
 export LIBUV_THREAD_COUNT=16
 
