@@ -66,6 +66,9 @@ services:
 
   # Aplicação principal
   app:
+    build:
+      context: .
+      dockerfile: ${DOCKERFILE_PATH:-Dockerfile}
     image: agents-chat:local
     container_name: agents-chat
     restart: unless-stopped
@@ -86,20 +89,19 @@ services:
       - S3_BUCKET=${MINIO_LOBE_BUCKET}
       - S3_PUBLIC_DOMAIN=${S3_PUBLIC_DOMAIN:-${NEXT_PUBLIC_SITE_URL}:9000}
       - NEXT_PUBLIC_S3_DOMAIN=${NEXT_PUBLIC_S3_DOMAIN:-${NEXT_PUBLIC_SITE_URL}:9000}
-      # Autenticação Casdoor
-      - AUTH_CASDOOR_ISSUER=${AUTH_CASDOOR_ISSUER}
-      - AUTH_CASDOOR_ID=${AUTH_CASDOOR_ID}
-      - AUTH_CASDOOR_SECRET=${AUTH_CASDOOR_SECRET}
-      - AUTH_CASDOOR_ENDPOINT=http://agents-chat-casdoor:8000
-      - AUTH_CASDOOR_PUBLIC_ENDPOINT=${AUTH_CASDOOR_ISSUER}
-      - NEXT_AUTH_SSO_PROVIDERS=casdoor
-      - NEXTAUTH_URL=${NEXT_PUBLIC_SITE_URL}
+      # Autenticação
+      - AUTH_URL=${AUTH_URL:-${NEXT_PUBLIC_SITE_URL}}
+      - AUTH_TRUST_HOST=${AUTH_TRUST_HOST:-true}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-${NEXT_PUBLIC_SITE_URL}}
+      - NEXTAUTH_URL_INTERNAL=${NEXTAUTH_URL_INTERNAL:-http://localhost:3210}
+      - NEXT_AUTH_SSO_PROVIDERS=${NEXT_AUTH_SSO_PROVIDERS:-credentials}
       # Aplicação
       - APP_URL=${NEXT_PUBLIC_SITE_URL}
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
       - NEXT_PUBLIC_SERVICE_MODE=server
-      - NEXT_PUBLIC_ENABLE_NEXT_AUTH=0
-      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_ENABLE_NEXT_AUTH=${NEXT_PUBLIC_ENABLE_NEXT_AUTH:-1}
+      - HOST=${HOST:-0.0.0.0}
+      - HOSTNAME=${HOSTNAME:-0.0.0.0}
       - PORT=3210
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=2048
@@ -121,7 +123,6 @@ services:
       - postgres
       - redis
       - minio
-      - casdoor
     networks:
       - agents-chat
     volumes:
