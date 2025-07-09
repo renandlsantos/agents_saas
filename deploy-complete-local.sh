@@ -36,6 +36,30 @@ else
    CURRENT_USER="$USER"
 fi
 
+# ===================== AJUSTE DE AUTENTICAÇÃO =====================
+# Escolha o modo de autenticação:
+#   credentials  -> Login local (usuário/senha)
+#   casdoor      -> Casdoor (SSO local)
+#   google       -> Google OAuth (requer CLIENT_ID/SECRET)
+#   github       -> GitHub OAuth (requer CLIENT_ID/SECRET)
+# Exemplo de uso: AUTH_MODE=credentials ./deploy-complete-local.sh
+# Para rebuild rápido: ./deploy-complete-local.sh rebuild
+# ================================================================
+
+# Modo de autenticação (padrão: credentials)
+AUTH_MODE="${AUTH_MODE:-credentials}"
+
+# Se rebuild rápido:
+if [[ "$1" == "rebuild" ]]; then
+  log "♻️  Rebuild rápido da aplicação..."
+  docker build -t agents-chat:local .
+  docker rm -f agents-chat || true
+  docker-compose -f docker-compose.complete.yml up -d app
+  docker logs agents-chat --tail 20
+  success "Rebuild e restart concluídos!"
+  exit 0
+fi
+
 # =============================================================================
 # 1. PREPARAÇÃO DO AMBIENTE
 # =============================================================================
@@ -86,12 +110,7 @@ rm -f .env.backup
 
 success "Limpeza completa finalizada!"
 
-# =============================================================================
-# 3. CONFIGURAÇÃO DE AMBIENTE OTIMIZADA
-# =============================================================================
-
-log "⚙️ Configurando variáveis de ambiente otimizadas..."
-
+# ===================== GERAÇÃO DO .env =====================
 # Gerar senhas seguras
 POSTGRES_PASSWORD=$(openssl rand -hex 16)
 MINIO_PASSWORD=$(openssl rand -hex 16)
@@ -100,6 +119,33 @@ NEXT_AUTH_SECRET=$(openssl rand -hex 32)
 
 # Backup do .env existente se houver
 [ -f ".env" ] && cp .env .env.backup
+
+# Bloco de autenticação
+NEXT_PUBLIC_ENABLE_NEXT_AUTH=1
+NEXT_AUTH_SSO_PROVIDERS=""
+AUTH_BLOCK=""
+
+case "$AUTH_MODE" in
+  credentials)
+    NEXT_AUTH_SSO_PROVIDERS="credentials"
+    ;;
+  casdoor)
+    NEXT_AUTH_SSO_PROVIDERS="casdoor"
+    AUTH_BLOCK="\nAUTH_CASDOOR_ISSUER=http://localhost:8000\nAUTH_CASDOOR_ID=agents-chat\nAUTH_CASDOOR_SECRET=agents-chat-secret"
+    ;;
+  google)
+    NEXT_AUTH_SSO_PROVIDERS="google"
+    AUTH_BLOCK="\nAUTH_GOOGLE_CLIENT_ID=COLOQUE_SEU_CLIENT_ID_AQUI\nAUTH_GOOGLE_CLIENT_SECRET=COLOQUE_SEU_CLIENT_SECRET_AQUI"
+    ;;
+  github)
+    NEXT_AUTH_SSO_PROVIDERS="github"
+    AUTH_BLOCK="\nAUTH_GITHUB_CLIENT_ID=COLOQUE_SEU_CLIENT_ID_AQUI\nAUTH_GITHUB_CLIENT_SECRET=COLOQUE_SEU_CLIENT_SECRET_AQUI"
+    ;;
+  *)
+    warn "Modo de autenticação desconhecido, usando credentials."
+    NEXT_AUTH_SSO_PROVIDERS="credentials"
+    ;;
+esac
 
 # Criar arquivo .env completo
 cat > .env << EOF
@@ -113,7 +159,9 @@ LOBE_PORT=3210
 NODE_ENV=production
 NEXT_PUBLIC_SITE_URL=http://localhost:3210
 NEXT_PUBLIC_SERVICE_MODE=server
-NEXT_PUBLIC_ENABLE_NEXT_AUTH=1
+NEXT_PUBLIC_ENABLE_NEXT_AUTH=${NEXT_PUBLIC_ENABLE_NEXT_AUTH}
+NEXT_AUTH_SSO_PROVIDERS=${NEXT_AUTH_SSO_PROVIDERS}
+${AUTH_BLOCK}
 NEXT_TELEMETRY_DISABLED=1
 
 # Build Configuration
@@ -248,12 +296,7 @@ else
     error "Falha ao criar imagem Docker!"
 fi
 
-# =============================================================================
-# 7. CONFIGURAÇÃO DO DOCKER-COMPOSE COMPLETO
-# =============================================================================
-
-log "🗄️ Configurando infraestrutura completa (PostgreSQL + MinIO)..."
-
+# ===================== GERAÇÃO DO DOCKER-COMPOSE =====================
 # Criar docker-compose completo
 cat > docker-compose.complete.yml << EOF
 version: '3.8'
@@ -381,6 +424,11 @@ services:
       - KEY_VAULTS_SECRET=${KEY_VAULTS_SECRET}
       - NEXT_AUTH_SECRET=${NEXT_AUTH_SECRET}
       - NEXT_PUBLIC_SITE_URL=http://localhost:3210
+      - NEXT_PUBLIC_ENABLE_NEXT_AUTH=${NEXT_PUBLIC_ENABLE_NEXT_AUTH}
+      - NEXT_AUTH_SSO_PROVIDERS=${NEXT_AUTH_SSO_PROVIDERS}
+$(if [[ "$AUTH_MODE" == "casdoor" ]]; then echo "      - AUTH_CASDOOR_ISSUER=http://agents-chat-casdoor:8000\n      - AUTH_CASDOOR_ID=agents-chat\n      - AUTH_CASDOOR_SECRET=agents-chat-secret"; fi)
+$(if [[ "$AUTH_MODE" == "google" ]]; then echo "      - AUTH_GOOGLE_CLIENT_ID=COLOQUE_SEU_CLIENT_ID_AQUI\n      - AUTH_GOOGLE_CLIENT_SECRET=COLOQUE_SEU_CLIENT_SECRET_AQUI"; fi)
+$(if [[ "$AUTH_MODE" == "github" ]]; then echo "      - AUTH_GITHUB_CLIENT_ID=COLOQUE_SEU_CLIENT_ID_AQUI\n      - AUTH_GITHUB_CLIENT_SECRET=COLOQUE_SEU_CLIENT_SECRET_AQUI"; fi)
     depends_on:
       postgres:
         condition: service_healthy
