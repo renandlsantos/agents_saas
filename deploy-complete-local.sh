@@ -26,9 +26,14 @@ warn() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 highlight() { echo -e "${PURPLE}[HIGHLIGHT]${NC} $1"; }
 
-# Verificar se está executando como root
+# Verificar usuário e ajustar comportamento
 if [[ $EUID -eq 0 ]]; then
-   error "Este script não deve ser executado como root!"
+   warn "Executando como root - alguns comandos serão ajustados"
+   USER_HOME="/root"
+   CURRENT_USER="root"
+else
+   USER_HOME="/home/$USER"
+   CURRENT_USER="$USER"
 fi
 
 # =============================================================================
@@ -37,15 +42,14 @@ fi
 
 log "🏗️ Preparando ambiente para deploy local completo..."
 
-# Criar diretório de trabalho
-sudo mkdir -p /opt/agents-chat
-sudo chown $USER:$USER /opt/agents-chat
-cd /opt/agents-chat
-
-# Verificar se estamos no repositório correto
+# Verificar se estamos no repositório correto primeiro
 if [ ! -f "package.json" ]; then
     error "Execute este script no diretório raiz do projeto agents_saas!"
 fi
+
+# Usar diretório atual se já estivermos no projeto
+WORK_DIR=$(pwd)
+log "Usando diretório atual: $WORK_DIR"
 
 # Verificar dependências necessárias
 command -v docker >/dev/null 2>&1 || error "Docker não está instalado!"
@@ -509,10 +513,10 @@ echo "   • Arquivos de dados em volumes Docker persistentes"
 echo ""
 
 # Salvar informações importantes
-cat > /opt/agents-chat/deploy-info.txt << EOF
+cat > $WORK_DIR/deploy-info.txt << EOF
 === AGENTS CHAT - INFORMAÇÕES DO DEPLOY ===
 Data: $(date)
-Usuário: $USER
+Usuário: $CURRENT_USER
 
 SENHAS GERADAS:
 - MinIO: ${MINIO_PASSWORD}
@@ -531,5 +535,5 @@ COMANDOS:
 - Iniciar: docker-compose -f docker-compose.complete.yml up -d
 EOF
 
-success "Informações salvas em /opt/agents-chat/deploy-info.txt"
+success "Informações salvas em $WORK_DIR/deploy-info.txt"
 highlight "Deploy local completo finalizado com sucesso! 🚀"
