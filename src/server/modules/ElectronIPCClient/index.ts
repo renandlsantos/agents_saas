@@ -1,8 +1,9 @@
 /**
  * ElectronIPCClient module with Edge Runtime safety
  *
- * This module conditionally loads electron-specific dependencies only in
- * Node.js environments with Electron, preventing Edge Runtime errors.
+ * This module provides a unified interface that works in both Edge Runtime
+ * and Node.js environments. In Edge Runtime or non-Electron environments,
+ * it provides a stub implementation that throws appropriate errors.
  */
 
 // Edge Runtime detection - check for lack of Node.js globals
@@ -14,68 +15,85 @@ const isElectronEnvironment =
   process.versions?.electron &&
   process.versions?.node !== undefined;
 
-// Only import in desktop environment to avoid Edge Runtime errors
-let ElectronIpcClient: any;
-let packageJSON: any;
-
-// Only attempt to load electron modules in actual Electron environment
-if (isElectronEnvironment) {
-  try {
-    ElectronIpcClient = require('@lobechat/electron-server-ipc').ElectronIpcClient;
-    packageJSON = require('@/../apps/desktop/package.json');
-  } catch (error) {
-    // Silently fail if modules cannot be loaded
-    console.warn('Failed to load electron modules:', error);
-  }
-}
-
 class LobeHubElectronIpcClient {
   private client: any;
+  private clientPromise: Promise<any> | null = null;
 
   constructor() {
-    if (isElectronEnvironment && ElectronIpcClient && packageJSON) {
-      this.client = new ElectronIpcClient(packageJSON.name);
+    // Initialize client lazily to avoid Edge Runtime issues
+    this.client = null;
+  }
+
+  private async ensureClient(): Promise<any> {
+    if (this.client) return this.client;
+    
+    if (!isElectronEnvironment) {
+      throw new Error('Electron IPC client not available in this environment');
+    }
+
+    // Use cached promise to avoid multiple initializations
+    if (this.clientPromise) return this.clientPromise;
+
+    this.clientPromise = this.initializeClient();
+    this.client = await this.clientPromise;
+    return this.client;
+  }
+
+  private async initializeClient(): Promise<any> {
+    try {
+      // Dynamic imports only when actually needed
+      const [electronModule, desktopPkg] = await Promise.all([
+        import('@lobechat/electron-server-ipc'),
+        import('@/../apps/desktop/package.json')
+      ]);
+      
+      const ElectronIpcClient = electronModule.ElectronIpcClient;
+      const packageJSON = desktopPkg.default;
+      
+      return new ElectronIpcClient(packageJSON.name);
+    } catch (error) {
+      console.error('Failed to initialize Electron IPC client:', error);
+      throw new Error('Failed to initialize Electron IPC client');
     }
   }
 
   // 获取数据库路径
   getDatabasePath = async (): Promise<string> => {
-    if (!this.client) throw new Error('Electron IPC client not available');
-    return this.client.sendRequest('getDatabasePath');
+    const client = await this.ensureClient();
+    return client.sendRequest('getDatabasePath');
   };
 
   // 获取用户数据路径
   getUserDataPath = async (): Promise<string> => {
-    if (!this.client) throw new Error('Electron IPC client not available');
-    return this.client.sendRequest('getUserDataPath');
+    const client = await this.ensureClient();
+    return client.sendRequest('getUserDataPath');
   };
 
   getDatabaseSchemaHash = async (): Promise<string> => {
-    if (!this.client) throw new Error('Electron IPC client not available');
-    return this.client.sendRequest('setDatabaseSchemaHash');
+    const client = await this.ensureClient();
+    return client.sendRequest('getDatabaseSchemaHash');
   };
 
   setDatabaseSchemaHash = async (hash: string | undefined): Promise<void> => {
-    if (!this.client) throw new Error('Electron IPC client not available');
     if (!hash) return;
-
-    return this.client.sendRequest('setDatabaseSchemaHash', hash);
+    const client = await this.ensureClient();
+    return client.sendRequest('setDatabaseSchemaHash', hash);
   };
 
   getFilePathById = async (id: string): Promise<string> => {
-    if (!this.client) throw new Error('Electron IPC client not available');
-    return this.client.sendRequest('getStaticFilePath', id);
+    const client = await this.ensureClient();
+    return client.sendRequest('getStaticFilePath', id);
   };
 
   deleteFiles = async (
     paths: string[],
   ): Promise<{ errors?: { message: string; path: string }[]; success: boolean }> => {
-    if (!this.client) throw new Error('Electron IPC client not available');
-    return this.client.sendRequest('deleteFiles', paths);
+    const client = await this.ensureClient();
+    return client.sendRequest('deleteFiles', paths);
   };
 }
 
 // Export the appropriate client based on environment
-// In Edge Runtime, this will be a stub that throws errors
-// In Electron environment, this will be the real client
+// In Edge Runtime, this will be a stub that throws errors when methods are called
+// In Electron environment, this will be the real client with lazy initialization
 export const electronIpcClient = new LobeHubElectronIpcClient();

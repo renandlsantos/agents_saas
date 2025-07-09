@@ -1,12 +1,24 @@
 import NextAuth from 'next-auth';
 
+import { authEnv } from '@/config/auth';
 import { getServerDBConfig } from '@/config/db';
 import { serverDB } from '@/database/server';
 
 import { LobeNextAuthDbAdapter } from './adapter';
 import config from './auth.config';
+import credentialsProvider from './sso-providers/credentials';
 
 const { NEXT_PUBLIC_ENABLED_SERVER_SERVICE } = getServerDBConfig();
+
+// Add credentials provider if it's configured
+const addCredentialsProvider = () => {
+  if (!authEnv.NEXT_PUBLIC_ENABLE_NEXT_AUTH) return [];
+  
+  const hasCredentials = authEnv.NEXT_AUTH_SSO_PROVIDERS.split(/[,，]/)
+    .some((provider) => provider.trim() === 'credentials');
+    
+  return hasCredentials ? [credentialsProvider.provider] : [];
+};
 
 /**
  * NextAuth initialization with Database adapter
@@ -27,6 +39,7 @@ const { NEXT_PUBLIC_ENABLED_SERVER_SERVICE } = getServerDBConfig();
 export default NextAuth({
   ...config,
   adapter: NEXT_PUBLIC_ENABLED_SERVER_SERVICE ? LobeNextAuthDbAdapter(serverDB) : undefined,
+  providers: [...config.providers, ...addCredentialsProvider()],
   session: {
     strategy: 'jwt',
   },

@@ -6,13 +6,21 @@ import { ssoProviders } from './sso-providers';
 
 export const initSSOProviders = () => {
   return authEnv.NEXT_PUBLIC_ENABLE_NEXT_AUTH
-    ? authEnv.NEXT_AUTH_SSO_PROVIDERS.split(/[,，]/).map((provider) => {
-        const validProvider = ssoProviders.find((item) => item.id === provider.trim());
+    ? authEnv.NEXT_AUTH_SSO_PROVIDERS.split(/[,，]/)
+        .filter((provider) => {
+          const trimmedProvider = provider.trim();
+          // In this base config, we filter out credentials provider
+          // It will be added separately in the Node.js runtime config
+          return trimmedProvider !== 'credentials';
+        })
+        .map((provider) => {
+          const trimmedProvider = provider.trim();
+          const validProvider = ssoProviders.find((item) => item.id === trimmedProvider);
 
-        if (validProvider) return validProvider.provider;
+          if (validProvider) return validProvider.provider;
 
-        throw new Error(`[NextAuth] provider ${provider} is not supported`);
-      })
+          throw new Error(`[NextAuth] provider ${provider} is not supported`);
+        })
     : [];
 };
 

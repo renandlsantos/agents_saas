@@ -1,4 +1,3 @@
-import { isDesktop } from '@/const/version';
 import { getDBInstance } from '@/database/core/web-server';
 import { LobeChatDatabase } from '@/database/type';
 
@@ -19,6 +18,18 @@ const isEdgeRuntime = () => {
   );
 };
 
+/**
+ * Check if we're in a desktop environment
+ * This check is Edge Runtime safe
+ */
+const isDesktopEnvironment = () => {
+  // In Edge Runtime, always return false
+  if (isEdgeRuntime()) return false;
+  
+  // In Node.js runtime, check the environment variable
+  return typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_IS_DESKTOP_APP === '1';
+};
+
 export const getServerDB = async (): Promise<LobeChatDatabase> => {
   // 如果已经有缓存的实例，直接返回
   if (cachedDB) return cachedDB;
@@ -31,7 +42,7 @@ export const getServerDB = async (): Promise<LobeChatDatabase> => {
     }
 
     // 根据环境选择合适的数据库实例
-    if (isDesktop) {
+    if (isDesktopEnvironment()) {
       // 动态导入 electron 模块，避免在 Edge Runtime 中加载
       const { getPgliteInstance } = await import('./electron');
       cachedDB = await getPgliteInstance();

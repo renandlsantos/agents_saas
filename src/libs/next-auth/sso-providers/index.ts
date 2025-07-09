@@ -4,7 +4,6 @@ import Authentik from './authentik';
 import AzureAD from './azure-ad';
 import Casdoor from './casdoor';
 import CloudflareZeroTrust from './cloudflare-zero-trust';
-import Credentials from './credentials';
 import GenericOIDC from './generic-oidc';
 import Github from './github';
 import Google from './google';
@@ -14,6 +13,9 @@ import MicrosoftEntraID from './microsoft-entra-id';
 import WeChat from './wechat';
 import Zitadel from './zitadel';
 
+// Note: Credentials provider is not included here because it requires
+// database access which is not available in Edge Runtime.
+// It's loaded separately in the Node.js runtime auth config.
 export const ssoProviders = [
   Auth0,
   Authentik,
@@ -29,5 +31,4 @@ export const ssoProviders = [
   WeChat,
   Keycloak,
   Google,
-  Credentials,
 ];
