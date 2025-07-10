@@ -69,14 +69,14 @@ USE_PREBUILT="${USE_PREBUILT:-false}"
 if [[ "$1" == "rebuild" ]]; then
   log "♻️  Rebuild rápido da aplicação..."
 
-  # Verificar se docker-compose.complete.yml existe
-  if [ ! -f "docker-compose.complete.yml" ]; then
-    error "docker-compose.complete.yml não encontrado! Execute o deploy completo primeiro: ./deploy-complete-local.sh"
+  # Verificar se docker-compose.yml existe
+  if [ ! -f "docker-compose.yml" ]; then
+    error "docker-compose.yml não encontrado! Execute o deploy completo primeiro: ./deploy-complete-local.sh"
   fi
 
   docker build -f docker-compose/Dockerfile -t agents-chat:local .
   docker rm -f agents-chat || true
-  docker-compose -f docker-compose.complete.yml up -d app
+  docker-compose -f docker-compose.yml up -d app
   docker logs agents-chat --tail 20
   success "Rebuild e restart concluídos!"
   exit 0
@@ -345,7 +345,7 @@ fi
 
 # ===================== GERAÇÃO DO DOCKER-COMPOSE =====================
 # Criar docker-compose completo
-cat > docker-compose.complete.yml << EOF
+cat > docker-compose.yml << EOF
 version: '3.8'
 
 services:
@@ -512,7 +512,7 @@ success "Docker-compose completo configurado!"
 log "🚀 Iniciando infraestrutura (PostgreSQL e MinIO primeiro)..."
 
 # Iniciar apenas PostgreSQL e MinIO primeiro
-docker-compose -f docker-compose.complete.yml up -d postgres minio minio-init
+docker-compose -f docker-compose.yml up -d postgres minio minio-init
 
 log "Aguardando serviços inicializarem..."
 sleep 30
@@ -550,7 +550,7 @@ MIGRATION_DB=1 DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@localhos
 
 # Iniciar a aplicação após migrações
 log "Iniciando aplicação após migrações..."
-docker-compose -f docker-compose.complete.yml up -d app
+docker-compose -f docker-compose.yml up -d app
 
 # Aguardar aplicação
 log "Verificando aplicação..."
@@ -611,8 +611,8 @@ echo ""
 echo -e "${GREEN}🔧 COMANDOS ÚTEIS:${NC}"
 echo "   • Ver logs: docker logs -f agents-chat"
 echo "   • Status: docker ps"
-echo "   • Parar tudo: docker-compose -f docker-compose.complete.yml down"
-echo "   • Reiniciar: docker-compose -f docker-compose.complete.yml restart"
+echo "   • Parar tudo: docker-compose -f docker-compose.yml down"
+echo "   • Reiniciar: docker-compose -f docker-compose.yml restart"
 echo ""
 echo -e "${PURPLE}💡 NOTAS IMPORTANTES:${NC}"
 echo "   • Todas as senhas foram geradas automaticamente"
@@ -640,8 +640,8 @@ ACESSOS:
 
 COMANDOS:
 - Logs: docker logs -f agents-chat
-- Parar: docker-compose -f docker-compose.complete.yml down
-- Iniciar: docker-compose -f docker-compose.complete.yml up -d
+- Parar: docker-compose -f docker-compose.yml down
+- Iniciar: docker-compose -f docker-compose.yml up -d
 EOF
 
 success "Informações salvas em $WORK_DIR/deploy-info.txt"
