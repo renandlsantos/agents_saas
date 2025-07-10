@@ -14,8 +14,8 @@ COPY packages ./packages
 # Criar arquivo pnpm-workspace.yaml se não existir
 RUN if [ ! -f pnpm-workspace.yaml ]; then echo "packages:" > pnpm-workspace.yaml; fi
 
-# Instalar dependências (ignorando workspace issues)
-RUN pnpm install --no-frozen-lockfile --ignore-workspace-root-check || npm install
+# Instalar dependências (corrigido para versão atual do pnpm)
+RUN pnpm install --no-frozen-lockfile --ignore-workspace || npm install --legacy-peer-deps
 
 # Copiar código fonte
 COPY . .
@@ -38,8 +38,8 @@ COPY pnpm-workspace.yaml* ./
 # Criar arquivo pnpm-workspace.yaml se não existir
 RUN if [ ! -f pnpm-workspace.yaml ]; then echo "packages:" > pnpm-workspace.yaml; fi
 
-# Instalar deps de produção
-RUN pnpm install --prod --no-frozen-lockfile --ignore-workspace-root-check || npm install --production
+# Instalar deps de produção (corrigido)
+RUN pnpm install --prod --no-frozen-lockfile --ignore-workspace || npm install --production --legacy-peer-deps
 
 # Copiar arquivos necessários do build
 COPY --from=builder /app/public ./public
