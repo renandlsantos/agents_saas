@@ -51,9 +51,8 @@ export async function POST(request: NextRequest) {
         emailVerifiedAt: new Date(),
         id: nanoid(),
         // For simplicity, marking as verified
-isOnboarded: false,
-        
-password: hashedPassword, 
+        isOnboarded: false,
+        password: hashedPassword,
         username: validatedData.username,
       })
       .returning();
