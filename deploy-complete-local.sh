@@ -113,8 +113,8 @@ success "Ambiente preparado!"
 log "🧹 Fazendo limpeza completa do ambiente..."
 
 # Parar e remover containers antigos
-docker stop agents-chat agents-chat-postgres agents-chat-minio agents-chat-minio-init 2>/dev/null || true
-docker rm agents-chat agents-chat-postgres agents-chat-minio agents-chat-minio-init 2>/dev/null || true
+docker stop agents-chat postgres agents-chat-minio agents-chat-minio-init 2>/dev/null || true
+docker rm agents-chat postgres agents-chat-minio agents-chat-minio-init 2>/dev/null || true
 
 # Remover imagens antigas
 docker rmi agents-chat:local 2>/dev/null || true
@@ -546,7 +546,7 @@ docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTE
 # Executar migrações do banco de dados
 log "Executando migrações do banco de dados..."
 cd "$WORK_DIR"
-MIGRATION_DB=1 DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@agents-chat-postgres:5432/agents_chat" tsx ./scripts/migrateServerDB/index.ts || warn "Erro ao executar migrações - verifique manualmente"
+MIGRATION_DB=1 DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/agents_chat" tsx ./scripts/migrateServerDB/index.ts || warn "Erro ao executar migrações - verifique manualmente"
 
 # Aguardar aplicação
 log "Verificando aplicação..."
@@ -573,7 +573,7 @@ echo ""
 echo "=== HEALTH CHECKS ==="
 curl -f http://localhost:3210 >/dev/null 2>&1 && echo "✅ App: OK" || echo "❌ App: ERRO"
 curl -f http://localhost:9000/minio/health/live >/dev/null 2>&1 && echo "✅ MinIO: OK" || echo "❌ MinIO: ERRO"
-docker exec agents-chat-postgres pg_isready -U postgres >/dev/null 2>&1 && echo "✅ PostgreSQL: OK" || echo "❌ PostgreSQL: ERRO"
+docker exec postgres pg_isready -U postgres >/dev/null 2>&1 && echo "✅ PostgreSQL: OK" || echo "❌ PostgreSQL: ERRO"
 
 echo ""
 echo "=== LOGS DA APLICAÇÃO ==="
