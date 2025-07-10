@@ -31,14 +31,15 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
-# Instalar apenas dependências de produção
+# Copiar arquivos de workspace
 COPY package.json pnpm-lock.yaml* ./
 COPY pnpm-workspace.yaml* ./
+COPY packages ./packages
 
 # Criar arquivo pnpm-workspace.yaml se não existir
 RUN if [ ! -f pnpm-workspace.yaml ]; then echo "packages:" > pnpm-workspace.yaml; fi
 
-# Instalar deps de produção (corrigido)
+# Instalar deps de produção (corrigido - incluindo workspace)
 RUN pnpm install --prod --no-frozen-lockfile --ignore-workspace || npm install --production --legacy-peer-deps
 
 # Copiar arquivos necessários do build
