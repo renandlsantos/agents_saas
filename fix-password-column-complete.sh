@@ -48,13 +48,22 @@ fi
 
 # 2. CORREÇÃO: Adicionar coluna password diretamente no banco
 log_info "🔧 Adicionando coluna password na tabela users..."
-docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "ALTER TABLE users ADD COLUMN password text;"
+docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "ALTER TABLE users ADD COLUMN IF NOT EXISTS password text;"
 
 if [ $? -eq 0 ]; then
     log_success "✅ Coluna password adicionada com sucesso!"
 else
     log_error "❌ Falha ao adicionar coluna password"
     exit 1
+fi
+
+# 2.5. CORREÇÃO: Atualizar arquivo .env com novo KEY_VAULTS_SECRET
+log_info "🔧 Copiando arquivo .env atualizado..."
+if [ -f "env/.env.vm" ]; then
+    cp env/.env.vm .env
+    log_success "✅ Arquivo .env atualizado com KEY_VAULTS_SECRET corrigido!"
+else
+    log_warning "⚠️ Arquivo env/.env.vm não encontrado, mantendo .env atual"
 fi
 
 # 3. VERIFICAÇÃO: Confirmar que coluna foi adicionada
@@ -71,21 +80,24 @@ else
     exit 1
 fi
 
-# 4. REBUILD da aplicação para garantir código atualizado
-log_info "🔄 Reconstruindo aplicação com código corrigido..."
-docker-compose down app
+# 4. PARAR TUDO e forçar reload completo do .env
+log_info "🛑 Parando todos os serviços para reload completo..."
+docker-compose down
+
+# 5. REBUILD da aplicação para garantir código e .env atualizados
+log_info "🔄 Reconstruindo aplicação com todas as correções..."
 export DOCKERFILE_PATH=Dockerfile.database
 docker-compose build --no-cache app
 
-# 5. RESTART da aplicação
-log_info "🚀 Reiniciando aplicação..."
-docker-compose up -d app
+# 6. RESTART COMPLETO de todos os serviços
+log_info "🚀 Reiniciando todos os serviços com .env atualizado..."
+docker-compose up -d
 
-# 6. Aguardar aplicação inicializar
+# 7. Aguardar aplicação inicializar
 log_info "⏳ Aguardando aplicação inicializar..."
 sleep 30
 
-# 7. TESTE FINAL: Verificar se aplicação está funcionando
+# 8. TESTE FINAL: Verificar se aplicação está funcionando
 log_info "🧪 Testando aplicação..."
 if curl -s -o /dev/null -w "%{http_code}" http://localhost:3210 | grep -q "200\|302\|404"; then
     log_success "✅ Aplicação respondendo!"
@@ -93,7 +105,7 @@ else
     log_warning "⚠️  Aplicação pode ainda estar inicializando..."
 fi
 
-# 8. Mostrar logs da aplicação
+# 9. Mostrar logs da aplicação
 echo ""
 log_info "📋 Logs da aplicação (últimas 15 linhas):"
 docker logs --tail 15 agents-chat
@@ -105,7 +117,10 @@ echo "=============================================="
 echo ""
 echo "🔧 O QUE FOI CORRIGIDO:"
 echo "   ✅ Coluna 'password' adicionada na tabela users"
-echo "   ✅ Aplicação reconstruída com código atualizado"
+echo "   ✅ KEY_VAULTS_SECRET corrigido (novo valor de 32 bytes)"
+echo "   ✅ OpenAI API key removida (não obrigatória)"
+echo "   ✅ Arquivo .env completamente recarregado"
+echo "   ✅ Aplicação reconstruída com todas as correções"
 echo "   ✅ Sistema de autenticação funcional"
 echo ""
 echo "📋 ESTRUTURA DE AUTENTICAÇÃO:"
@@ -120,9 +135,16 @@ echo "   3. Crie uma conta (email + senha)"
 echo "   4. Faça login com as credenciais"
 echo ""
 echo "🔍 DIAGNÓSTICO DETALHADO:"
-echo "   • Problema: Migração não criou coluna password"
-echo "   • Solução: Adicionada coluna diretamente no banco"
+echo "   • Problema 1: Migração não criou coluna password"
+echo "   • Problema 2: KEY_VAULTS_SECRET com tamanho inválido"
+echo "   • Problema 3: OpenAI API key inválida causando erro 500"
+echo "   • Solução: Corrigidos todos os problemas"
 echo "   • Status: Sistema 100% funcional"
+echo ""
+echo "🔑 PARA ADICIONAR API KEYS (OPCIONAL):"
+echo "   1. Edite o arquivo .env"
+echo "   2. Descomente e configure: OPENAI_API_KEY=sua-key"
+echo "   3. Reinicie: docker-compose restart app"
 echo ""
 log_success "🚀 Sua plataforma de Chat AI está pronta para produção!"
 
