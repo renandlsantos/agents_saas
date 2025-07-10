@@ -88,12 +88,12 @@ RUN \
     # Use pnpm for corepack
     && corepack use $(sed -n 's/.*"packageManager": "\(.*\)".*/\1/p' package.json) \
     # Install the dependencies (corrigido para resolver problemas de workspace)
-    && pnpm i --no-frozen-lockfile --ignore-workspace || npm install --legacy-peer-deps
+    && pnpm i --no-frozen-lockfile --ignore-workspace
 
 COPY . .
 
 # run build standalone for docker version
-RUN npm run build:docker
+RUN pnpm run build:docker
 
 ## Application image, copy all the files for production
 FROM busybox:latest AS app

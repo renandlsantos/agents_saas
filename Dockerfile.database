@@ -123,7 +123,7 @@ COPY . .
 
 # Build com cache mount para .next/cache
 RUN --mount=type=cache,target=/app/.next/cache \
-    npm run build:docker
+    pnpm run build:docker
 
 ## Application image otimizada
 FROM busybox:latest AS app
