@@ -11,8 +11,15 @@ services:
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${LOBE_DB_NAME}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - agents-chat
 
@@ -61,6 +68,9 @@ services:
       - logConfig_level=Info
     volumes:
       - ./data/casdoor:/app/conf
+    depends_on:
+      postgres:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -122,9 +132,12 @@ services:
       - FEATURE_FLAGS=${FEATURE_FLAGS}
       - DEBUG=${DEBUG}
     depends_on:
-      - postgres
-      - redis
-      - minio
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
