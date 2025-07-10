@@ -1,7 +1,7 @@
 /* eslint-disable unicorn/no-process-exit */
-const dns = require('node:dns').promises;
-const fs = require('node:fs').promises;
-const { spawn } = require('node:child_process');
+import { spawn } from 'node:child_process';
+import { promises as dns } from 'node:dns';
+import { promises as fs } from 'node:fs';
 
 // Set file paths
 const DB_MIGRATION_SCRIPT_PATH = '/app/docker.cjs';
