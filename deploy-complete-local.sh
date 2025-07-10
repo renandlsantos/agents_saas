@@ -509,10 +509,10 @@ success "Docker-compose completo configurado!"
 # 8. INICIALIZAÇÃO COMPLETA
 # =============================================================================
 
-log "🚀 Iniciando infraestrutura completa..."
+log "🚀 Iniciando infraestrutura (PostgreSQL e MinIO primeiro)..."
 
-# Iniciar todos os serviços
-docker-compose -f docker-compose.complete.yml up -d
+# Iniciar apenas PostgreSQL e MinIO primeiro
+docker-compose -f docker-compose.complete.yml up -d postgres minio minio-init
 
 log "Aguardando serviços inicializarem..."
 sleep 30
@@ -546,7 +546,11 @@ docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTE
 # Executar migrações do banco de dados
 log "Executando migrações do banco de dados..."
 cd "$WORK_DIR"
-MIGRATION_DB=1 DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/agents_chat" tsx ./scripts/migrateServerDB/index.ts || warn "Erro ao executar migrações - verifique manualmente"
+MIGRATION_DB=1 DATABASE_URL="postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/agents_chat" tsx ./scripts/migrateServerDB/index.ts || warn "Erro ao executar migrações - verifique manualmente"
+
+# Iniciar a aplicação após migrações
+log "Iniciando aplicação após migrações..."
+docker-compose -f docker-compose.complete.yml up -d app
 
 # Aguardar aplicação
 log "Verificando aplicação..."
