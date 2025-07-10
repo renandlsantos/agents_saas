@@ -308,4 +308,4 @@ EXPOSE 3210/tcp
 
 ENTRYPOINT ["/bin/node"]
 
-CMD ["--input-type=module", "/app/startServer.js"]
+CMD ["/app/server.js"]
