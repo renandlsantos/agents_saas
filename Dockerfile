@@ -87,8 +87,8 @@ RUN \
     && corepack enable \
     # Use pnpm for corepack
     && corepack use $(sed -n 's/.*"packageManager": "\(.*\)".*/\1/p' package.json) \
-    # Install the dependencies (corrigido para resolver problemas de workspace)
-    && pnpm i --no-frozen-lockfile --ignore-workspace
+    # Install the dependencies (incluindo workspace packages)
+    && pnpm i --no-frozen-lockfile
 
 COPY . .
 

@@ -59,8 +59,8 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     && corepack enable \
     # Use pnpm for corepack
     && corepack use $(sed -n 's/.*"packageManager": "\(.*\)".*/\1/p' package.json) \
-    # Install the dependencies SEM frozen lockfile (pois não temos o lock file)
-    && pnpm i \
+    # Install the dependencies incluindo workspace packages
+    && pnpm i --no-frozen-lockfile \
     # Add db migration dependencies
     && mkdir -p /deps \
     && cd /deps \
