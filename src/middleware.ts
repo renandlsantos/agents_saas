@@ -53,7 +53,7 @@ export const config = {
   ],
 };
 
-const backendApiEndpoints = ['/api', '/trpc', '/webapi', '/oidc'];
+const backendApiEndpoints = ['/api', '/trpc', '/webapi', '/oidc', '/next-auth', '/_next'];
 
 const defaultMiddleware = (request: NextRequest) => {
   const url = new URL(request.url);
@@ -71,9 +71,12 @@ const defaultMiddleware = (request: NextRequest) => {
 
   // if it's a new user, there's no cookie
   // So we need to use the fallback language parsed by accept-language
-  // FIXED: Default to en-US instead of browser language to avoid redirect issues
-  const browserLanguage = 'en-US'; // parseBrowserLanguage(request.headers);
-  const locale = (request.cookies.get(LOBE_LOCALE_COOKIE)?.value || browserLanguage) as Locales;
+  // Check for locale preference: cookie > .env default > browser language
+  const cookieLocale = request.cookies.get(LOBE_LOCALE_COOKIE)?.value;
+  const envDefaultLocale = process.env.DEFAULT_LOCALE || 'pt-BR';
+  const browserLanguage = parseBrowserLanguage(request.headers);
+
+  const locale = (cookieLocale || envDefaultLocale || browserLanguage) as Locales;
 
   const ua = request.headers.get('user-agent');
 
@@ -130,12 +133,23 @@ const defaultMiddleware = (request: NextRequest) => {
     originalPathname: url.pathname,
   });
 
-  // TEMPORARY FIX: Disable URL rewriting to avoid pt-BR redirect issues
-  // url.pathname = nextPathname;
-  // return NextResponse.rewrite(url, { status: 200 });
-  
-  // Just return without rewriting
-  return NextResponse.next();
+  // Properly handle URL rewriting for variants
+  url.pathname = nextPathname;
+
+  // Create response with proper rewrite
+  const response = NextResponse.rewrite(url, { status: 200 });
+
+  // Set locale cookie if not present
+  if (!request.cookies.get(LOBE_LOCALE_COOKIE)?.value && locale) {
+    response.cookies.set(LOBE_LOCALE_COOKIE, locale, {
+      httpOnly: false,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+  }
+
+  return response;
 };
 
 const isPublicRoute = createRouteMatcher([

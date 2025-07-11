@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { memo, useEffect } from 'react';
 
 import { useUserStore } from '@/store/user';
@@ -14,6 +14,7 @@ interface RedirectProps {
 
 const Redirect = memo<RedirectProps>(({ setLoadingStage }) => {
   const router = useRouter();
+  const params = useParams();
   const [isLogin, isLoaded, isUserStateInit, isOnboard] = useUserStore((s) => [
     authSelectors.isLogin(s),
     authSelectors.isLoaded(s),
@@ -23,7 +24,15 @@ const Redirect = memo<RedirectProps>(({ setLoadingStage }) => {
 
   const navToChat = () => {
     setLoadingStage(AppLoadingStage.GoToChat);
-    router.replace('/chat');
+    // Get the current variant from params if available
+    const variant = params?.variants as string;
+    if (variant) {
+      // If we're already in a variant path, navigate to the chat within that variant
+      router.replace(`/${variant}/chat`);
+    } else {
+      // Otherwise, use the simple redirect that will be handled by middleware
+      router.replace('/chat');
+    }
   };
 
   useEffect(() => {
