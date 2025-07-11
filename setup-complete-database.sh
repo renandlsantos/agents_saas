@@ -30,6 +30,46 @@ log_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
+# =============================================================================
+# CONFIGURAÇÃO DE DNS/DOMÍNIO
+# =============================================================================
+echo ""
+echo "📡 ====================================="
+echo "   CONFIGURAÇÃO DE DOMÍNIO"
+echo "====================================="
+echo ""
+
+# IP padrão do servidor
+SERVER_IP="64.23.166.36"
+
+# Perguntar se deseja configurar domínio personalizado
+echo -e "${BLUE}Deseja configurar um domínio personalizado? (ex: chat.seudominio.com)${NC}"
+echo -e "${YELLOW}Deixe em branco para usar o IP do servidor ($SERVER_IP)${NC}"
+echo -n "Digite o domínio (ou pressione ENTER para usar IP): "
+read CUSTOM_DOMAIN
+
+# Determinar URLs baseadas na configuração
+if [ -n "$CUSTOM_DOMAIN" ]; then
+    # Remove http:// ou https:// se o usuário incluiu
+    CUSTOM_DOMAIN=$(echo "$CUSTOM_DOMAIN" | sed 's|https\?://||')
+    BASE_URL="https://${CUSTOM_DOMAIN}"
+    DISPLAY_URL="$CUSTOM_DOMAIN"
+    log_success "Domínio configurado: $CUSTOM_DOMAIN"
+    echo ""
+    log_warning "⚠️  IMPORTANTE: Configure seu DNS apontando para o IP $SERVER_IP"
+    echo "   Registro A: $CUSTOM_DOMAIN → $SERVER_IP"
+    echo ""
+else
+    BASE_URL="http://${SERVER_IP}"
+    DISPLAY_URL="$SERVER_IP"
+    log_info "Usando IP do servidor: $SERVER_IP"
+fi
+
+# Exportar para uso no script
+export CUSTOM_DOMAIN
+export BASE_URL
+export DISPLAY_URL
+
 # Verificar se .env existe
 if [ ! -f ".env" ]; then
     log_info "Copiando env/.env.vm para .env..."
@@ -40,6 +80,28 @@ fi
 
 # Carregar variáveis do .env
 source .env
+
+# Adicionar domínio personalizado ao .env se configurado
+if [ -n "$CUSTOM_DOMAIN" ]; then
+    # Verificar se CUSTOM_DOMAIN já existe no .env
+    if ! grep -q "^CUSTOM_DOMAIN=" .env; then
+        echo "" >> .env
+        echo "# Domínio personalizado configurado pelo setup" >> .env
+        echo "CUSTOM_DOMAIN=$CUSTOM_DOMAIN" >> .env
+        log_success "Domínio $CUSTOM_DOMAIN adicionado ao arquivo .env"
+    else
+        # Atualizar domínio existente
+        sed -i "s|^CUSTOM_DOMAIN=.*|CUSTOM_DOMAIN=$CUSTOM_DOMAIN|" .env
+        log_info "Domínio atualizado no arquivo .env"
+    fi
+    
+    # Adicionar APP_URL se não existir
+    if ! grep -q "^APP_URL=" .env; then
+        echo "APP_URL=https://$CUSTOM_DOMAIN" >> .env
+    else
+        sed -i "s|^APP_URL=.*|APP_URL=https://$CUSTOM_DOMAIN|" .env
+    fi
+fi
 
 log_info "Carregando configurações do ambiente..."
 
@@ -271,14 +333,27 @@ echo "   ✅ Database: $table_count tabelas criadas"
 echo "   ✅ Migrações: Executadas com sucesso"
 echo ""
 echo "🌐 URLs DE ACESSO:"
-echo "   • 🚀 Lobe Chat:  http://64.23.166.36:3210"
-echo "   • 🔐 Casdoor:    http://64.23.166.36:8000"
-echo "   • 📦 MinIO:      http://64.23.166.36:9000"
+if [ -n "$CUSTOM_DOMAIN" ]; then
+    echo "   • 🚀 Lobe Chat:  https://${CUSTOM_DOMAIN}"
+    echo "   • 🔐 Casdoor:    https://${CUSTOM_DOMAIN}:8000"
+    echo "   • 📦 MinIO:      https://${CUSTOM_DOMAIN}:9000"
+else
+    echo "   • 🚀 Lobe Chat:  http://${SERVER_IP}:3210"
+    echo "   • 🔐 Casdoor:    http://${SERVER_IP}:8000"
+    echo "   • 📦 MinIO:      http://${SERVER_IP}:9000"
+fi
 echo ""
 echo "👤 PRIMEIROS PASSOS:"
-echo "   1. Acesse: http://64.23.166.36:3210"
-echo "   2. Clique em 'Sign Up' para criar conta"
-echo "   3. Faça login e comece a usar o chat!"
+if [ -n "$CUSTOM_DOMAIN" ]; then
+    echo "   1. Configure o DNS apontando para ${SERVER_IP}"
+    echo "   2. Acesse: https://${CUSTOM_DOMAIN}"
+    echo "   3. Clique em 'Sign Up' para criar conta"
+    echo "   4. Faça login e comece a usar o chat!"
+else
+    echo "   1. Acesse: http://${SERVER_IP}:3210"
+    echo "   2. Clique em 'Sign Up' para criar conta"
+    echo "   3. Faça login e comece a usar o chat!"
+fi
 echo ""
 echo "🔧 COMANDOS ÚTEIS:"
 echo "   • docker-compose ps                    # Status dos serviços"
@@ -289,9 +364,41 @@ echo "   • docker-compose up -d                 # Subir tudo"
 echo "   • ./setup-complete-database.sh --clean # Recriar do zero"
 echo ""
 echo "🎯 PRÓXIMOS PASSOS:"
-echo "   • Configure domínio personalizado"
-echo "   • Configure SSL/HTTPS"
-echo "   • Configure backup automático"
-echo "   • Monitore logs e performance"
+if [ -n "$CUSTOM_DOMAIN" ]; then
+    echo ""
+    echo "📡 CONFIGURAÇÃO DE DNS:"
+    echo "   1. No seu provedor de DNS, crie um registro A:"
+    echo "      • Tipo: A"
+    echo "      • Nome: ${CUSTOM_DOMAIN}"
+    echo "      • Valor: ${SERVER_IP}"
+    echo "      • TTL: 300 (5 minutos)"
+    echo ""
+    echo "   2. Aguarde a propagação do DNS (pode levar até 48h)"
+    echo "      Teste com: nslookup ${CUSTOM_DOMAIN}"
+    echo ""
+    echo "🔒 CONFIGURAÇÃO SSL/HTTPS (RECOMENDADO):"
+    echo "   1. Instale o Certbot:"
+    echo "      apt-get update && apt-get install -y certbot"
+    echo ""
+    echo "   2. Configure um proxy reverso (Nginx):"
+    echo "      apt-get install -y nginx"
+    echo ""
+    echo "   3. Gere o certificado SSL:"
+    echo "      certbot certonly --standalone -d ${CUSTOM_DOMAIN}"
+    echo ""
+else
+    echo "   • Configure domínio personalizado"
+    echo "     Execute novamente: ./setup-complete-database.sh"
+    echo ""
+    echo "   • Configure SSL/HTTPS após adicionar domínio"
+fi
 echo ""
-log_success "🚀 Sua plataforma SAAS de Chat AI está pronta para produção!"
+echo "🔧 OUTRAS CONFIGURAÇÕES:"
+echo "   • Configure backup automático"
+echo "   • Configure monitoramento"
+echo "   • Ajuste limites de recursos"
+echo ""
+log_success "🚀 Sua plataforma SAAS de Chat AI está pronta!"
+if [ -n "$CUSTOM_DOMAIN" ]; then
+    log_info "📌 Lembre-se de configurar o DNS antes de acessar!"
+fi
