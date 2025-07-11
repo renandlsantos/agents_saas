@@ -142,19 +142,32 @@ export class AiInfraRepos {
   getAiProviderRuntimeState = async (
     decryptor?: DecryptUserKeyVaults,
   ): Promise<AiProviderRuntimeState> => {
-    const result = await this.aiProviderModel.getAiProviderRuntimeConfig(decryptor);
+    try {
+      console.log('[getAiProviderRuntimeState] Starting method');
+      console.log('[getAiProviderRuntimeState] userId:', this.userId);
+      console.log('[getAiProviderRuntimeState] providerConfigs keys:', Object.keys(this.providerConfigs || {}));
+      
+      const result = await this.aiProviderModel.getAiProviderRuntimeConfig(decryptor);
+      console.log('[getAiProviderRuntimeState] Runtime config obtained:', Object.keys(result || {}));
 
-    const runtimeConfig = result;
+      const runtimeConfig = result;
 
-    Object.entries(result).forEach(([key, value]) => {
-      runtimeConfig[key] = merge(this.providerConfigs[key] || {}, value);
-    });
+      Object.entries(result).forEach(([key, value]) => {
+        runtimeConfig[key] = merge(this.providerConfigs[key] || {}, value);
+      });
 
-    const enabledAiProviders = await this.getUserEnabledProviderList();
+      const enabledAiProviders = await this.getUserEnabledProviderList();
+      console.log('[getAiProviderRuntimeState] Enabled providers count:', enabledAiProviders.length);
 
-    const enabledAiModels = await this.getEnabledModels();
+      const enabledAiModels = await this.getEnabledModels();
+      console.log('[getAiProviderRuntimeState] Enabled models count:', enabledAiModels.length);
 
-    return { enabledAiModels, enabledAiProviders, runtimeConfig };
+      return { enabledAiModels, enabledAiProviders, runtimeConfig };
+    } catch (error) {
+      console.error('[getAiProviderRuntimeState] Error:', error);
+      console.error('[getAiProviderRuntimeState] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      throw error;
+    }
   };
 
   getAiProviderModelList = async (providerId: string) => {

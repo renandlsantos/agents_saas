@@ -345,6 +345,72 @@ const useStyles = createStyles(({ css, token }) => ({
 4. **Chaves estrangeiras**: Trate constraints adequadamente (use `null` ou crie registros referenciados)
 5. **Teste ambiente duplo**: Teste nos ambientes PGLite e PostgreSQL
 
+### 💰 Billing System | Sistema de Cobrança
+
+**EN**: The project includes a comprehensive billing system for token usage control:
+
+**PT-BR**: O projeto inclui um sistema completo de cobrança para controle de uso de tokens:
+
+#### Key Components | Componentes Principais
+
+- **Database Schema** (`/src/database/schemas/billing.ts`): Complete billing tables with TypeScript types
+- **Model Layer** (`/src/database/models/billing.ts`): CRUD operations for billing entities
+- **Service Layer** (`/src/services/billing.ts`): Business logic for subscriptions, usage tracking, and quota management
+- **Middleware** (`/src/middleware/quota.ts`): Quota enforcement for API routes
+- **UI Components** (`/src/features/BillingDashboard/`): React components for billing visualization
+- **API Routes** (`/src/app/api/billing/`): REST endpoints for billing operations
+- **AI Runtime Integration** (`/src/libs/model-runtime/hooks/billing.ts`): Automatic token usage tracking
+
+#### Database Tables | Tabelas do Banco
+
+```typescript
+// Billing plans with features and pricing
+billing_plans: { id, name, price, features, tokensPerMonth, maxTokensPerRequest }
+
+// User subscriptions to plans
+user_subscriptions: { id, userId, planId, status, createdAt, expiresAt }
+
+// Token usage tracking
+user_usage: { id, userId, date, tokensUsed, requestsCount, feature }
+
+// User balance and credits
+user_balance: { id, userId, balance, lastUpdated }
+
+// Billing transactions
+billing_transactions: { id, userId, amount, type, description, createdAt }
+
+// User quotas and limits
+user_quotas: { id, userId, quotaType, limit, used, resetDate }
+```
+
+#### Usage Examples | Exemplos de Uso
+
+```typescript
+// Check quota before API call
+const quotaCheck = await billingService.checkQuota('tokens', 1000);
+if (!quotaCheck.allowed) {
+  throw new Error('Quota exceeded');
+}
+
+// Record token usage after API call
+await billingService.recordTokenUsage({
+  tokens: 1000,
+  feature: 'chat',
+  model: 'gpt-4'
+});
+
+// Subscribe to a plan
+await billingService.subscribeToPlan('pro-monthly');
+```
+
+#### Security Features | Recursos de Segurança
+
+- ✅ User isolation in all billing operations
+- ✅ Quota enforcement middleware
+- ✅ Transaction logging for audit trails
+- ✅ Automatic usage tracking integration
+- ✅ Plan-based access control
+
 ### 🌐 Internationalization (i18n) | Internacionalização
 
 #### Workflow | Fluxo de Trabalho

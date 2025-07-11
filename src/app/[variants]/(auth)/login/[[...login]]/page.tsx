@@ -1,5 +1,5 @@
 import { SignIn } from '@clerk/nextjs';
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
 import { enableClerk } from '@/const/auth';
 import { BRANDING_NAME } from '@/const/branding';
@@ -19,7 +19,8 @@ export const generateMetadata = async (props: DynamicLayoutProps) => {
 };
 
 const Page = () => {
-  if (!enableClerk) return notFound();
+  // Se não estiver usando Clerk, redireciona para a página de login do NextAuth
+  if (!enableClerk) return redirect('/next-auth/signin');
 
   return <SignIn path="/login" />;
 };

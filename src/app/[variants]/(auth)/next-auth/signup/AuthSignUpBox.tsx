@@ -79,10 +79,10 @@ export default memo(() => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create account');
+        throw new Error(data.message || 'Falha ao criar conta');
       }
 
-      message.success('Account created successfully! Signing you in...');
+      message.success('Conta criada com sucesso! Fazendo login...');
 
       // Auto sign in after successful signup
       const result = await signIn('credentials', {
@@ -92,13 +92,13 @@ export default memo(() => {
       });
 
       if (result?.error) {
-        throw new Error('Failed to sign in after registration');
+        throw new Error('Falha ao fazer login após o registro');
       }
 
       router.push('/chat');
     } catch (error) {
       console.error('Signup error:', error);
-      message.error(error instanceof Error ? error.message : 'Failed to create account');
+      message.error(error instanceof Error ? error.message : 'Falha ao criar conta');
     } finally {
       setLoading(false);
     }
@@ -117,14 +117,14 @@ export default memo(() => {
         <Flex gap="large" vertical>
           {/* Header */}
           <div className={styles.text}>
+            <div>
+              <ProductLogo size={48} />
+            </div>
             <Text as={'h4'} className={styles.title}>
-              <div>
-                <ProductLogo size={48} />
-              </div>
-              Create your Agents Chat account
+              {t('signUp.start.title')}
             </Text>
             <Text as={'p'} className={styles.description}>
-              Sign up to start using Agents Chat
+              {t('signUp.start.subtitle')}
             </Text>
           </div>
           {/* Content */}
@@ -136,36 +136,36 @@ export default memo(() => {
             size="large"
           >
             <Form.Item
-              label="Username (optional)"
+              label={t('formFieldLabel__username') + ' (' + t('formFieldHintText__optional') + ')'}
               name="username"
               rules={[
-                { message: 'Username must be at least 3 characters', min: 3 },
+                { message: 'O nome de usuário deve ter pelo menos 3 caracteres', min: 3 },
                 {
-                  message: 'Username can only contain letters, numbers, underscores and hyphens',
+                  message: 'O nome de usuário só pode conter letras, números, underscores e hífens',
                   pattern: /^[\w-]+$/,
                 },
               ]}
             >
-              <Input placeholder="johndoe" />
+              <Input placeholder="joaosilva" />
             </Form.Item>
 
             <Form.Item
-              label="Email"
+              label={t('formFieldLabel__emailAddress')}
               name="email"
               rules={[
-                { message: 'Please enter your email', required: true },
-                { message: 'Please enter a valid email', type: 'email' },
+                { message: 'Campo obrigatório', required: true },
+                { message: 'Por favor, insira um e-mail válido', type: 'email' },
               ]}
             >
-              <Input placeholder="user@example.com" />
+              <Input placeholder="usuario@exemplo.com" />
             </Form.Item>
 
             <Form.Item
-              label="Password"
+              label={t('formFieldLabel__password')}
               name="password"
               rules={[
-                { message: 'Please enter your password', required: true },
-                { message: 'Password must be at least 6 characters', min: 6 },
+                { message: 'Campo obrigatório', required: true },
+                { message: 'A senha deve ter pelo menos 6 caracteres', min: 6 },
               ]}
             >
               <Input.Password placeholder="••••••••" />
@@ -173,16 +173,16 @@ export default memo(() => {
 
             <Form.Item
               dependencies={['password']}
-              label="Confirm Password"
+              label={t('formFieldLabel__confirmPassword')}
               name="confirmPassword"
               rules={[
-                { message: 'Please confirm your password', required: true },
+                { message: 'Campo obrigatório', required: true },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
                     if (!value || getFieldValue('password') === value) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('Passwords do not match'));
+                    return Promise.reject(new Error(t('formFieldError__notMatchingPasswords')));
                   },
                 }),
               ]}
@@ -192,13 +192,13 @@ export default memo(() => {
 
             <Form.Item>
               <Button block htmlType="submit" loading={loading} type="primary">
-                Create Account
+                {t('signUp.start.actionLink')}
               </Button>
             </Form.Item>
 
             <div className={styles.text}>
               <Text>
-                Already have an account?{' '}
+                {t('signUp.continue.actionText')}{' '}
                 <a
                   onClick={(e) => {
                     e.preventDefault();
@@ -206,7 +206,7 @@ export default memo(() => {
                   }}
                   style={{ cursor: 'pointer' }}
                 >
-                  Sign in
+                  {t('signUp.continue.actionLink')}
                 </a>
               </Text>
             </div>

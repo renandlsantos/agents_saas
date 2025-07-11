@@ -14,47 +14,61 @@ interface ProviderSpecificConfig {
 }
 
 export const genServerAiProvidersConfig = (specificConfig: Record<any, ProviderSpecificConfig>) => {
-  const llmConfig = getLLMConfig() as Record<string, any>;
+  try {
+    console.log('[genServerAiProvidersConfig] Starting provider config generation');
+    const llmConfig = getLLMConfig() as Record<string, any>;
+    console.log('[genServerAiProvidersConfig] LLM config keys:', Object.keys(llmConfig || {}));
 
-  return Object.values(ModelProvider).reduce(
-    (config, provider) => {
-      const providerUpperCase = provider.toUpperCase();
-      const providerCard = AiModels[provider] as AiFullModelCard[];
+    return Object.values(ModelProvider).reduce(
+      (config, provider) => {
+        try {
+          const providerUpperCase = provider.toUpperCase();
+          const providerCard = AiModels[provider] as AiFullModelCard[];
 
-      if (!providerCard)
-        throw new Error(
-          `Provider [${provider}] not found in aiModels, please make sure you have exported the provider in the \`aiModels/index.ts\``,
-        );
+          if (!providerCard) {
+            console.error(`[genServerAiProvidersConfig] Provider [${provider}] not found in aiModels`);
+            throw new Error(
+              `Provider [${provider}] not found in aiModels, please make sure you have exported the provider in the \`aiModels/index.ts\``,
+            );
+          }
 
-      const providerConfig = specificConfig[provider as keyof typeof specificConfig] || {};
-      const providerModelList =
-        process.env[providerConfig.modelListKey ?? `${providerUpperCase}_MODEL_LIST`];
+          const providerConfig = specificConfig[provider as keyof typeof specificConfig] || {};
+          const providerModelList =
+            process.env[providerConfig.modelListKey ?? `${providerUpperCase}_MODEL_LIST`];
 
-      const defaultChatModels = providerCard.filter((c) => c.type === 'chat');
+          const defaultChatModels = providerCard.filter((c) => c.type === 'chat');
 
-      config[provider] = {
-        enabled:
-          typeof providerConfig.enabled !== 'undefined'
-            ? providerConfig.enabled
-            : llmConfig[providerConfig.enabledKey || `ENABLED_${providerUpperCase}`],
+          config[provider] = {
+            enabled:
+              typeof providerConfig.enabled !== 'undefined'
+                ? providerConfig.enabled
+                : llmConfig[providerConfig.enabledKey || `ENABLED_${providerUpperCase}`],
 
-        enabledModels: extractEnabledModels(
-          providerModelList,
-          providerConfig.withDeploymentName || false,
-        ),
-        serverModelLists: transformToAiChatModelList({
-          defaultChatModels: defaultChatModels || [],
-          modelString: providerModelList,
-          providerId: provider,
-          withDeploymentName: providerConfig.withDeploymentName || false,
-        }),
-        ...(providerConfig.fetchOnClient !== undefined && {
-          fetchOnClient: providerConfig.fetchOnClient,
-        }),
-      };
+            enabledModels: extractEnabledModels(
+              providerModelList,
+              providerConfig.withDeploymentName || false,
+            ),
+            serverModelLists: transformToAiChatModelList({
+              defaultChatModels: defaultChatModels || [],
+              modelString: providerModelList,
+              providerId: provider,
+              withDeploymentName: providerConfig.withDeploymentName || false,
+            }),
+            ...(providerConfig.fetchOnClient !== undefined && {
+              fetchOnClient: providerConfig.fetchOnClient,
+            }),
+          };
 
-      return config;
-    },
-    {} as Record<string, ProviderConfig>,
-  );
+          return config;
+        } catch (error) {
+          console.error(`[genServerAiProvidersConfig] Error processing provider ${provider}:`, error);
+          throw error;
+        }
+      },
+      {} as Record<string, ProviderConfig>,
+    );
+  } catch (error) {
+    console.error('[genServerAiProvidersConfig] Fatal error:', error);
+    throw error;
+  }
 };

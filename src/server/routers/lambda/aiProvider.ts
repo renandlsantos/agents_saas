@@ -19,21 +19,32 @@ import { ProviderConfig } from '@/types/user/settings';
 const aiProviderProcedure = authedProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
 
-  const { aiProvider } = await getServerGlobalConfig();
+  try {
+    console.log('[aiProviderProcedure] Starting middleware initialization');
+    console.log('[aiProviderProcedure] Context userId:', ctx.userId);
+    
+    const { aiProvider } = await getServerGlobalConfig();
+    console.log('[aiProviderProcedure] Global config loaded, aiProvider keys:', Object.keys(aiProvider || {}));
 
-  const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
-  return opts.next({
-    ctx: {
-      aiInfraRepos: new AiInfraRepos(
-        ctx.serverDB,
-        ctx.userId,
-        aiProvider as Record<string, ProviderConfig>,
-      ),
-      aiProviderModel: new AiProviderModel(ctx.serverDB, ctx.userId),
-      gateKeeper,
-      userModel: new UserModel(ctx.serverDB, ctx.userId),
-    },
-  });
+    const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
+    console.log('[aiProviderProcedure] KeyVaultsGateKeeper initialized');
+
+    return opts.next({
+      ctx: {
+        aiInfraRepos: new AiInfraRepos(
+          ctx.serverDB,
+          ctx.userId,
+          aiProvider as Record<string, ProviderConfig>,
+        ),
+        aiProviderModel: new AiProviderModel(ctx.serverDB, ctx.userId),
+        gateKeeper,
+        userModel: new UserModel(ctx.serverDB, ctx.userId),
+      },
+    });
+  } catch (error) {
+    console.error('[aiProviderProcedure] Error in middleware:', error);
+    throw error;
+  }
 });
 
 export const aiProviderRouter = router({
@@ -59,7 +70,20 @@ export const aiProviderRouter = router({
   getAiProviderRuntimeState: aiProviderProcedure
     .input(z.object({ isLogin: z.boolean().optional() }))
     .query(async ({ ctx }): Promise<AiProviderRuntimeState> => {
-      return ctx.aiInfraRepos.getAiProviderRuntimeState(KeyVaultsGateKeeper.getUserKeyVaults);
+      try {
+        console.log('[getAiProviderRuntimeState] Starting query');
+        console.log('[getAiProviderRuntimeState] Context exists:', !!ctx);
+        console.log('[getAiProviderRuntimeState] aiInfraRepos exists:', !!ctx.aiInfraRepos);
+        
+        const result = await ctx.aiInfraRepos.getAiProviderRuntimeState(KeyVaultsGateKeeper.getUserKeyVaults);
+        console.log('[getAiProviderRuntimeState] Result obtained successfully');
+        
+        return result;
+      } catch (error) {
+        console.error('[getAiProviderRuntimeState] Error in query:', error);
+        console.error('[getAiProviderRuntimeState] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+        throw error;
+      }
     }),
 
   removeAiProvider: aiProviderProcedure

@@ -73,13 +73,13 @@ export default memo(() => {
       });
 
       if (result?.error) {
-        message.error('Invalid email or password');
+        message.error('E-mail ou senha inválidos');
       } else if (result?.ok) {
         router.push(callbackUrl);
       }
     } catch (error) {
       console.error('Signin error:', error);
-      message.error('Failed to sign in');
+      message.error('Falha ao fazer login');
     } finally {
       setLoading(false);
     }
@@ -98,14 +98,14 @@ export default memo(() => {
         <Flex gap="large" vertical>
           {/* Header */}
           <div className={styles.text}>
+            <div>
+              <ProductLogo size={48} />
+            </div>
             <Text as={'h4'} className={styles.title}>
-              <div>
-                <ProductLogo size={48} />
-              </div>
-              Sign in to Agents Chat
+              {t('signIn.start.title', { applicationName: 'Agents Chat' })}
             </Text>
             <Text as={'p'} className={styles.description}>
-              Enter your email and password to continue
+              {t('signIn.password.subtitle')}
             </Text>
           </div>
           {/* Content */}
@@ -117,38 +117,38 @@ export default memo(() => {
             size="large"
           >
             <Form.Item
-              label="Email"
+              label={t('formFieldLabel__emailAddress')}
               name="email"
               rules={[
-                { message: 'Please enter your email', required: true },
-                { message: 'Please enter a valid email', type: 'email' },
+                { message: 'Campo obrigatório', required: true },
+                { message: 'Por favor, insira um e-mail válido', type: 'email' },
               ]}
             >
-              <Input placeholder="user@example.com" />
+              <Input placeholder="usuario@exemplo.com" />
             </Form.Item>
 
             <Form.Item
-              label="Password"
+              label={t('formFieldLabel__password')}
               name="password"
-              rules={[{ message: 'Please enter your password', required: true }]}
+              rules={[{ required: true }]}
             >
               <Input.Password placeholder="••••••••" />
             </Form.Item>
 
             <Form.Item>
               <Button block htmlType="submit" loading={loading} type="primary">
-                Sign In
+                {t('signInEnterPasswordTitle')}
               </Button>
             </Form.Item>
 
             <Flex gap="small" vertical>
               <Button block onClick={() => router.push('/next-auth/signin')} type="text">
-                Back to other sign in options
+                {t('footerActionLink__useAnotherMethod')}
               </Button>
 
               <div className={styles.text}>
                 <Text>
-                  Don&apos;t have an account?{' '}
+                  {t('signIn.start.actionText')}{' '}
                   <a
                     onClick={(e) => {
                       e.preventDefault();
@@ -156,7 +156,7 @@ export default memo(() => {
                     }}
                     style={{ cursor: 'pointer' }}
                   >
-                    Sign up
+                    {t('signIn.start.actionLink')}
                   </a>
                 </Text>
               </div>
