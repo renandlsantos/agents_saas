@@ -109,10 +109,10 @@ export default memo(() => {
         <Flex gap="large" vertical>
           {/* Header */}
           <div className={styles.text}>
+            <div>
+              <ProductLogo size={48} />
+            </div>
             <Text as={'h4'} className={styles.title}>
-              <div>
-                <ProductLogo size={48} />
-              </div>
               {t('signIn.start.title', { applicationName: 'Agents Chat' })}
             </Text>
             <Text as={'p'} className={styles.description}>
@@ -130,7 +130,7 @@ export default memo(() => {
                       key={provider}
                       onClick={() => router.push('/next-auth/signin/credentials')}
                     >
-                      Sign in with Email
+                      Entrar com E-mail
                     </Button>
                   );
                 }
@@ -150,7 +150,7 @@ export default memo(() => {
             )}
             <div className={styles.text}>
               <Text>
-                Don&apos;t have an account?{' '}
+                {t('signIn.start.actionText')}{' '}
                 <a
                   onClick={(e) => {
                     e.preventDefault();
@@ -158,7 +158,7 @@ export default memo(() => {
                   }}
                   style={{ cursor: 'pointer' }}
                 >
-                  Sign up
+                  {t('signIn.start.actionLink')}
                 </a>
               </Text>
             </div>

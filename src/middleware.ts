@@ -71,7 +71,8 @@ const defaultMiddleware = (request: NextRequest) => {
 
   // if it's a new user, there's no cookie
   // So we need to use the fallback language parsed by accept-language
-  const browserLanguage = parseBrowserLanguage(request.headers);
+  // FIXED: Default to en-US instead of browser language to avoid redirect issues
+  const browserLanguage = 'en-US'; // parseBrowserLanguage(request.headers);
   const locale = (request.cookies.get(LOBE_LOCALE_COOKIE)?.value || browserLanguage) as Locales;
 
   const ua = request.headers.get('user-agent');
@@ -129,9 +130,12 @@ const defaultMiddleware = (request: NextRequest) => {
     originalPathname: url.pathname,
   });
 
-  url.pathname = nextPathname;
-
-  return NextResponse.rewrite(url, { status: 200 });
+  // TEMPORARY FIX: Disable URL rewriting to avoid pt-BR redirect issues
+  // url.pathname = nextPathname;
+  // return NextResponse.rewrite(url, { status: 200 });
+  
+  // Just return without rewriting
+  return NextResponse.next();
 };
 
 const isPublicRoute = createRouteMatcher([

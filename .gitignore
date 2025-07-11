@@ -72,3 +72,4 @@ vertex-ai-key.json
 .pnpm-store
 ./packages/lobe-ui
 .env.vm
+data/*
