@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-import { DEFAULT_LANG , LOBE_LOCALE_COOKIE } from '@/const/locale';
+import { DEFAULT_LANG, LOBE_LOCALE_COOKIE } from '@/const/locale';
 
 export default function SignUpRedirect() {
   const router = useRouter();
@@ -12,7 +12,7 @@ export default function SignUpRedirect() {
     // Pega o idioma do cookie ou usa o padrão
     const cookieLocale = document.cookie
       .split('; ')
-      .find((row) => row.startsWith(LOBE_LOCALE_COOKIE))
+      .find((row) => row.startsWith(LOBE_LOCALE_COOKIE + '='))
       ?.split('=')[1];
 
     const locale = cookieLocale || DEFAULT_LANG;
