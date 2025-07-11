@@ -45,7 +45,7 @@ export default {
   debug: authEnv.NEXT_AUTH_DEBUG,
   pages: {
     error: '/next-auth/error',
-    signIn: '/login',
+    signIn: '/next-auth/signin',
   },
   providers: initSSOProviders(),
   secret: authEnv.NEXT_AUTH_SECRET,
