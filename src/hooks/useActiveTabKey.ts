@@ -1,12 +1,13 @@
 import { usePathname } from 'next/navigation';
 
+import { useCleanPathname } from '@/hooks/useCleanPathname';
 import { ProfileTabs, SettingsTabs, SidebarTabKey } from '@/store/global/initialState';
 
 /**
  * Returns the active tab key (chat/market/settings/...)
  */
 export const useActiveTabKey = () => {
-  const pathname = usePathname();
+  const pathname = useCleanPathname();
 
   return pathname.split('/').find(Boolean)! as SidebarTabKey;
 };
@@ -15,7 +16,7 @@ export const useActiveTabKey = () => {
  * Returns the active setting page key (common/sync/agent/...)
  */
 export const useActiveSettingsKey = () => {
-  const pathname = usePathname();
+  const pathname = useCleanPathname();
 
   const tabs = pathname.split('/').at(-1);
 
@@ -28,7 +29,7 @@ export const useActiveSettingsKey = () => {
  * Returns the active profile page key (profile/security/stats/...)
  */
 export const useActiveProfileKey = () => {
-  const pathname = usePathname();
+  const pathname = useCleanPathname();
 
   const tabs = pathname.split('/').at(-1);
 

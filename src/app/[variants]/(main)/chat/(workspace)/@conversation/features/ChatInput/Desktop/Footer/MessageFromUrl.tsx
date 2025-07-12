@@ -17,7 +17,11 @@ const MessageFromUrl = () => {
       // Remove message from URL
       const params = new URLSearchParams(searchParams.toString());
       params.delete('message');
-      const newUrl = `${window.location.pathname}?${params.toString()}`;
+
+      // Extract clean pathname without variants
+      const pathname = window.location.pathname;
+      const cleanPath = pathname.replace(/^\/[^/]+__(\d+)__[^/]+/, '');
+      const newUrl = `${cleanPath || '/chat'}?${params.toString()}`;
       window.history.replaceState({}, '', newUrl);
 
       updateInputMessage(message);

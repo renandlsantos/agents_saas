@@ -1,10 +1,10 @@
-import { usePathname } from 'next/navigation';
+import { useCleanPathname } from '@/hooks/useCleanPathname';
 
 /**
  * Returns true if the current path has a sub slug (`/chat/mobile` or `/chat/settings`)
  */
 export const useIsSubSlug = () => {
-  const pathname = usePathname();
+  const pathname = useCleanPathname();
 
   const slugs = pathname.split('/').filter(Boolean);
 
