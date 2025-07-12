@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { memo, useEffect } from 'react';
 
 import { useUserStore } from '@/store/user';
@@ -14,7 +14,6 @@ interface RedirectProps {
 
 const Redirect = memo<RedirectProps>(({ setLoadingStage }) => {
   const router = useRouter();
-  const params = useParams();
   const [isLogin, isLoaded, isUserStateInit, isOnboard] = useUserStore((s) => [
     authSelectors.isLogin(s),
     authSelectors.isLoaded(s),
