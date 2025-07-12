@@ -1,28 +1,28 @@
 'use client';
 
 import { useTheme } from 'antd-style';
-import { PropsWithChildren } from 'react';
 import { Flexbox } from 'react-layout-kit';
 
-import Hero from './features/Hero';
-import Features from './features/Features';
-import Pricing from './features/Pricing';
 import CTA from './features/CTA';
+import Features from './features/Features';
 import Footer from './features/Footer';
+import Hero from './features/Hero';
+import WaitlistSection from './features/WaitlistSection';
 
 const LandingPage = () => {
   const theme = useTheme();
-  
+
   return (
-    <Flexbox 
-      style={{ 
+    <Flexbox
+      style={{
         minHeight: '100vh',
-        background: theme.colorBgLayout,
+        backgroundColor: theme.colorBgLayout,
+        color: theme.colorText,
       }}
     >
       <Hero />
       <Features />
-      <Pricing />
+      <WaitlistSection />
       <CTA />
       <Footer />
     </Flexbox>

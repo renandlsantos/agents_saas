@@ -14,7 +14,7 @@ const useStyles = createStyles(({ css, token }) => ({
   section: css`
     padding-block: 100px;
     padding-inline: 24px;
-    background: ${token.colorBgContainer};
+    background-color: ${token.colorBgLayout};
 
     @media (max-width: 768px) {
       padding-block: 60px;
@@ -108,20 +108,21 @@ const CTA = () => {
         </Paragraph>
 
         <Flexbox horizontal className={styles.buttonGroup}>
-          <Link href="/signup">
-            <Button
-              type="primary"
-              size="large"
-              className={styles.button}
-              icon={<Icon icon={Sparkles} />}
-            >
-              Teste Grátis por 14 Dias
-            </Button>
-          </Link>
+          <Button
+            type="primary"
+            size="large"
+            className={styles.button}
+            icon={<Icon icon={Sparkles} />}
+            onClick={() => {
+              document.getElementById('waitlist-section')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            Entrar na Lista de Espera
+          </Button>
 
           <Link href="mailto:contato@ai4learning.com.br?subject=Solicitar Demo Agents Chat">
             <Button size="large" className={styles.button} icon={<Icon icon={ArrowRight} />}>
-              Agendar Demo
+              Solicitar Demonstração
             </Button>
           </Link>
         </Flexbox>
