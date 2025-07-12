@@ -1,64 +1,34 @@
 #!/bin/bash
 
-# Script para configurar MinIO com HTTPS via Nginx proxy
+# Script to fix MinIO HTTPS configuration
 
-echo "🔧 Configurando MinIO com HTTPS..."
+echo "=== Fixing MinIO HTTPS Configuration ==="
+echo ""
 
-# Criar configuração Nginx para MinIO
-sudo tee /etc/nginx/sites-available/minio > /dev/null <<EOF
-server {
-    listen 9443 ssl;
-    server_name app.ai4learning.com.br;
+# Option 1: For production with HTTPS
+echo "Option 1: Production Setup with HTTPS"
+echo "1. Run on your server: ./sh/fix-certbot-nginx.sh"
+echo "2. This will set up Nginx to proxy MinIO over HTTPS on port 9443"
+echo "3. Your .env file has been updated to use https://64.23.166.36:9443"
+echo ""
 
-    ssl_certificate /etc/letsencrypt/live/app.ai4learning.com.br/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/app.ai4learning.com.br/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
+# Option 2: For development
+echo "Option 2: Development Setup"
+echo "Access your application via HTTP instead:"
+echo "http://64.23.166.36:3210"
+echo ""
 
-    client_max_body_size 100M;
+echo "=== Restarting Services ==="
+docker-compose down
+docker-compose up -d
 
-    location / {
-        proxy_pass http://localhost:9000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        
-        # WebSocket support (for MinIO console)
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-EOF
+echo ""
+echo "=== Checking Services ==="
+docker-compose ps
 
-# Ativar o site
-sudo ln -sf /etc/nginx/sites-available/minio /etc/nginx/sites-enabled/
-
-# Testar configuração Nginx
-echo "📝 Testando configuração Nginx..."
-if sudo nginx -t; then
-    echo "✅ Configuração Nginx válida"
-    
-    # Recarregar Nginx
-    sudo systemctl reload nginx
-    echo "✅ Nginx recarregado"
-    
-    # Abrir porta no firewall se ufw estiver ativo
-    if command -v ufw &> /dev/null && sudo ufw status | grep -q "Status: active"; then
-        sudo ufw allow 9443/tcp
-        echo "✅ Porta 9443 aberta no firewall"
-    fi
-    
-    echo ""
-    echo "🎉 MinIO HTTPS configurado com sucesso!"
-    echo ""
-    echo "📋 Próximos passos:"
-    echo "1. Teste o acesso: https://app.ai4learning.com.br:9443"
-    echo "2. Reinicie os containers Docker:"
-    echo "   docker-compose down && docker-compose up -d"
-    echo ""
-else
-    echo "❌ Erro na configuração Nginx. Verifique o arquivo de configuração."
-    exit 1
-fi
+echo ""
+echo "Done! MinIO URLs are now configured for HTTPS."
+echo "If you still see mixed content errors:"
+echo "1. Clear your browser cache"
+echo "2. Check that Nginx is properly configured on port 9443"
+echo "3. Ensure SSL certificates are valid"
