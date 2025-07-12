@@ -1,26 +1,13 @@
-'use client';
+import { Suspense } from 'react';
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import AuthSignUpBox from '@/app/[variants]/(auth)/next-auth/signup/AuthSignUpBox';
+import Loading from '@/components/Loading/BrandTextLoading';
 
-import { DEFAULT_LANG, LOBE_LOCALE_COOKIE } from '@/const/locale';
-
-export default function SignUpRedirect() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // Pega o idioma do cookie ou usa o padrão
-    const cookieLocale = document.cookie
-      .split('; ')
-      .find((row) => row.startsWith(LOBE_LOCALE_COOKIE + '='))
-      ?.split('=')[1];
-
-    const locale = cookieLocale || DEFAULT_LANG;
-    const theme = 'light'; // ou pegar do cookie também
-
-    // Redireciona para a página correta com variants
-    router.replace(`/${locale}__0__${theme}/next-auth/signup`);
-  }, [router]);
-
-  return <div>Redirecting...</div>;
+// Renderiza a página de signup diretamente sem redirecionamento
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <AuthSignUpBox />
+    </Suspense>
+  );
 }

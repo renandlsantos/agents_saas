@@ -117,27 +117,21 @@ const defaultMiddleware = (request: NextRequest) => {
     url.port = process.env.PORT || '3210';
   }
 
-  // refs: https://github.com/lobehub/lobe-chat/pull/5866
-  // new handle segment rewrite: /${route}${originalPathname}
-  // / -> /zh-CN__0__dark
-  // /discover -> /zh-CN__0__dark/discover
-  const nextPathname = `/${route}` + (url.pathname === '/' ? '' : url.pathname);
-  const nextURL = appEnv.MIDDLEWARE_REWRITE_THROUGH_LOCAL
-    ? urlJoin(url.origin, nextPathname)
-    : nextPathname;
+  // Internal rewrite to variant path while keeping clean URLs
+  const internalPathname = `/${route}` + (url.pathname === '/' ? '' : url.pathname);
 
   logDefault('URL rewrite: %O', {
-    isLocalRewrite: appEnv.MIDDLEWARE_REWRITE_THROUGH_LOCAL,
-    nextPathname: nextPathname,
-    nextURL: nextURL,
+    internalPathname: internalPathname,
     originalPathname: url.pathname,
+    route: route,
   });
 
-  // Properly handle URL rewriting for variants
-  url.pathname = nextPathname;
+  // Create a new URL for internal rewriting
+  const rewriteUrl = new URL(url);
+  rewriteUrl.pathname = internalPathname;
 
-  // Create response with proper rewrite
-  const response = NextResponse.rewrite(url, { status: 200 });
+  // Rewrite internally but keep the original clean URL visible to the user
+  const response = NextResponse.rewrite(rewriteUrl, { status: 200 });
 
   // Set locale cookie if not present
   if (!request.cookies.get(LOBE_LOCALE_COOKIE)?.value && locale) {
