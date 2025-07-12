@@ -45,13 +45,21 @@ export const config = {
 
     '/login(.*)',
     '/signup(.*)',
+    '/next-auth/(.*)',
     '/oauth(.*)',
     '/oidc(.*)',
     // ↓ cloud ↓
   ],
 };
 
-const backendApiEndpoints = ['/api', '/trpc', '/webapi', '/oidc', '/_next'];
+const backendApiEndpoints = [
+  '/api/auth/[...nextauth]',
+  '/api',
+  '/trpc',
+  '/webapi',
+  '/oidc',
+  '/_next',
+];
 
 // Helper function to calculate route variants
 const calculateRouteVariants = (request: NextRequest) => {
@@ -210,11 +218,8 @@ const nextAuthMiddleware = NextAuthEdge.auth((req) => {
     if (isProtected) {
       logNextAuth('Request a protected route, redirecting to sign-in page');
 
-      // Calculate route variants for the signin page
-      const { route } = calculateRouteVariants(req);
-
-      // Create login URL with proper variant path
-      const nextLoginUrl = new URL(`/${route}/next-auth/signin`, req.nextUrl.origin);
+      // Create login URL without variants in the visible URL
+      const nextLoginUrl = new URL(`/next-auth/signin`, req.nextUrl.origin);
       nextLoginUrl.searchParams.set('callbackUrl', req.nextUrl.href);
 
       logNextAuth('Redirecting to: %s', nextLoginUrl.toString());
