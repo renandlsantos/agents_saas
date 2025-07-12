@@ -13,6 +13,7 @@ import BrandWatermark from '@/components/BrandWatermark';
 import { ProductLogo } from '@/components/Branding/ProductLogo';
 import AuthIcons from '@/components/NextAuth/AuthIcons';
 import { DOCUMENTS_REFER_URL, PRIVACY_URL, TERMS_URL } from '@/const/url';
+import { cleanPathname } from '@/hooks/useCleanPathname';
 import { useUserStore } from '@/store/user';
 
 const useStyles = createStyles(({ css, token }) => ({
@@ -76,7 +77,9 @@ export default memo(() => {
   const searchParams = useSearchParams();
 
   // Redirect back to the page url
-  const callbackUrl = searchParams.get('callbackUrl') ?? '';
+  const rawCallbackUrl = searchParams.get('callbackUrl') ?? '';
+  // Clean the callback URL to remove variants
+  const callbackUrl = cleanPathname(rawCallbackUrl) || '/chat';
 
   const handleSignIn = async (provider: string) => {
     try {

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import BrandWatermark from '@/components/BrandWatermark';
 import { ProductLogo } from '@/components/Branding/ProductLogo';
 import { DOCUMENTS_REFER_URL, PRIVACY_URL, TERMS_URL } from '@/const/url';
+import { cleanPathname } from '@/hooks/useCleanPathname';
 
 const useStyles = createStyles(({ css, token }) => ({
   container: css`
@@ -59,7 +60,9 @@ export default memo(() => {
   const [loading, setLoading] = useState(false);
 
   // Redirect back to the page url
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/chat';
+  const rawCallbackUrl = searchParams.get('callbackUrl') ?? '/chat';
+  // Clean the callback URL to remove variants
+  const callbackUrl = cleanPathname(rawCallbackUrl);
 
   const handleSignIn = async (values: SigninFormValues) => {
     setLoading(true);

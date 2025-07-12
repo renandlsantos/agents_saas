@@ -24,15 +24,8 @@ const Redirect = memo<RedirectProps>(({ setLoadingStage }) => {
 
   const navToChat = () => {
     setLoadingStage(AppLoadingStage.GoToChat);
-    // Get the current variant from params if available
-    const variant = params?.variants as string;
-    if (variant) {
-      // If we're already in a variant path, navigate to the chat within that variant
-      router.replace(`/${variant}/chat`);
-    } else {
-      // Otherwise, use the simple redirect that will be handled by middleware
-      router.replace('/chat');
-    }
+    // Always use clean URLs - middleware will handle the variant rewriting internally
+    router.replace('/chat');
   };
 
   useEffect(() => {
