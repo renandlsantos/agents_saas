@@ -1,3 +1,3 @@
-import AuthErrorBox from '@/app/[variants]/(auth)/next-auth/error/AuthErrorBox';
+import AuthErrorPage from '@/app/[variants]/(auth)/next-auth/error/AuthErrorPage';
 
-export default () => <AuthErrorBox />;
+export default () => <AuthErrorPage />;
