@@ -1,5 +1,4 @@
 import { Hotkey, Icon } from '@lobehub/ui';
-import { Badge } from 'antd';
 import { ItemType } from 'antd/es/menu/interface';
 import {
   Book,
@@ -11,9 +10,7 @@ import {
   Settings2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { PropsWithChildren, memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Flexbox } from 'react-layout-kit';
 
 import type { MenuProps } from '@/components/Menu';
 import { enableAuth } from '@/const/auth';
@@ -27,33 +24,8 @@ import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfi
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
-import { useNewVersion } from './useNewVersion';
-
-const NewVersionBadge = memo(
-  ({
-    children,
-    showBadge,
-    onClick,
-  }: PropsWithChildren & { onClick?: () => void; showBadge?: boolean }) => {
-    const { t } = useTranslation('common');
-    if (!showBadge)
-      return (
-        <Flexbox flex={1} onClick={onClick}>
-          {children}
-        </Flexbox>
-      );
-    return (
-      <Flexbox align={'center'} flex={1} gap={8} horizontal onClick={onClick} width={'100%'}>
-        <span>{children}</span>
-        <Badge count={t('upgradeVersion.hasNew')} />
-      </Flexbox>
-    );
-  },
-);
-
 export const useMenu = () => {
   const { canInstall, install } = usePWAInstall();
-  const hasNewVersion = useNewVersion();
   const { t } = useTranslation(['common', 'setting', 'auth']);
   const { showCloudPromotion, hideDocs } = useServerConfigStore(featureFlagsSelectors);
   const [isLogin, isLoginWithAuth] = useUserStore((s) => [
@@ -78,11 +50,7 @@ export const useMenu = () => {
       ) : undefined,
       icon: <Icon icon={Settings2} />,
       key: 'setting',
-      label: (
-        <Link href={'/settings/common'}>
-          <NewVersionBadge showBadge={hasNewVersion}>{t('userPanel.setting')}</NewVersionBadge>
-        </Link>
-      ),
+      label: <Link href={'/settings/common'}>{t('userPanel.setting')}</Link>,
     },
     {
       type: 'divider',
