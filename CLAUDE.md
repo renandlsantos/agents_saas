@@ -365,22 +365,34 @@ const useStyles = createStyles(({ css, token }) => ({
 
 ```typescript
 // Billing plans with features and pricing
-billing_plans: { id, name, price, features, tokensPerMonth, maxTokensPerRequest }
+billing_plans: {
+  (id, name, price, features, tokensPerMonth, maxTokensPerRequest);
+}
 
 // User subscriptions to plans
-user_subscriptions: { id, userId, planId, status, createdAt, expiresAt }
+user_subscriptions: {
+  (id, userId, planId, status, createdAt, expiresAt);
+}
 
 // Token usage tracking
-user_usage: { id, userId, date, tokensUsed, requestsCount, feature }
+user_usage: {
+  (id, userId, date, tokensUsed, requestsCount, feature);
+}
 
 // User balance and credits
-user_balance: { id, userId, balance, lastUpdated }
+user_balance: {
+  (id, userId, balance, lastUpdated);
+}
 
 // Billing transactions
-billing_transactions: { id, userId, amount, type, description, createdAt }
+billing_transactions: {
+  (id, userId, amount, type, description, createdAt);
+}
 
 // User quotas and limits
-user_quotas: { id, userId, quotaType, limit, used, resetDate }
+user_quotas: {
+  (id, userId, quotaType, limit, used, resetDate);
+}
 ```
 
 #### Usage Examples | Exemplos de Uso
@@ -396,7 +408,7 @@ if (!quotaCheck.allowed) {
 await billingService.recordTokenUsage({
   tokens: 1000,
   feature: 'chat',
-  model: 'gpt-4'
+  model: 'gpt-4',
 });
 
 // Subscribe to a plan
@@ -777,3 +789,109 @@ docker-compose up -d --build app
 # Reset to clean state
 docker-compose down -v && ./deploy-secure.sh
 ```
+
+# important-instruction-reminders
+
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
+
+---
+
+# =============================================================================
+
+# 📋 RECENT UPDATES | ATUALIZAÇÕES RECENTES
+
+# =============================================================================
+
+## Authentication Routes Fix | Correção de Rotas de Autenticação
+
+### Problem Solved | Problema Resolvido
+
+- Fixed 404 errors on `/next-auth/signin` routes
+- Removed URL variants (pt-BR\_\_0\_\_dark) from visible URLs
+- Maintained internal routing system compatibility
+
+### Changes Made | Alterações Realizadas
+
+1. **Clean URLs**:
+   - Removed visible route variants from URLs
+   - Now using clean paths: `/login`, `/signup`, `/chat`, `/next-auth/signin`
+   - Internal middleware still uses variants for proper routing
+
+2. **New Authentication Pages**:
+   - Created `/app/next-auth/signin/page.tsx`
+   - Created `/app/next-auth/signup/page.tsx`
+   - Created `/app/next-auth/error/page.tsx`
+   - Created `/app/next-auth/layout.tsx`
+
+3. **Middleware Updates**:
+   - Added `/next-auth/(.*)` to middleware matcher
+   - Updated redirect logic to use clean URLs
+   - Maintained backward compatibility
+
+## Landing Page Improvements | Melhorias na Landing Page
+
+### Theme Integration | Integração de Tema
+
+- Full dark/light theme support using `useTheme()` from antd-style
+- Dynamic colors that adjust based on system preferences
+- Smooth transitions between themes
+
+### Waitlist Feature | Funcionalidade de Lista de Espera
+
+- Replaced pricing section with waitlist signup
+- Email capture form with validation
+- Smooth scroll to waitlist section
+- Success feedback on submission
+
+### Components Updated | Componentes Atualizados
+
+1. **Hero Section**:
+   - "Começar Agora" → "Entrar na Fila de Espera"
+   - Login button remains active
+   - Theme-aware styling
+
+2. **Waitlist Section** (New):
+   - Email input with validation
+   - Loading states
+   - Success messages
+   - Privacy notice
+
+3. **CTA Section**:
+   - Updated to direct to waitlist
+   - "Solicitar Demonstração" option maintained
+
+4. **All Sections**:
+   - Theme-aware backgrounds and colors
+   - Consistent styling across light/dark modes
+
+## Build Error Fix | Correção de Erro de Build
+
+### Next.js 15 useSearchParams Error
+
+Fixed the build error: `useSearchParams() should be wrapped in a suspense boundary`
+
+**Solution Applied**:
+
+```tsx
+// /app/next-auth/error/page.tsx
+import { Suspense } from 'react';
+
+// Force dynamic rendering to avoid build errors with useSearchParams
+export const dynamic = 'force-dynamic';
+
+export default () => (
+  <Suspense fallback={<Loading />}>
+    <AuthErrorPage />
+  </Suspense>
+);
+```
+
+**Key Points**:
+
+- Next.js 15 requires Suspense boundaries for components using `useSearchParams()`
+- Added `export const dynamic = 'force-dynamic'` to force dynamic rendering
+- Wrapped component in Suspense with Loading fallback
+- This prevents static generation errors during build
