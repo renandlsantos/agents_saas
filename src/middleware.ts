@@ -2,7 +2,6 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import debug from 'debug';
 import { NextRequest, NextResponse } from 'next/server';
 import { UAParser } from 'ua-parser-js';
-import urlJoin from 'url-join';
 
 import { authEnv } from '@/config/auth';
 import { LOBE_LOCALE_COOKIE } from '@/const/locale';
@@ -46,25 +45,16 @@ export const config = {
 
     '/login(.*)',
     '/signup(.*)',
-    '/next-auth/(.*)',
     '/oauth(.*)',
     '/oidc(.*)',
     // ↓ cloud ↓
   ],
 };
 
-const backendApiEndpoints = ['/api', '/trpc', '/webapi', '/oidc', '/next-auth', '/_next'];
+const backendApiEndpoints = ['/api', '/trpc', '/webapi', '/oidc', '/_next'];
 
-const defaultMiddleware = (request: NextRequest) => {
-  const url = new URL(request.url);
-  logDefault('Processing request: %s %s', request.method, request.url);
-
-  // skip all api requests
-  if (backendApiEndpoints.some((path) => url.pathname.startsWith(path))) {
-    logDefault('Skipping API request: %s', url.pathname);
-    return NextResponse.next();
-  }
-
+// Helper function to calculate route variants
+const calculateRouteVariants = (request: NextRequest) => {
   // 1. Read user preferences from cookies
   const theme =
     request.cookies.get(LOBE_THEME_APPEARANCE)?.value || parseDefaultThemeFromCountry(request);
@@ -82,6 +72,28 @@ const defaultMiddleware = (request: NextRequest) => {
 
   const device = new UAParser(ua || '').getDevice();
 
+  // 2. Create normalized preference values
+  const route = RouteVariants.serializeVariants({
+    isMobile: device.type === 'mobile',
+    locale,
+    theme,
+  });
+
+  return { locale, theme, device, route, browserLanguage };
+};
+
+const defaultMiddleware = (request: NextRequest) => {
+  const url = new URL(request.url);
+  logDefault('Processing request: %s %s', request.method, request.url);
+
+  // skip all api requests
+  if (backendApiEndpoints.some((path) => url.pathname.startsWith(path))) {
+    logDefault('Skipping API request: %s', url.pathname);
+    return NextResponse.next();
+  }
+
+  const { locale, theme, device, route, browserLanguage } = calculateRouteVariants(request);
+
   logDefault('User preferences: %O', {
     browserLanguage,
     deviceType: device.type,
@@ -89,13 +101,6 @@ const defaultMiddleware = (request: NextRequest) => {
       locale: !!request.cookies.get(LOBE_LOCALE_COOKIE)?.value,
       theme: !!request.cookies.get(LOBE_THEME_APPEARANCE)?.value,
     },
-    locale,
-    theme,
-  });
-
-  // 2. Create normalized preference values
-  const route = RouteVariants.serializeVariants({
-    isMobile: device.type === 'mobile',
     locale,
     theme,
   });
@@ -204,8 +209,15 @@ const nextAuthMiddleware = NextAuthEdge.auth((req) => {
     // ref: https://authjs.dev/getting-started/session-management/protecting
     if (isProtected) {
       logNextAuth('Request a protected route, redirecting to sign-in page');
-      const nextLoginUrl = new URL('/next-auth/signin', req.nextUrl.origin);
+
+      // Calculate route variants for the signin page
+      const { route } = calculateRouteVariants(req);
+
+      // Create login URL with proper variant path
+      const nextLoginUrl = new URL(`/${route}/next-auth/signin`, req.nextUrl.origin);
       nextLoginUrl.searchParams.set('callbackUrl', req.nextUrl.href);
+
+      logNextAuth('Redirecting to: %s', nextLoginUrl.toString());
       return Response.redirect(nextLoginUrl);
     }
     logNextAuth('Request a free route but not login, allow visit without auth header');
