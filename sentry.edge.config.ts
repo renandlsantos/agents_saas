@@ -11,7 +11,44 @@ if (!!process.env.NEXT_PUBLIC_SENTRY_DSN) {
 
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-    // Adjust this value in production, or use tracesSampler for greater control
-    tracesSampleRate: 1,
+    environment: process.env.NODE_ENV || 'development',
+
+    // Performance Monitoring
+    tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE
+      ? parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE)
+      : process.env.NODE_ENV === 'production'
+        ? 0.1
+        : 1,
+
+    // Release tracking
+    release: process.env.NEXT_PUBLIC_VERSION || 'unknown',
+
+    // Filter transactions
+    beforeSendTransaction(transaction) {
+      // Don't send transactions for health checks
+      if (transaction.transaction?.includes('/api/health')) {
+        return null;
+      }
+
+      // Don't send transactions for static assets
+      if (transaction.transaction?.includes('/_next/static')) {
+        return null;
+      }
+
+      return transaction;
+    },
+
+    // Add edge context
+    beforeSend(event) {
+      // Add edge-specific context
+      event.contexts = {
+        ...event.contexts,
+        runtime: {
+          name: 'edge',
+        },
+      };
+
+      return event;
+    },
   });
 }

@@ -105,7 +105,22 @@ export class S3 {
       Key: key,
     });
 
-    return getSignedUrl(this.client, command, { expiresIn: 3600 });
+    const url = await getSignedUrl(this.client, command, { expiresIn: 3600 });
+
+    // If we have a public domain configured and it's different from the endpoint,
+    // replace the endpoint URL with the public domain
+    if (fileEnv.S3_PUBLIC_DOMAIN && fileEnv.S3_ENDPOINT) {
+      const endpointUrl = new URL(fileEnv.S3_ENDPOINT);
+      const publicUrl = new URL(fileEnv.S3_PUBLIC_DOMAIN);
+
+      // Replace the protocol and host
+      return url.replace(
+        `${endpointUrl.protocol}//${endpointUrl.host}`,
+        `${publicUrl.protocol}//${publicUrl.host}`,
+      );
+    }
+
+    return url;
   }
 
   public async createPreSignedUrlForPreview(key: string, expiresIn?: number): Promise<string> {
@@ -114,22 +129,24 @@ export class S3 {
       Key: key,
     });
 
-    return getSignedUrl(this.client, command, {
+    const url = await getSignedUrl(this.client, command, {
       expiresIn: expiresIn ?? fileEnv.S3_PREVIEW_URL_EXPIRE_IN,
     });
-  }
 
-  // 添加一个新方法用于上传二进制内容
-  public async uploadBuffer(path: string, buffer: Buffer, contentType?: string) {
-    const command = new PutObjectCommand({
-      ACL: this.setAcl ? 'public-read' : undefined,
-      Body: buffer,
-      Bucket: this.bucket,
-      ContentType: contentType,
-      Key: path,
-    });
+    // If we have a public domain configured and it's different from the endpoint,
+    // replace the endpoint URL with the public domain
+    if (fileEnv.S3_PUBLIC_DOMAIN && fileEnv.S3_ENDPOINT) {
+      const endpointUrl = new URL(fileEnv.S3_ENDPOINT);
+      const publicUrl = new URL(fileEnv.S3_PUBLIC_DOMAIN);
 
-    return this.client.send(command);
+      // Replace the protocol and host
+      return url.replace(
+        `${endpointUrl.protocol}//${endpointUrl.host}`,
+        `${publicUrl.protocol}//${publicUrl.host}`,
+      );
+    }
+
+    return url;
   }
 
   public async uploadContent(path: string, content: string) {
@@ -137,6 +154,19 @@ export class S3 {
       ACL: this.setAcl ? 'public-read' : undefined,
       Body: content,
       Bucket: this.bucket,
+      ContentType: 'text/plain',
+      Key: path,
+    });
+
+    return this.client.send(command);
+  }
+
+  public async uploadBuffer(path: string, buffer: Buffer, contentType?: string) {
+    const command = new PutObjectCommand({
+      ACL: this.setAcl ? 'public-read' : undefined,
+      Body: buffer,
+      Bucket: this.bucket,
+      ContentType: contentType || 'application/octet-stream',
       Key: path,
     });
 

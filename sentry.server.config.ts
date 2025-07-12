@@ -10,8 +10,61 @@ if (!!process.env.NEXT_PUBLIC_SENTRY_DSN) {
 
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-    // Adjust this value in production, or use tracesSampler for greater control
-    tracesSampleRate: 1,
+    environment: process.env.NODE_ENV || 'development',
+
+    // Performance Monitoring
+    tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE
+      ? parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE)
+      : process.env.NODE_ENV === 'production'
+        ? 0.1
+        : 1,
+
+    // Release tracking
+    release: process.env.NEXT_PUBLIC_VERSION || 'unknown',
+
+    // Profiling (requires tracing to be enabled)
+    profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1,
+
+    // Integrations
+    integrations: [
+      // Automatically instrument Node.js libraries and frameworks
+      ...Sentry.autoDiscoverNodePerformanceMonitoringIntegrations(),
+    ],
+
+    // Filter transactions
+    beforeSendTransaction(transaction) {
+      // Don't send transactions for health checks
+      if (transaction.transaction?.includes('/api/health')) {
+        return null;
+      }
+
+      // Don't send transactions for static assets
+      if (transaction.transaction?.includes('/_next/static')) {
+        return null;
+      }
+
+      return transaction;
+    },
+
+    // Add server context
+    beforeSend(event, hint) {
+      // Add server-specific context
+      event.contexts = {
+        ...event.contexts,
+        runtime: {
+          name: 'node',
+          version: process.version,
+        },
+      };
+
+      // Filter out expected errors
+      if (hint.originalException instanceof Error && // Don't send ECONNREFUSED errors (common in development)
+        hint.originalException.message?.includes('ECONNREFUSED')) {
+          return null;
+        }
+
+      return event;
+    },
 
     // uncomment the line below to enable Spotlight (https://spotlightjs.com)
     // spotlight: process.env.NODE_ENV === 'development',

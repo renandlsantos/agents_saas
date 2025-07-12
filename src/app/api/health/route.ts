@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server';
-import { getDBInstance } from '@/database/core/web-server';
 import { sql } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
+
+import { getDBInstance } from '@/database/core/web-server';
+import { captureException, captureMessage } from '@/utils/sentry';
 
 export async function GET() {
   const health = {
@@ -21,13 +23,35 @@ export async function GET() {
     health.services.database = true;
   } catch (error) {
     console.error('Database health check failed:', error);
+    captureException(error, {
+      operation: 'health-check',
+      tags: {
+        service: 'database',
+        type: 'health-check',
+      },
+    });
   }
 
   // Redis check removido temporariamente - ioredis não está instalado
   health.services.redis = true;
 
   // Determinar status geral
-  health.status = Object.values(health.services).every(v => v) ? 'healthy' : 'unhealthy';
+  health.status = Object.values(health.services).every((v) => v) ? 'healthy' : 'unhealthy';
+
+  // Capturar mensagem se o sistema estiver unhealthy
+  if (health.status === 'unhealthy') {
+    const failedServices = Object.entries(health.services)
+      .filter(([_, status]) => !status)
+      .map(([service]) => service);
+
+    captureMessage(`Health check failed: ${failedServices.join(', ')}`, 'warning', {
+      operation: 'health-check',
+      metadata: {
+        health,
+        failedServices,
+      },
+    });
+  }
 
   // Adicionar detalhes de configuração (sem expor dados sensíveis)
   const configDetails = {
@@ -51,6 +75,6 @@ export async function GET() {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
-    }
+    },
   );
 }

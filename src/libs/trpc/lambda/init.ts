@@ -10,13 +10,30 @@
 import { initTRPC } from '@trpc/server';
 import superjson from 'superjson';
 
+import { captureException } from '@/utils/sentry';
+
 import type { LambdaContext } from './context';
 
 export const trpc = initTRPC.context<LambdaContext>().create({
   /**
    * @link https://trpc.io/docs/v11/error-formatting
    */
-  errorFormatter({ shape }) {
+  errorFormatter({ shape, error, ctx }) {
+    // Capture errors to Sentry
+    if (error.code === 'INTERNAL_SERVER_ERROR') {
+      captureException(error, {
+        userId: ctx?.userId || undefined,
+        operation: `tRPC:${shape.data?.path}`,
+        tags: {
+          type: 'trpc',
+          code: error.code,
+        },
+        metadata: {
+          path: shape.data?.path,
+        },
+      });
+    }
+
     return shape;
   },
   /**

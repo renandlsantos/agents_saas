@@ -10,13 +10,30 @@
 import { initTRPC } from '@trpc/server';
 import superjson from 'superjson';
 
+import { captureException } from '@/utils/sentry';
+
 import type { EdgeContext } from './context';
 
 export const edgeTrpc = initTRPC.context<EdgeContext>().create({
   /**
    * @link https://trpc.io/docs/v11/error-formatting
    */
-  errorFormatter({ shape }) {
+  errorFormatter({ shape, error, ctx }) {
+    // Capture errors to Sentry
+    if (error.code === 'INTERNAL_SERVER_ERROR') {
+      captureException(error, {
+        userId: ctx?.userId || undefined,
+        operation: `tRPC:${shape.data?.path}`,
+        tags: {
+          type: 'trpc-edge',
+          code: error.code,
+        },
+        metadata: {
+          path: shape.data?.path,
+        },
+      });
+    }
+
     return shape;
   },
   /**
