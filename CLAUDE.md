@@ -895,3 +895,388 @@ export default () => (
 - Added `export const dynamic = 'force-dynamic'` to force dynamic rendering
 - Wrapped component in Suspense with Loading fallback
 - This prevents static generation errors during build
+
+## Admin API Key Management System | Sistema de Gerenciamento de API Keys do Admin
+
+### Overview | Visão Geral
+
+**EN**: The admin panel now includes a comprehensive API key management system that allows administrators to configure AI provider credentials centrally, eliminating the need to manage API keys through environment variables.
+
+**PT-BR**: O painel administrativo agora inclui um sistema abrangente de gerenciamento de chaves API que permite aos administradores configurar credenciais de provedores de IA centralmente, eliminando a necessidade de gerenciar chaves API através de variáveis de ambiente.
+
+### Key Features | Principais Funcionalidades
+
+- ✅ **Centralized API Key Management**: Configure all AI provider keys from admin panel
+- ✅ **Encrypted Storage**: All API keys are encrypted using AES-GCM with KEY_VAULTS_SECRET
+- ✅ **Priority System**: User keys → Admin keys → Environment variables
+- ✅ **Provider-Specific Forms**: Tailored forms for each AI provider (OpenAI, Azure, AWS, etc.)
+- ✅ **Real-time Configuration**: Changes take effect immediately without restart
+- ✅ **Visual Indicators**: Show which providers are configured and enabled
+- ✅ **Secure Caching**: 5-minute cache for performance with automatic invalidation
+
+### Architecture | Arquitetura
+
+#### Database Schema | Schema do Banco
+
+```sql
+-- AI providers table with encrypted keyVaults
+CREATE TABLE ai_providers (
+  id VARCHAR(64) NOT NULL,
+  name TEXT,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  sort INTEGER,
+  enabled BOOLEAN,
+  fetch_on_client BOOLEAN,
+  check_model TEXT,
+  logo TEXT,
+  description TEXT,
+  key_vaults TEXT,  -- Encrypted API keys and credentials
+  source VARCHAR(20) CHECK (source IN ('builtin', 'custom')),
+  settings JSONB DEFAULT '{}',
+  config JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (id, user_id)
+);
+```
+
+#### Key Components | Componentes Principais
+
+1. **Admin Models Page** (`/src/features/Admin/Models/index.tsx`):
+   - Provider listing with configuration forms
+   - Provider-specific API key forms (OpenAI, Azure, AWS Bedrock, etc.)
+   - Real-time enable/disable toggle
+   - Visual indicators for configured providers
+
+2. **Server-side API** (`/src/server/routers/lambda/admin.ts`):
+   - `getModelConfig`: Fetch and decrypt provider configurations
+   - `updateProviderConfig`: Save and encrypt provider settings
+   - Automatic cache invalidation on updates
+
+3. **Global Configuration** (`/src/server/globalConfig/adminProviderConfig.ts`):
+   - Load admin-configured settings with caching
+   - Decrypt API keys securely
+   - Provide fallback to environment variables
+
+4. **Runtime Integration** (`/src/server/modules/AgentRuntime/index.ts`):
+   - Priority-based API key resolution
+   - Support for all 40+ AI providers
+   - Seamless fallback system
+
+### Supported Providers | Provedores Suportados
+
+The system supports all major AI providers with provider-specific forms:
+
+- **OpenAI Compatible**: OpenAI, DeepSeek, Perplexity, Moonshot, Mistral, Groq, etc.
+- **Azure OpenAI**: Full Azure integration with endpoint and API version
+- **AWS Bedrock**: Complete AWS credentials management
+- **Google**: Vertex AI and standard Google AI
+- **Anthropic**: Claude API integration
+- **Cloudflare**: Workers AI support
+- **Local Models**: Ollama and LMStudio
+- **And 30+ more providers**
+
+### Security Implementation | Implementação de Segurança
+
+#### Encryption | Criptografia
+
+```typescript
+// Encryption using AES-GCM with KEY_VAULTS_SECRET
+const { KeyVaultsEncrypt } = await import('@/server/modules/KeyVaultsEncrypt');
+const encrypt = new KeyVaultsEncrypt();
+
+// Encrypt API keys before storing
+const encryptedKeyVaults = await encrypt.encrypt(JSON.stringify(keyVaults));
+
+// Decrypt when loading
+const decrypted = await encrypt.decrypt(provider.keyVaults);
+const keyVaults = JSON.parse(decrypted);
+```
+
+#### Priority System | Sistema de Prioridade
+
+```typescript
+// Priority: 1. User payload, 2. Admin config, 3. Environment variables
+const apiKey = apiKeyManager.pick(
+  payload?.apiKey || adminSettings?.apiKey || llmConfig[`${upperProvider}_API_KEY`],
+);
+```
+
+### Usage Examples | Exemplos de Uso
+
+#### Configuring OpenAI Provider | Configurando Provedor OpenAI
+
+```typescript
+// Admin configures OpenAI through UI
+const openAIConfig = {
+  apiKey: 'sk-proj-...',
+  baseURL: 'https://api.openai.com/v1', // optional
+};
+
+// System automatically uses admin config for all users
+const runtime = await initAgentRuntimeWithUserPayload('openai', userPayload);
+```
+
+#### AWS Bedrock Configuration | Configuração AWS Bedrock
+
+```typescript
+// Admin configures AWS Bedrock
+const bedrockConfig = {
+  accessKeyId: 'AKIA...',
+  secretAccessKey: 'wJalrXUtnFEMI...',
+  region: 'us-east-1',
+  sessionToken: 'optional-session-token',
+};
+```
+
+#### Azure OpenAI Setup | Configuração Azure OpenAI
+
+```typescript
+// Admin configures Azure OpenAI
+const azureConfig = {
+  apiKey: 'your-azure-api-key',
+  endpoint: 'https://your-resource.openai.azure.com',
+  apiVersion: '2024-10-21',
+};
+```
+
+### Migration Guide | Guia de Migração
+
+#### From Environment Variables | De Variáveis de Ambiente
+
+1. **Before**: API keys in `.env`
+
+```env
+OPENAI_API_KEY=sk-proj-...
+ANTHROPIC_API_KEY=sk-ant-...
+AZURE_API_KEY=your-azure-key
+```
+
+2. **After**: Configure through admin panel
+   - Access `/admin/models`
+   - Configure each provider individually
+   - Enable/disable providers as needed
+   - Environment variables serve as fallback
+
+#### Database Migration | Migração do Banco
+
+The system uses existing `ai_providers` table structure:
+
+```bash
+# Generate new schema
+pnpm db:generate
+
+# Apply migrations
+pnpm db:migrate
+
+# The setup script handles schema updates automatically
+./setup-admin-environment.sh --rebuild
+```
+
+### Performance Optimization | Otimização de Performance
+
+#### Caching Strategy | Estratégia de Cache
+
+```typescript
+// 5-minute cache for admin provider configurations
+let adminProviderCache: Record<string, any> | null = null;
+let cacheExpiry: number = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Cache invalidation on updates
+export function clearAdminProviderCache() {
+  adminProviderCache = null;
+  cacheExpiry = 0;
+}
+```
+
+#### Lazy Loading | Carregamento Sob Demanda
+
+- Provider configurations loaded only when needed
+- Automatic cache warming on first request
+- Graceful fallback to environment variables
+
+### Troubleshooting | Solução de Problemas
+
+#### Common Issues | Problemas Comuns
+
+1. **Missing KEY_VAULTS_SECRET**:
+
+```bash
+# Generate secure key
+openssl rand -hex 32
+
+# Add to .env
+KEY_VAULTS_SECRET=your-generated-key
+```
+
+2. **Provider Not Working**:
+   - Check admin panel for configuration
+   - Verify API key format
+   - Check provider-specific requirements
+
+3. **Cache Issues**:
+   - Cache auto-invalidates on updates
+   - Manual cache clear available in admin panel
+
+### Deployment Notes | Notas de Deploy
+
+#### Setup Script Updates | Atualizações do Script de Setup
+
+The `setup-admin-environment.sh` script includes:
+
+- Automatic KEY_VAULTS_SECRET generation
+- Database schema fixes for missing columns
+- Admin user creation with proper permissions
+- Provider configuration verification
+
+#### Environment Variables | Variáveis de Ambiente
+
+```bash
+# Required for encryption
+KEY_VAULTS_SECRET=64_character_hex_key
+
+# Optional fallback keys (admin panel takes priority)
+OPENAI_API_KEY=sk-proj-...
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+#### Database Requirements | Requisitos do Banco
+
+- PostgreSQL 12+ with pgvector extension
+- Proper user permissions for admin operations
+- Encrypted storage support
+
+### Setup Script Integration | Integração do Script de Setup
+
+The `setup-admin-environment.sh` script has been updated to fully support the API key management system:
+
+#### Key Features | Funcionalidades Principais
+
+```bash
+# Complete setup with API key management
+./setup-admin-environment.sh
+
+# Rebuild existing environment with latest schema fixes
+./setup-admin-environment.sh --rebuild
+
+# Force all migrations (use with caution)
+./setup-admin-environment.sh --force-migration
+
+# Clean environment and start fresh
+./setup-admin-environment.sh --clean
+```
+
+#### Automatic Database Schema Fixes | Correções Automáticas do Schema
+
+The script includes comprehensive schema fixes for common issues:
+
+```sql
+-- Safe column addition function
+CREATE OR REPLACE FUNCTION safe_add_column(
+    p_table_name text,
+    p_column_name text,
+    p_column_definition text
+) RETURNS void AS $$;
+
+-- Applied fixes
+SELECT safe_add_column('sessions', 'group_id', 'VARCHAR(255)');
+SELECT safe_add_column('sessions', 'pinned', 'BOOLEAN DEFAULT false');
+SELECT safe_add_column('agents', 'category', 'VARCHAR(255) DEFAULT ''general''');
+SELECT safe_add_column('agents', 'is_domain', 'BOOLEAN DEFAULT false');
+SELECT safe_add_column('agents', 'sort', 'INTEGER DEFAULT 0');
+SELECT safe_add_column('agents_to_sessions', 'category', 'VARCHAR(255)');
+```
+
+#### Environment Configuration | Configuração do Ambiente
+
+The script automatically generates secure keys:
+
+```bash
+# Auto-generated secure keys
+KEY_VAULTS_SECRET=$(openssl rand -hex 32) # For API key encryption
+NEXTAUTH_SECRET=$(openssl rand -hex 32)   # For authentication
+POSTGRES_PASSWORD=$(openssl rand -hex 32) # For database
+MINIO_PASSWORD=$(openssl rand -hex 16)    # For file storage
+```
+
+#### Admin User Creation | Criação do Usuário Admin
+
+Automatic admin user creation with proper permissions:
+
+```typescript
+// Generated admin user script
+const adminUser = {
+  email: 'admin@your-domain.com',
+  password: 'auto-generated-password',
+  isAdmin: true,
+  isOnboarded: true,
+};
+```
+
+#### Rebuild Process | Processo de Rebuild
+
+For existing deployments, use the rebuild flag:
+
+```bash
+# Rebuild with latest schema fixes
+./setup-admin-environment.sh --rebuild
+
+# This will:
+# 1. Update dependencies
+# 2. Regenerate database schema
+# 3. Apply missing column fixes
+# 4. Rebuild application
+# 5. Preserve existing data
+```
+
+#### Migration Safety | Segurança das Migrações
+
+The script includes safety measures:
+
+- ✅ **Existing data preservation**: Never drops existing tables
+- ✅ **Safe column addition**: Only adds missing columns
+- ✅ **Graceful error handling**: Continues on non-critical errors
+- ✅ **Backup recommendations**: Suggests backing up before major changes
+- ✅ **Rollback support**: Maintains .env.backup for quick recovery
+
+#### Post-Setup Verification | Verificação Pós-Setup
+
+The script provides verification steps:
+
+```bash
+# Service health checks
+✅ PostgreSQL: Ready
+✅ MinIO: Ready
+✅ API Health: OK
+✅ Admin Panel: Accessible
+
+# Access information
+📊 Admin Panel: http://your-host:3210/admin
+👤 Admin Email: admin@your-domain.com
+🔑 Admin Password: auto-generated-password
+```
+
+#### Integration with CI/CD | Integração com CI/CD
+
+The script is designed for automated deployments:
+
+```yaml
+# Example GitHub Actions workflow
+- name: Setup Admin Environment
+  run: |
+    chmod +x setup-admin-environment.sh
+    ./setup-admin-environment.sh --rebuild
+
+- name: Verify Setup
+  run: |
+    docker ps | grep agents-chat
+    curl -f http://localhost:3210/api/health
+```
+
+# important-instruction-reminders
+
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.

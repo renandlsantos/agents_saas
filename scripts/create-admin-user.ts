@@ -88,4 +88,10 @@ async function createAdminUser() {
 }
 
 // Run the script
-await createAdminUser();
+try {
+  await createAdminUser();
+  console.log('✅ Script completed successfully');
+} catch (error) {
+  console.error('❌ Script failed:', error);
+  throw error;
+}

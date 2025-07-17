@@ -536,10 +536,12 @@
   {
     "sql": [
       "ALTER TABLE \"agents\" ADD COLUMN \"category\" varchar(50);",
-      "\nALTER TABLE \"agents\" ADD COLUMN \"is_domain\" boolean DEFAULT false;"
+      "\nALTER TABLE \"agents\" ADD COLUMN \"is_domain\" boolean DEFAULT false;",
+      "\nCREATE INDEX IF NOT EXISTS \"idx_agents_category\" ON \"agents\" USING btree (\"category\");",
+      "\nCREATE INDEX IF NOT EXISTS \"idx_agents_is_domain\" ON \"agents\" USING btree (\"is_domain\");"
     ],
     "bps": true,
     "folderMillis": 1752767547805,
-    "hash": "a22f62a4e689e0158ba3086be68e4167ea17e65b7d249feeff63691de6a26921"
+    "hash": "c1a5619d8cd34b23091a59302d089bd9b6915742f18b0d3296cb307e97854c05"
   }
 ]

@@ -182,20 +182,42 @@ export const adminRouter = router({
       },
     });
 
+    // Decrypt keyVaults if available
+    const { KeyVaultsGateKeeper } = await import('@/server/modules/KeyVaultsEncrypt');
+    const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
+
     return {
-      providers: providers.map((provider) => ({
-        id: provider.id,
-        name: provider.name || provider.id,
-        logo: provider.logo,
-        enabled: provider.enabled,
-        models: provider.models.map((model) => ({
-          id: model.id,
-          displayName: model.displayName || model.id,
-          enabled: model.enabled,
-          type: model.type,
-          contextWindow: model.contextWindowTokens,
-        })),
-      })),
+      providers: await Promise.all(
+        providers.map(async (provider) => {
+          let decryptedKeyVaults = {};
+          if (provider.keyVaults) {
+            try {
+              const { plaintext, wasAuthentic } = await gateKeeper.decrypt(provider.keyVaults);
+              if (wasAuthentic) {
+                decryptedKeyVaults = JSON.parse(plaintext);
+              }
+            } catch (error) {
+              console.error('Failed to decrypt keyVaults for provider:', provider.id, error);
+            }
+          }
+
+          return {
+            id: provider.id,
+            name: provider.name || provider.id,
+            logo: provider.logo,
+            enabled: provider.enabled,
+            keyVaults: decryptedKeyVaults,
+            settings: provider.settings || {},
+            models: provider.models.map((model) => ({
+              id: model.id,
+              displayName: model.displayName || model.id,
+              enabled: model.enabled,
+              type: model.type,
+              contextWindow: model.contextWindowTokens,
+            })),
+          };
+        }),
+      ),
     };
   }),
 
@@ -206,22 +228,61 @@ export const adminRouter = router({
         providerId: z.string(),
         enabled: z.boolean().optional(),
         settings: z.record(z.any()).optional(),
+        keyVaults: z.record(z.string()).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await ctx.serverDB
-        .update(aiProviders)
-        .set({
-          enabled: input.enabled,
-          settings: input.settings,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(aiProviders.id, input.providerId),
-            or(eq(aiProviders.source, 'builtin'), eq(aiProviders.userId, ctx.userId)),
-          ),
-        );
+      // If keyVaults are provided, encrypt them
+      let encryptedKeyVaults: string | undefined;
+      if (input.keyVaults) {
+        // Check if KEY_VAULTS_SECRET is available
+        const keyVaultsSecret = process.env.KEY_VAULTS_SECRET;
+        if (!keyVaultsSecret) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message:
+              'KEY_VAULTS_SECRET not configured. Please set this environment variable to enable API key storage.',
+          });
+        }
+
+        // Encrypt the keyVaults
+        const { KeyVaultsGateKeeper } = await import('@/server/modules/KeyVaultsEncrypt');
+        const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
+        encryptedKeyVaults = await gateKeeper.encrypt(JSON.stringify(input.keyVaults));
+      }
+
+      // Check if this is a builtin provider - we need to update the global config
+      const provider = await ctx.serverDB.query.aiProviders.findFirst({
+        where: and(eq(aiProviders.id, input.providerId), eq(aiProviders.source, 'builtin')),
+      });
+
+      if (provider) {
+        // For builtin providers, update the admin's config
+        await ctx.serverDB
+          .update(aiProviders)
+          .set({
+            enabled: input.enabled,
+            settings: input.settings,
+            keyVaults: encryptedKeyVaults,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(aiProviders.id, input.providerId), eq(aiProviders.userId, ctx.userId)));
+      } else {
+        // For custom providers, just update normally
+        await ctx.serverDB
+          .update(aiProviders)
+          .set({
+            enabled: input.enabled,
+            settings: input.settings,
+            keyVaults: encryptedKeyVaults,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(aiProviders.id, input.providerId), eq(aiProviders.userId, ctx.userId)));
+      }
+
+      // Clear the admin provider cache so changes take effect immediately
+      const { clearAdminProviderCache } = await import('@/server/globalConfig/adminProviderConfig');
+      clearAdminProviderCache();
 
       return { success: true };
     }),

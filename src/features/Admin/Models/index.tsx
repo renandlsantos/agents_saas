@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Alert,
   Avatar,
   Badge,
   Button,
@@ -100,9 +101,11 @@ interface Model {
 interface Provider {
   enabled: boolean;
   id: string;
+  keyVaults?: Record<string, any>;
   logo?: string | null;
   models: Model[];
   name: string;
+  settings?: Record<string, any>;
 }
 
 const Statistic = ({ title, value, prefix, suffix }: any) => (
@@ -162,7 +165,29 @@ const ProviderCard = memo<{
   const handleSaveConfig = async () => {
     try {
       const values = await form.validateFields();
-      onUpdate(provider.id, { settings: values });
+
+      // Separate keyVaults from other settings
+      const keyVaults: Record<string, any> = {};
+      const settings: Record<string, any> = {};
+
+      Object.entries(values).forEach(([key, value]) => {
+        if (
+          key === 'apiKey' ||
+          key === 'baseURL' ||
+          key === 'endpoint' ||
+          key === 'accessKeyId' ||
+          key === 'secretAccessKey' ||
+          key === 'region' ||
+          key === 'apiVersion' ||
+          key === 'sessionToken'
+        ) {
+          keyVaults[key] = value;
+        } else {
+          settings[key] = value;
+        }
+      });
+
+      onUpdate(provider.id, { keyVaults, settings });
       setConfigOpen(false);
       message.success('Provider configuration updated');
     } catch {
@@ -189,8 +214,19 @@ const ProviderCard = memo<{
           </div>
         </div>
         <Space>
-          <Button icon={<KeyIcon size={16} />} onClick={() => setConfigOpen(!configOpen)}>
-            API Configuration
+          <Button
+            icon={<KeyIcon size={16} />}
+            onClick={() => setConfigOpen(!configOpen)}
+            type={provider.keyVaults?.apiKey ? 'default' : 'dashed'}
+          >
+            {provider.keyVaults?.apiKey ? (
+              <Space>
+                <CheckCircleIcon size={14} style={{ color: '#52c41a' }} />
+                API Configured
+              </Space>
+            ) : (
+              'Configure API'
+            )}
           </Button>
           <Switch
             checked={provider.enabled}
@@ -198,33 +234,140 @@ const ProviderCard = memo<{
             loading={isUpdating}
             checkedChildren="Enabled"
             unCheckedChildren="Disabled"
+            disabled={
+              !provider.keyVaults?.apiKey && provider.id !== 'ollama' && provider.id !== 'lmstudio'
+            }
           />
         </Space>
       </div>
 
       {configOpen && (
         <div className={styles.apiConfig}>
-          <Form form={form} layout="vertical">
-            <Form.Item
-              name="apiKey"
-              label="API Key"
-              rules={[{ required: true, message: 'Please enter API key' }]}
-            >
-              <Password placeholder="sk-..." />
-            </Form.Item>
-            {provider.id === 'openai' && (
-              <Form.Item name="baseURL" label="Base URL (Optional)">
-                <Input placeholder="https://api.openai.com/v1" />
+          <Form form={form} layout="vertical" initialValues={provider.keyVaults || {}}>
+            {/* Common API Key field for most providers */}
+            {provider.id !== 'ollama' && provider.id !== 'lmstudio' && (
+              <Form.Item
+                name="apiKey"
+                label="API Key"
+                rules={[{ required: true, message: 'Please enter API key' }]}
+              >
+                <Password
+                  placeholder={
+                    provider.id === 'openai'
+                      ? 'sk-...'
+                      : provider.id === 'anthropic'
+                        ? 'sk-ant-...'
+                        : provider.id === 'google'
+                          ? 'AIza...'
+                          : provider.id === 'groq'
+                            ? 'gsk_...'
+                            : 'Enter your API key'
+                  }
+                />
               </Form.Item>
             )}
-            <Form.Item>
+
+            {/* OpenAI Compatible providers */}
+            {[
+              'openai',
+              'deepseek',
+              'perplexity',
+              'moonshot',
+              'minimax',
+              'mistral',
+              'qwen',
+              'zhipu',
+              'stepfun',
+              'novita',
+              'togetherai',
+              'openrouter',
+              'groq',
+              'fireworksai',
+              'xai',
+              'vllm',
+              'xinference',
+            ].includes(provider.id) && (
+              <Form.Item name="baseURL" label="Base URL (Optional)">
+                <Input
+                  placeholder={
+                    provider.id === 'openai'
+                      ? 'https://api.openai.com/v1'
+                      : provider.id === 'deepseek'
+                        ? 'https://api.deepseek.com'
+                        : provider.id === 'anthropic'
+                          ? 'https://api.anthropic.com'
+                          : 'https://api.example.com/v1'
+                  }
+                />
+              </Form.Item>
+            )}
+
+            {/* Azure OpenAI specific */}
+            {(provider.id === 'azure' || provider.id === 'azureai') && (
+              <>
+                <Form.Item name="endpoint" label="Endpoint" rules={[{ required: true }]}>
+                  <Input placeholder="https://your-resource.openai.azure.com" />
+                </Form.Item>
+                <Form.Item name="apiVersion" label="API Version" rules={[{ required: true }]}>
+                  <Input placeholder="2024-10-21" />
+                </Form.Item>
+              </>
+            )}
+
+            {/* AWS Bedrock specific */}
+            {provider.id === 'bedrock' && (
+              <>
+                <Form.Item name="accessKeyId" label="Access Key ID" rules={[{ required: true }]}>
+                  <Password placeholder="AKIA..." />
+                </Form.Item>
+                <Form.Item
+                  name="secretAccessKey"
+                  label="Secret Access Key"
+                  rules={[{ required: true }]}
+                >
+                  <Password placeholder="Enter your secret access key" />
+                </Form.Item>
+                <Form.Item name="region" label="Region" rules={[{ required: true }]}>
+                  <Input placeholder="us-east-1" />
+                </Form.Item>
+                <Form.Item name="sessionToken" label="Session Token (Optional)">
+                  <Password placeholder="Optional session token" />
+                </Form.Item>
+              </>
+            )}
+
+            {/* Cloudflare specific */}
+            {provider.id === 'cloudflare' && (
+              <Form.Item name="baseURLOrAccountID" label="Account ID" rules={[{ required: true }]}>
+                <Input placeholder="Your Cloudflare account ID" />
+              </Form.Item>
+            )}
+
+            {/* Ollama/LMStudio specific */}
+            {(provider.id === 'ollama' || provider.id === 'lmstudio') && (
+              <Form.Item name="baseURL" label="Server URL" rules={[{ required: true }]}>
+                <Input placeholder="http://127.0.0.1:11434" />
+              </Form.Item>
+            )}
+
+            <Divider />
+
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Alert
+                message="Admin Configuration"
+                description="API keys configured here will be used for all users on this platform unless they provide their own keys. Keys are encrypted and stored securely in the database."
+                type="info"
+                showIcon
+                icon={<KeyIcon size={16} />}
+              />
+
               <Space>
-                <Button type="primary" onClick={handleSaveConfig}>
+                <Button type="primary" onClick={handleSaveConfig} loading={isUpdating}>
                   Save Configuration
                 </Button>
                 <Button onClick={() => setConfigOpen(false)}>Cancel</Button>
               </Space>
-            </Form.Item>
+            </Space>
           </Form>
         </div>
       )}

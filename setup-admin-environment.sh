@@ -662,7 +662,91 @@ BEGIN
     END IF;
 END$$;
 SQLEOF
-success "Schema do banco de dados verificado!"
+
+# Fix missing category column in agentsToSessions table
+log "Verificando e corrigindo estrutura das tabelas de sessão..."
+docker exec agents-chat-postgres psql -U postgres -d agents_chat << 'SQLEOF'
+-- Check if agentsToSessions table exists and add missing columns
+DO $$
+BEGIN
+    -- First check if the table exists
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_name = 'agents_to_sessions'
+    ) THEN
+        -- Add category column if it doesn't exist
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'agents_to_sessions' AND column_name = 'category'
+        ) THEN
+            ALTER TABLE agents_to_sessions ADD COLUMN category VARCHAR(255);
+            RAISE NOTICE 'Coluna category adicionada à tabela agents_to_sessions';
+        END IF;
+    END IF;
+
+    -- Also check for the sessions table structure
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_name = 'sessions'
+    ) THEN
+        -- Ensure sessions table has all required columns
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'sessions' AND column_name = 'group_id'
+        ) THEN
+            ALTER TABLE sessions ADD COLUMN group_id VARCHAR(255);
+            RAISE NOTICE 'Coluna group_id adicionada à tabela sessions';
+        END IF;
+    END IF;
+
+    -- Check for agents table category column
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_name = 'agents'
+    ) THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'agents' AND column_name = 'category'
+        ) THEN
+            ALTER TABLE agents ADD COLUMN category VARCHAR(255) DEFAULT 'general';
+            RAISE NOTICE 'Coluna category adicionada à tabela agents';
+        END IF;
+    END IF;
+END$$;
+SQLEOF
+
+# Run a more comprehensive migration fix
+log "Executando correções adicionais no schema..."
+docker exec agents-chat-postgres psql -U postgres -d agents_chat << 'SQLEOF'
+-- Create a function to safely add columns
+CREATE OR REPLACE FUNCTION safe_add_column(
+    p_table_name text,
+    p_column_name text,
+    p_column_definition text
+) RETURNS void AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = p_table_name AND column_name = p_column_name
+    ) THEN
+        EXECUTE format('ALTER TABLE %I ADD COLUMN %I %s', p_table_name, p_column_name, p_column_definition);
+        RAISE NOTICE 'Column % added to table %', p_column_name, p_table_name;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply fixes for common missing columns
+SELECT safe_add_column('sessions', 'group_id', 'VARCHAR(255)');
+SELECT safe_add_column('sessions', 'pinned', 'BOOLEAN DEFAULT false');
+SELECT safe_add_column('agents', 'category', 'VARCHAR(255) DEFAULT ''general''');
+SELECT safe_add_column('agents', 'is_domain', 'BOOLEAN DEFAULT false');
+SELECT safe_add_column('agents', 'sort', 'INTEGER DEFAULT 0');
+
+-- Drop the temporary function
+DROP FUNCTION IF EXISTS safe_add_column;
+SQLEOF
+
+success "Schema do banco de dados verificado e corrigido!"
 
 # Restore original DATABASE_URL after migration
 if [ -n "$ORIGINAL_DATABASE_URL" ]; then
