@@ -13,6 +13,7 @@ set -e  # Exit on error
 FORCE_MIGRATION=false
 CLEAN_ENVIRONMENT=false
 REBUILD_ONLY=false
+CONFIGURE_NGINX_ONLY=false
 
 for arg in "$@"; do
     case $arg in
@@ -25,6 +26,9 @@ for arg in "$@"; do
         --rebuild)
             REBUILD_ONLY=true
             ;;
+        --configure-nginx)
+            CONFIGURE_NGINX_ONLY=true
+            ;;
         --help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -32,6 +36,7 @@ for arg in "$@"; do
             echo "  --force-migration  Force run all database migrations"
             echo "  --clean           Clean entire environment (Docker, volumes, cache)"
             echo "  --rebuild         Rebuild existing application (migrations + build)"
+            echo "  --configure-nginx Configure Nginx for external access"
             echo "  --help            Show this help message"
             echo ""
             exit 0
@@ -115,6 +120,89 @@ clean_environment() {
 # Execute clean if requested
 if [ "$CLEAN_ENVIRONMENT" = "true" ]; then
     clean_environment
+fi
+
+# Configure Nginx only if requested
+if [ "$CONFIGURE_NGINX_ONLY" = "true" ]; then
+    # Get external host from .env or ask
+    if [ -f .env ]; then
+        EXTERNAL_HOST=$(grep "^ADMIN_EMAIL=" .env | cut -d'@' -f2 || echo "localhost")
+    fi
+    
+    if [ -z "$EXTERNAL_HOST" ] || [ "$EXTERNAL_HOST" = "localhost" ]; then
+        read -p "Digite o IP ou domínio para acesso externo: " EXTERNAL_HOST
+    fi
+    
+    if command -v nginx >/dev/null 2>&1; then
+        log "🌐 Configurando Nginx para acesso externo..."
+        
+        # Create Nginx configuration
+        sudo tee /etc/nginx/sites-available/agents-chat > /dev/null << EOF
+server {
+    listen 80;
+    server_name ${EXTERNAL_HOST};
+
+    # Main application
+    location / {
+        proxy_pass http://localhost:3210;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        
+        # WebSocket support
+        proxy_read_timeout 86400;
+    }
+
+    # MinIO API
+    location /minio/ {
+        proxy_pass http://localhost:9000/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # MinIO Console  
+    location /minio-console/ {
+        proxy_pass http://localhost:9001/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    client_max_body_size 100M;
+}
+EOF
+
+        # Enable the site
+        sudo ln -sf /etc/nginx/sites-available/agents-chat /etc/nginx/sites-enabled/
+        
+        # Remove default site if exists
+        sudo rm -f /etc/nginx/sites-enabled/default
+        
+        # Test Nginx configuration
+        if sudo nginx -t; then
+            sudo systemctl reload nginx
+            success "Nginx configurado com sucesso!"
+            echo ""
+            echo "🌐 Acesso externo configurado:"
+            echo "   • Aplicação: http://${EXTERNAL_HOST}"
+            echo "   • Admin Panel: http://${EXTERNAL_HOST}/admin"
+            echo "   • MinIO: http://${EXTERNAL_HOST}/minio-console/"
+            echo ""
+        else
+            error "Erro na configuração do Nginx"
+        fi
+    else
+        error "Nginx não está instalado. Instale com: sudo apt update && sudo apt install nginx -y"
+    fi
+    exit 0
 fi
 
 # Show mode header
@@ -803,7 +891,76 @@ EOF
 fi
 
 # ============================================================================
-# 12. VERIFICAÇÃO FINAL E INSTRUÇÕES
+# 12. CONFIGURAR NGINX (SE DISPONÍVEL)
+# ============================================================================
+if command -v nginx >/dev/null 2>&1; then
+    log "🌐 Configurando Nginx para acesso externo..."
+    
+    # Create Nginx configuration
+    sudo tee /etc/nginx/sites-available/agents-chat > /dev/null << EOF
+server {
+    listen 80;
+    server_name ${EXTERNAL_HOST};
+
+    # Main application
+    location / {
+        proxy_pass http://localhost:3210;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        
+        # WebSocket support
+        proxy_read_timeout 86400;
+    }
+
+    # MinIO API
+    location /minio/ {
+        proxy_pass http://localhost:9000/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # MinIO Console
+    location /minio-console/ {
+        proxy_pass http://localhost:9001/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    client_max_body_size 100M;
+}
+EOF
+
+    # Enable the site
+    sudo ln -sf /etc/nginx/sites-available/agents-chat /etc/nginx/sites-enabled/
+    
+    # Test Nginx configuration
+    if sudo nginx -t; then
+        sudo systemctl reload nginx
+        success "Nginx configurado para acesso externo!"
+        log "Aplicação acessível em: http://${EXTERNAL_HOST}"
+    else
+        warn "Erro na configuração do Nginx. Verifique manualmente."
+    fi
+else
+    warn "Nginx não está instalado. Para acesso externo, instale com:"
+    echo "  sudo apt update && sudo apt install nginx -y"
+    echo ""
+    warn "Após instalar, execute:"
+    echo "  ./setup-admin-environment.sh --configure-nginx"
+fi
+
+# ============================================================================
+# 13. VERIFICAÇÃO FINAL E INSTRUÇÕES
 # ============================================================================
 # Skip certain sections for rebuild
 if [ "$REBUILD_ONLY" = "true" ]; then
