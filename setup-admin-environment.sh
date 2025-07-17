@@ -478,15 +478,33 @@ fi
 log "Configurando DATABASE_URL temporária para migração..."
 sed -i.bak 's|@agents-chat-postgres:|@localhost:|g' .env
 
-# Run migration only if not an existing deployment or if forced
-if [ "$EXISTING_DEPLOYMENT" = "false" ] || [ "$FORCE_MIGRATION" = "true" ]; then
-    MIGRATION_DB=1 pnpm db:migrate || {
-        warn "Migrações falharam - tentando adicionar apenas coluna admin"
-        MIGRATION_FAILED=true
-    }
-else
+# For existing deployments, skip migrations by default unless forced
+if [ "$EXISTING_DEPLOYMENT" = "true" ] && [ "$FORCE_MIGRATION" = "false" ]; then
     log "Deploy existente detectado - pulando migrações completas"
-    MIGRATION_FAILED=false
+    log "Use --force-migration para forçar execução de migrações"
+else
+    log "Executando migrações do banco de dados..."
+    
+    MIGRATION_DB=1 pnpm db:migrate || {
+        warn "Migrações falharam - verificando tipo de erro..."
+        
+        # Get the actual error
+        ERROR_MSG=$(MIGRATION_DB=1 pnpm db:migrate 2>&1 || true)
+        
+        if echo "$ERROR_MSG" | grep -q "column \"password\" of relation \"users\" already exists"; then
+            log "Erro: A coluna 'password' já existe no banco de dados."
+            log "Isso indica que as migrações estão dessincronizadas."
+            log ""
+            log "Para resolver, você tem duas opções:"
+            log "1. Use o modo --rebuild para pular migrações e apenas reconstruir"
+            log "2. Reset o banco de dados com --clean e refaça o setup"
+            log ""
+            warn "Continuando sem executar migrações completas..."
+        else
+            warn "Erro nas migrações: $ERROR_MSG"
+            warn "Continuando com o setup..."
+        fi
+    }
 fi
 
 # Always ensure admin column exists
@@ -572,16 +590,34 @@ success "Usuário administrador criado!"
 # ============================================================================
 # 9. BUILD DA APLICAÇÃO
 # ============================================================================
-log "🔨 Fazendo build da aplicação..."
-
-# Build com configurações de produção
-export DOCKER=true
-export NODE_ENV=production
-export NEXT_TELEMETRY_DISABLED=1
-
-pnpm build
-
-success "Build concluído!"
+if [ "$REBUILD_ONLY" = "true" ] || [ "$FORCE_BUILD" = "true" ]; then
+    log "🔨 Fazendo build da aplicação..."
+    
+    # Build com configurações de produção
+    export DOCKER=true
+    export NODE_ENV=production
+    export NEXT_TELEMETRY_DISABLED=1
+    
+    pnpm build
+    
+    success "Build concluído!"
+else
+    # Check if .next directory exists
+    if [ -d ".next" ]; then
+        log "Build existente encontrado. Pulando rebuild..."
+        log "Use --rebuild para forçar novo build"
+    else
+        log "🔨 Primeira build da aplicação..."
+        
+        export DOCKER=true
+        export NODE_ENV=production
+        export NEXT_TELEMETRY_DISABLED=1
+        
+        pnpm build
+        
+        success "Build concluído!"
+    fi
+fi
 
 # ============================================================================
 # 10. CRIAR SCRIPTS DE INICIALIZAÇÃO
