@@ -774,25 +774,31 @@ log "Atualizando script de criação de admin..."
 log "Email do admin: ${ADMIN_EMAIL}"
 
 # Create a temporary script with the correct admin email and password
-cat > scripts/create-admin-user-temp.ts << EOF
+cat > scripts/create-admin-user-temp.js << 'EOF'
 /**
  * Temporary admin creation script with environment-specific credentials
  */
-import bcrypt from 'bcryptjs';
-import { eq } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+const bcrypt = require('bcryptjs');
+const { eq } = require('drizzle-orm');
+const { nanoid } = require('nanoid');
 
-import { users } from '@/database/schemas';
-import { serverDB } from '@/database/server';
+// Use dynamic import for ES modules
+async function loadModules() {
+  const { users } = await import('@/database/schemas');
+  const { serverDB } = await import('@/database/server');
+  return { users, serverDB };
+}
 
-const ADMIN_EMAIL = '${ADMIN_EMAIL}';
-const ADMIN_PASSWORD = '${ADMIN_PASSWORD}';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD;
 
 console.log('🔐 Creating admin user with credentials...');
 console.log('Admin Email:', ADMIN_EMAIL);
 
 async function createAdminUser() {
   try {
+    const { users, serverDB } = await loadModules();
+    
     // Check if admin user already exists
     const existingUser = await serverDB.query.users.findFirst({
       where: eq(users.email, ADMIN_EMAIL),
@@ -851,16 +857,23 @@ async function createAdminUser() {
     console.log('');
     console.log('⚠️  IMPORTANT: Change the default password after first login!');
     
-    // Exit cleanly
-    process.exit(0);
+    return true;
   } catch (error) {
     console.error('❌ Error creating admin user:', error);
-    process.exit(1);
+    throw error;
   }
 }
 
 // Run the script
-await createAdminUser();
+createAdminUser()
+  .then(() => {
+    console.log('✅ Admin user setup completed successfully');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('❌ Admin user setup failed:', error);
+    process.exit(1);
+  });
 EOF
 
 # Execute the script using tsx with proper environment
@@ -869,23 +882,24 @@ export DATABASE_URL="postgresql://postgres:${DB_PASSWORD}@localhost:5432/agents_
 export ADMIN_EMAIL="${ADMIN_EMAIL}"
 export ADMIN_DEFAULT_PASSWORD="${ADMIN_PASSWORD}"
 
-# Try running with tsx
-if command -v tsx >/dev/null 2>&1; then
-    tsx scripts/create-admin-user-temp.ts || {
-        warn "Falha ao executar com tsx, tentando com pnpm..."
-        pnpm tsx scripts/create-admin-user-temp.ts || {
-            error "Não foi possível criar o usuário admin via script TypeScript"
-        }
+# Try running with node (CommonJS)
+if command -v node >/dev/null 2>&1; then
+    node scripts/create-admin-user-temp.js || {
+        warn "Falha ao executar com node, tentando com tsx..."
+        if command -v tsx >/dev/null 2>&1; then
+            tsx scripts/create-admin-user.ts || {
+                error "Não foi possível criar o usuário admin via script"
+            }
+        else
+            error "Não foi possível criar o usuário admin. Node.js não está funcionando."
+        fi
     }
 else
-    # If tsx is not in PATH, try with pnpm
-    pnpm tsx scripts/create-admin-user-temp.ts || {
-        error "Não foi possível criar o usuário admin. Certifique-se de que tsx está instalado."
-    }
+    error "Node.js não está instalado."
 fi
 
 # Clean up temporary script
-rm -f scripts/create-admin-user-temp.ts
+rm -f scripts/create-admin-user-temp.js
 
 echo ""
 echo "=== CREDENCIAIS DO ADMIN ==="
