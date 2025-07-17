@@ -9,6 +9,12 @@
 
 set -e  # Exit on error
 
+# Check for flags
+FORCE_MIGRATION=false
+if [ "$1" = "--force-migration" ]; then
+    FORCE_MIGRATION=true
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -168,7 +174,7 @@ update_env "NEXT_PUBLIC_SERVICE_MODE" "server"
 update_env "NEXT_PUBLIC_ENABLE_NEXT_AUTH" "1"
 
 # MinIO/S3 Configuration
-update_env "S3_ENDPOINT" "http://localhost:9000"
+update_env "S3_ENDPOINT" "http://agents-chat-minio:9000"
 update_env "S3_ACCESS_KEY_ID" "minioadmin"
 update_env "S3_SECRET_ACCESS_KEY" "${MINIO_PASSWORD}"
 update_env "S3_BUCKET" "lobe"
@@ -306,6 +312,14 @@ success "Serviços Docker iniciados!"
 # ============================================================================
 log "🔄 Executando migrações do banco de dados..."
 
+# Check if this is an existing deployment
+if docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "SELECT 1 FROM users LIMIT 1" >/dev/null 2>&1; then
+    log "Detectado banco de dados existente com tabela users"
+    EXISTING_DEPLOYMENT=true
+else
+    EXISTING_DEPLOYMENT=false
+fi
+
 # Instalar extensão pgvector
 docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null || {
     log "Creating database if it doesn't exist..."
@@ -329,15 +343,30 @@ done
 
 # Executar migrações
 log "Tentando executar migrações..."
-# Always use localhost for migrations run from host machine
-MIGRATION_URL="postgresql://postgres:${DB_PASSWORD}@localhost:5432/agents_chat"
-log "Using database URL for migration: postgresql://postgres:****@localhost:5432/agents_chat"
-MIGRATION_DB=1 DATABASE_URL="${MIGRATION_URL}" pnpm db:migrate || {
-    warn "Migrações falharam - possivelmente o schema já existe"
-    log "Verificando e adicionando coluna is_admin se necessário..."
-    
-    # Adicionar coluna is_admin se não existir
-    docker exec agents-chat-postgres psql -U postgres -d agents_chat << 'SQLEOF'
+
+# Save current DATABASE_URL if it exists
+if [ -f .env ]; then
+    ORIGINAL_DATABASE_URL=$(grep "^DATABASE_URL=" .env | cut -d'=' -f2)
+fi
+
+# Temporarily update DATABASE_URL to use localhost for migration
+log "Configurando DATABASE_URL temporária para migração..."
+sed -i.bak 's|@agents-chat-postgres:|@localhost:|g' .env
+
+# Run migration only if not an existing deployment or if forced
+if [ "$EXISTING_DEPLOYMENT" = "false" ] || [ "$FORCE_MIGRATION" = "true" ]; then
+    MIGRATION_DB=1 pnpm db:migrate || {
+        warn "Migrações falharam - tentando adicionar apenas coluna admin"
+        MIGRATION_FAILED=true
+    }
+else
+    log "Deploy existente detectado - pulando migrações completas"
+    MIGRATION_FAILED=false
+fi
+
+# Always ensure admin column exists
+log "Garantindo que coluna is_admin existe..."
+docker exec agents-chat-postgres psql -U postgres -d agents_chat << 'SQLEOF'
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -345,11 +374,22 @@ BEGIN
         WHERE table_name = 'users' AND column_name = 'is_admin'
     ) THEN
         ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT false NOT NULL;
+        RAISE NOTICE 'Coluna is_admin adicionada com sucesso';
+    ELSE
+        RAISE NOTICE 'Coluna is_admin já existe';
     END IF;
 END$$;
 SQLEOF
-    success "Schema do banco de dados verificado!"
-}
+success "Schema do banco de dados verificado!"
+
+# Restore original DATABASE_URL after migration
+if [ -n "$ORIGINAL_DATABASE_URL" ]; then
+    log "Restaurando DATABASE_URL original..."
+    update_env "DATABASE_URL" "$ORIGINAL_DATABASE_URL"
+else
+    # If no original, ensure it uses container name for runtime
+    update_env "DATABASE_URL" "postgresql://postgres:${DB_PASSWORD}@agents-chat-postgres:5432/agents_chat"
+fi
 
 # ============================================================================
 # 8. CRIAR USUÁRIO ADMINISTRADOR
