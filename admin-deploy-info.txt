@@ -1,0 +1,30 @@
+=== AGENTS CHAT ADMIN - INFORMAÇÕES DO DEPLOY ===
+Data: Thu Jul 17 03:27:13 UTC 2025
+Host Externo: 64.23.237.16
+
+ACESSOS:
+- Admin Panel: http://64.23.237.16:3210/admin
+- Aplicação: http://64.23.237.16:3210
+- MinIO Console: http://64.23.237.16:9001
+- PostgreSQL: 64.23.237.16:5432
+
+CREDENCIAIS ADMIN:
+- Email: admin@64.23.237.16
+- Senha: ROJ0DotNWbFvkhVz
+
+CREDENCIAIS BANCO DE DADOS:
+- PostgreSQL: postgres / 2375aff696127465b30dcbad14be2fa4
+- MinIO: minioadmin / 3127f39d766da69608e7bedbb425e270
+
+CHAVES DE SEGURANÇA:
+- KEY_VAULTS_SECRET: ac7cbd2fd9e82a08285537e109b5e0aff5cfbd7ea752e97f6b4f60c09b634a8a
+- NEXT_AUTH_SECRET: 3e226869d26f2a39cbcab71af87c97eb47696669f3bf028b6d4a077844015ab3
+
+COMANDOS ÚTEIS:
+- Desenvolvimento: ./start-admin-dev.sh
+- Produção: ./start-admin-prod.sh
+- Logs: docker logs -f agents-chat
+- Parar: docker-compose down
+- Status: docker ps
+
+MODO DE AUTENTICAÇÃO: credentials

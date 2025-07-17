@@ -268,9 +268,11 @@ if [ "$REBUILD_ONLY" = "true" ]; then
     # Extract existing host from .env if available
     if [ -f .env ]; then
         EXTERNAL_HOST=$(grep "^ADMIN_EMAIL=" .env | cut -d'@' -f2 || echo "localhost")
+        CUSTOM_ADMIN_EMAIL=$(grep "^ADMIN_EMAIL=" .env | cut -d'=' -f2 || echo "")
         AUTH_MODE="credentials"
     else
         EXTERNAL_HOST="localhost"
+        CUSTOM_ADMIN_EMAIL=""
         AUTH_MODE="credentials"
     fi
 else
@@ -281,6 +283,19 @@ else
     if [ -z "$EXTERNAL_HOST" ]; then
         EXTERNAL_HOST="localhost"
         warn "Usando localhost como host padrão"
+    fi
+
+    # Perguntar sobre o email do administrador
+    echo ""
+    read -p "Digite o email do administrador (ex: admin@ai4learning.com.br) [padrão: admin@${EXTERNAL_HOST}]: " CUSTOM_ADMIN_EMAIL
+    if [ -z "$CUSTOM_ADMIN_EMAIL" ]; then
+        CUSTOM_ADMIN_EMAIL="admin@${EXTERNAL_HOST}"
+    fi
+
+    # Validar formato do email
+    if ! echo "$CUSTOM_ADMIN_EMAIL" | grep -qE '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'; then
+        warn "Email inválido. Usando padrão: admin@${EXTERNAL_HOST}"
+        CUSTOM_ADMIN_EMAIL="admin@${EXTERNAL_HOST}"
     fi
 
     # Perguntar sobre autenticação
@@ -405,7 +420,12 @@ update_env "POSTGRES_PASSWORD" "${DB_PASSWORD}"
 update_env "LOBE_DB_NAME" "agents_chat"
 
 # Admin configuration
-update_env "ADMIN_EMAIL" "admin@${EXTERNAL_HOST}"
+# Use custom admin email if provided, otherwise use default
+if [ -n "$CUSTOM_ADMIN_EMAIL" ]; then
+    update_env "ADMIN_EMAIL" "${CUSTOM_ADMIN_EMAIL}"
+else
+    update_env "ADMIN_EMAIL" "admin@${EXTERNAL_HOST}"
+fi
 update_env "ADMIN_DEFAULT_PASSWORD" "${ADMIN_PASSWORD}"
 update_env "ENABLE_ADMIN_PANEL" "true"
 
@@ -658,44 +678,130 @@ fi
 # ============================================================================
 log "👤 Criando usuário administrador inicial..."
 
-# Criar admin diretamente no banco via SQL
-log "Criando usuário administrador diretamente no banco..."
+# Set admin email based on configuration
+if [ -n "$CUSTOM_ADMIN_EMAIL" ]; then
+    ADMIN_EMAIL="${CUSTOM_ADMIN_EMAIL}"
+else
+    ADMIN_EMAIL="admin@${EXTERNAL_HOST}"
+fi
 
-# Gerar UUID v4 para o admin
-ADMIN_ID=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "$(openssl rand -hex 8)-$(openssl rand -hex 4)-4$(openssl rand -hex 3)-$(openssl rand -hex 4)-$(openssl rand -hex 12)")
-ADMIN_EMAIL="admin@${EXTERNAL_HOST}"
-ADMIN_USERNAME="admin"
+# First, create or update the create-admin-user.ts script to use the correct email
+log "Atualizando script de criação de admin..."
+log "Email do admin: ${ADMIN_EMAIL}"
 
-# Criar ou atualizar admin via SQL
-docker exec agents-chat-postgres psql -U postgres -d agents_chat << EOF
--- Criar ou atualizar usuário admin
-INSERT INTO users (
-    id,
-    email,
-    username,
-    full_name,
-    is_admin,
-    is_onboarded,
-    created_at,
-    updated_at
-) VALUES (
-    '${ADMIN_ID}',
-    '${ADMIN_EMAIL}',
-    '${ADMIN_USERNAME}',
-    'Administrator',
-    true,
-    true,
-    NOW(),
-    NOW()
-) ON CONFLICT (email) DO UPDATE SET
-    is_admin = true,
-    updated_at = NOW();
+# Create a temporary script with the correct admin email and password
+cat > scripts/create-admin-user-temp.ts << EOF
+/**
+ * Temporary admin creation script with environment-specific credentials
+ */
+import bcrypt from 'bcryptjs';
+import { eq } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
 
--- Verificar que o admin foi criado
-SELECT id, email, username, full_name, is_admin
-FROM users
-WHERE email = '${ADMIN_EMAIL}';
+import { users } from '@/database/schemas';
+import { serverDB } from '@/database/server';
+
+const ADMIN_EMAIL = '${ADMIN_EMAIL}';
+const ADMIN_PASSWORD = '${ADMIN_PASSWORD}';
+
+console.log('🔐 Creating admin user with credentials...');
+console.log('Admin Email:', ADMIN_EMAIL);
+
+async function createAdminUser() {
+  try {
+    // Check if admin user already exists
+    const existingUser = await serverDB.query.users.findFirst({
+      where: eq(users.email, ADMIN_EMAIL),
+    });
+
+    if (existingUser) {
+      console.log('👤 Admin user already exists, updating...');
+
+      // Hash the password
+      const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
+
+      // Update existing user to be admin with password
+      await serverDB
+        .update(users)
+        .set({
+          isAdmin: true,
+          password: hashedPassword,
+          isOnboarded: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, existingUser.id));
+
+      console.log('✅ Admin user updated successfully');
+    } else {
+      console.log('🆕 Creating new admin user...');
+
+      // Hash the password
+      const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
+
+      // Create new admin user
+      const newUser = await serverDB
+        .insert(users)
+        .values({
+          id: nanoid(),
+          email: ADMIN_EMAIL,
+          username: ADMIN_EMAIL.split('@')[0],
+          fullName: 'Administrator',
+          password: hashedPassword,
+          isAdmin: true,
+          isOnboarded: true,
+          emailVerifiedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+
+      console.log('✅ Admin user created successfully');
+      console.log('User ID:', newUser[0].id);
+    }
+
+    console.log('');
+    console.log('🎉 ADMIN USER SETUP COMPLETE!');
+    console.log('==================================');
+    console.log('📧 Email:', ADMIN_EMAIL);
+    console.log('🔑 Password:', ADMIN_PASSWORD);
+    console.log('');
+    console.log('⚠️  IMPORTANT: Change the default password after first login!');
+    
+    // Exit cleanly
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error creating admin user:', error);
+    process.exit(1);
+  }
+}
+
+// Run the script
+await createAdminUser();
 EOF
+
+# Execute the script using tsx with proper environment
+log "Executando script de criação de admin..."
+export DATABASE_URL="postgresql://postgres:${DB_PASSWORD}@localhost:5432/agents_chat"
+export ADMIN_EMAIL="${ADMIN_EMAIL}"
+export ADMIN_DEFAULT_PASSWORD="${ADMIN_PASSWORD}"
+
+# Try running with tsx
+if command -v tsx >/dev/null 2>&1; then
+    tsx scripts/create-admin-user-temp.ts || {
+        warn "Falha ao executar com tsx, tentando com pnpm..."
+        pnpm tsx scripts/create-admin-user-temp.ts || {
+            error "Não foi possível criar o usuário admin via script TypeScript"
+        }
+    }
+else
+    # If tsx is not in PATH, try with pnpm
+    pnpm tsx scripts/create-admin-user-temp.ts || {
+        error "Não foi possível criar o usuário admin. Certifique-se de que tsx está instalado."
+    }
+fi
+
+# Clean up temporary script
+rm -f scripts/create-admin-user-temp.ts
 
 echo ""
 echo "=== CREDENCIAIS DO ADMIN ==="
@@ -866,7 +972,7 @@ ACESSOS:
 - PostgreSQL: ${EXTERNAL_HOST}:5432
 
 CREDENCIAIS ADMIN:
-- Email: admin@${EXTERNAL_HOST}
+- Email: ${ADMIN_EMAIL}
 - Senha: ${ADMIN_PASSWORD}
 
 CREDENCIAIS BANCO DE DADOS:
@@ -1008,7 +1114,7 @@ echo "   • Aplicação: ${BLUE}http://${EXTERNAL_HOST}:3210${NC}"
 echo "   • MinIO Console: ${BLUE}http://${EXTERNAL_HOST}:9001${NC}"
 echo ""
 echo "👤 CREDENCIAIS DO ADMIN:"
-echo "   • Email: ${YELLOW}admin@${EXTERNAL_HOST}${NC}"
+echo "   • Email: ${YELLOW}${ADMIN_EMAIL}${NC}"
 echo "   • Senha: ${YELLOW}${ADMIN_PASSWORD}${NC}"
 echo "   • ${RED}⚠️  IMPORTANTE: Altere a senha após o primeiro login!${NC}"
 echo ""

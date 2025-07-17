@@ -1,18 +1,18 @@
-import { StateCreator, create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { createWithEqualityFn } from 'zustand/traditional';
+import { StateCreator } from 'zustand';
+import { shallow } from 'zustand/shallow';
 
+import { createDevtools } from '../middleware/createDevtools';
 import { AdminStoreState, initialState } from './initialState';
 import { AdminDashboardAction, createDashboardSlice } from './slices/dashboard';
 
 export type AdminStore = AdminStoreState & AdminDashboardAction;
 
-const createStore: StateCreator<AdminStore> = (...parameters) => ({
+const createStore: StateCreator<AdminStore, [['zustand/devtools', never]]> = (...parameters) => ({
   ...initialState,
   ...createDashboardSlice(...parameters),
 });
 
-export const useAdminStore = create<AdminStore>()(
-  devtools(createStore, {
-    name: 'LobeChat_Admin',
-  }),
-);
+const devtools = createDevtools('admin');
+
+export const useAdminStore = createWithEqualityFn<AdminStore>()(devtools(createStore), shallow);
