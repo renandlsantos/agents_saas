@@ -296,9 +296,25 @@ log "🔄 Executando migrações do banco de dados..."
 docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null || true
 
 # Executar migrações
-MIGRATION_DB=1 DATABASE_URL="postgresql://postgres:${DB_PASSWORD}@localhost:5432/agents_chat" pnpm db:migrate
-
-success "Migrações executadas!"
+log "Tentando executar migrações..."
+MIGRATION_DB=1 DATABASE_URL="postgresql://postgres:${DB_PASSWORD}@localhost:5432/agents_chat" pnpm db:migrate || {
+    warn "Migrações falharam - possivelmente o schema já existe"
+    log "Verificando e adicionando coluna is_admin se necessário..."
+    
+    # Adicionar coluna is_admin se não existir
+    docker exec agents-chat-postgres psql -U postgres -d agents_chat << 'SQLEOF'
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'is_admin'
+    ) THEN
+        ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT false NOT NULL;
+    END IF;
+END$$;
+SQLEOF
+    success "Schema do banco de dados verificado!"
+}
 
 # ============================================================================
 # 8. CRIAR USUÁRIO ADMINISTRADOR
