@@ -14,6 +14,7 @@ FORCE_MIGRATION=false
 CLEAN_ENVIRONMENT=false
 REBUILD_ONLY=false
 CONFIGURE_NGINX_ONLY=false
+SKIP_ADMIN_CREATION=false
 
 for arg in "$@"; do
     case $arg in
@@ -29,6 +30,9 @@ for arg in "$@"; do
         --configure-nginx)
             CONFIGURE_NGINX_ONLY=true
             ;;
+        --skip-admin)
+            SKIP_ADMIN_CREATION=true
+            ;;
         --help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -37,6 +41,7 @@ for arg in "$@"; do
             echo "  --clean           Clean entire environment (Docker, volumes, cache)"
             echo "  --rebuild         Rebuild existing application (migrations + build)"
             echo "  --configure-nginx Configure Nginx for external access"
+            echo "  --skip-admin      Skip admin user creation (useful for rebuilds)"
             echo "  --help            Show this help message"
             echo ""
             exit 0
@@ -298,6 +303,17 @@ else
         CUSTOM_ADMIN_EMAIL="admin@${EXTERNAL_HOST}"
     fi
 
+    # Perguntar sobre senha personalizada do administrador
+    echo ""
+    read -p "Digite uma senha personalizada para o administrador [deixe vazio para gerar automaticamente]: " CUSTOM_ADMIN_PASSWORD
+    if [ -n "$CUSTOM_ADMIN_PASSWORD" ]; then
+        # Verificar se a senha tem pelo menos 8 caracteres
+        if [ ${#CUSTOM_ADMIN_PASSWORD} -lt 8 ]; then
+            warn "Senha muito curta. Deve ter pelo menos 8 caracteres. Gerando automaticamente..."
+            CUSTOM_ADMIN_PASSWORD=""
+        fi
+    fi
+
     # Perguntar sobre autenticação
     echo ""
     echo "Escolha o modo de autenticação:"
@@ -353,7 +369,13 @@ DB_PASSWORD=${EXISTING_DB_PASSWORD:-$(openssl rand -hex 32)}
 MINIO_PASSWORD=${EXISTING_MINIO_PASSWORD:-$(openssl rand -hex 16)}
 KEY_VAULTS_SECRET=${EXISTING_KEY_VAULTS:-$(openssl rand -hex 32)}
 NEXTAUTH_SECRET=${EXISTING_NEXTAUTH:-$(openssl rand -hex 32)}
-ADMIN_PASSWORD=$(openssl rand -base64 12)
+
+# Use custom password if provided, otherwise generate one
+if [ -n "$CUSTOM_ADMIN_PASSWORD" ]; then
+    ADMIN_PASSWORD="$CUSTOM_ADMIN_PASSWORD"
+else
+    ADMIN_PASSWORD=$(openssl rand -base64 12)
+fi
 
 # Log if using existing passwords
 if [ -n "$EXISTING_DB_PASSWORD" ]; then
@@ -760,146 +782,92 @@ fi
 # ============================================================================
 # 8. CRIAR USUÁRIO ADMINISTRADOR
 # ============================================================================
-log "👤 Criando usuário administrador inicial..."
-
-# Set admin email based on configuration
-if [ -n "$CUSTOM_ADMIN_EMAIL" ]; then
-    ADMIN_EMAIL="${CUSTOM_ADMIN_EMAIL}"
+if [ "$SKIP_ADMIN_CREATION" = "true" ]; then
+    log "⏭️  Pulando criação de usuário admin (--skip-admin)"
 else
-    ADMIN_EMAIL="admin@${EXTERNAL_HOST}"
-fi
+    log "👤 Criando usuário administrador inicial..."
 
-# First, create or update the create-admin-user.ts script to use the correct email
-log "Atualizando script de criação de admin..."
-log "Email do admin: ${ADMIN_EMAIL}"
+    # Set admin email based on configuration
+    if [ -n "$CUSTOM_ADMIN_EMAIL" ]; then
+        ADMIN_EMAIL="${CUSTOM_ADMIN_EMAIL}"
+    else
+        ADMIN_EMAIL="admin@${EXTERNAL_HOST}"
+    fi
 
-# Create a temporary script with the correct admin email and password
-cat > scripts/create-admin-user-temp.js << 'EOF'
-/**
- * Temporary admin creation script with environment-specific credentials
- */
-const bcrypt = require('bcryptjs');
-const { eq } = require('drizzle-orm');
-const { nanoid } = require('nanoid');
+    # First, create or update the create-admin-user.ts script to use the correct email
+    log "Atualizando script de criação de admin..."
+    log "Email do admin: ${ADMIN_EMAIL}"
 
-// Use dynamic import for ES modules
-async function loadModules() {
-  const { users } = await import('@/database/schemas');
-  const { serverDB } = await import('@/database/server');
-  return { users, serverDB };
-}
+    # Create a more robust admin creation approach
+    log "Verificando se usuário admin já existe..."
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-const ADMIN_PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD;
+    # First, check if admin user exists using SQL
+    ADMIN_EXISTS=$(docker exec agents-chat-postgres psql -U postgres -d agents_chat -t -c "SELECT COUNT(*) FROM users WHERE email = '${ADMIN_EMAIL}' AND is_admin = true;" 2>/dev/null | xargs || echo "0")
 
-console.log('🔐 Creating admin user with credentials...');
-console.log('Admin Email:', ADMIN_EMAIL);
+    if [ "$ADMIN_EXISTS" -gt 0 ]; then
+        log "✅ Usuário admin já existe: ${ADMIN_EMAIL}"
+        log "Pulando criação de usuário admin..."
+        log "Use --skip-admin para pular esta verificação em futuras execuções"
+    else
+        log "🆕 Criando novo usuário admin..."
+        
+        # Create admin user using direct SQL to avoid path resolution issues
+        HASHED_PASSWORD=$(node -e "
+            const bcrypt = require('bcryptjs');
+            const password = process.env.ADMIN_DEFAULT_PASSWORD || '${ADMIN_PASSWORD}';
+            const hash = bcrypt.hashSync(password, 10);
+            console.log(hash);
+        ")
+        
+        # Generate nanoid for user ID
+        USER_ID=$(node -e "
+            const { nanoid } = require('nanoid');
+            console.log(nanoid());
+        ")
+        
+        # Create admin user directly via SQL
+        docker exec agents-chat-postgres psql -U postgres -d agents_chat << SQLEOF
+INSERT INTO users (
+    id, 
+    email, 
+    username, 
+    full_name, 
+    password, 
+    is_admin, 
+    is_onboarded, 
+    email_verified_at, 
+    created_at, 
+    updated_at
+) VALUES (
+    '${USER_ID}',
+    '${ADMIN_EMAIL}',
+    '$(echo ${ADMIN_EMAIL} | cut -d'@' -f1)',
+    'Administrator',
+    '${HASHED_PASSWORD}',
+    true,
+    true,
+    NOW(),
+    NOW(),
+    NOW()
+) ON CONFLICT (email) DO UPDATE SET
+    password = EXCLUDED.password,
+    is_admin = true,
+    is_onboarded = true,
+    updated_at = NOW();
+SQLEOF
 
-async function createAdminUser() {
-  try {
-    const { users, serverDB } = await loadModules();
-    
-    // Check if admin user already exists
-    const existingUser = await serverDB.query.users.findFirst({
-      where: eq(users.email, ADMIN_EMAIL),
-    });
-
-    if (existingUser) {
-      console.log('👤 Admin user already exists, updating...');
-
-      // Hash the password
-      const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
-
-      // Update existing user to be admin with password
-      await serverDB
-        .update(users)
-        .set({
-          isAdmin: true,
-          password: hashedPassword,
-          isOnboarded: true,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, existingUser.id));
-
-      console.log('✅ Admin user updated successfully');
-    } else {
-      console.log('🆕 Creating new admin user...');
-
-      // Hash the password
-      const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
-
-      // Create new admin user
-      const newUser = await serverDB
-        .insert(users)
-        .values({
-          id: nanoid(),
-          email: ADMIN_EMAIL,
-          username: ADMIN_EMAIL.split('@')[0],
-          fullName: 'Administrator',
-          password: hashedPassword,
-          isAdmin: true,
-          isOnboarded: true,
-          emailVerifiedAt: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .returning();
-
-      console.log('✅ Admin user created successfully');
-      console.log('User ID:', newUser[0].id);
-    }
-
-    console.log('');
-    console.log('🎉 ADMIN USER SETUP COMPLETE!');
-    console.log('==================================');
-    console.log('📧 Email:', ADMIN_EMAIL);
-    console.log('🔑 Password:', ADMIN_PASSWORD);
-    console.log('');
-    console.log('⚠️  IMPORTANT: Change the default password after first login!');
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Error creating admin user:', error);
-    throw error;
-  }
-}
-
-// Run the script
-createAdminUser()
-  .then(() => {
-    console.log('✅ Admin user setup completed successfully');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('❌ Admin user setup failed:', error);
-    process.exit(1);
-  });
-EOF
-
-# Execute the script using tsx with proper environment
-log "Executando script de criação de admin..."
-export DATABASE_URL="postgresql://postgres:${DB_PASSWORD}@localhost:5432/agents_chat"
-export ADMIN_EMAIL="${ADMIN_EMAIL}"
-export ADMIN_DEFAULT_PASSWORD="${ADMIN_PASSWORD}"
-
-# Try running with node (CommonJS)
-if command -v node >/dev/null 2>&1; then
-    node scripts/create-admin-user-temp.js || {
-        warn "Falha ao executar com node, tentando com tsx..."
-        if command -v tsx >/dev/null 2>&1; then
-            tsx scripts/create-admin-user.ts || {
-                error "Não foi possível criar o usuário admin via script"
-            }
+        if [ $? -eq 0 ]; then
+            success "✅ Usuário admin criado/atualizado com sucesso!"
+            log "📧 Email: ${ADMIN_EMAIL}"
+            log "🔑 Senha: ${ADMIN_PASSWORD}"
+            log "👤 ID: ${USER_ID}"
         else
-            error "Não foi possível criar o usuário admin. Node.js não está funcionando."
+            error "❌ Falha ao criar usuário admin via SQL"
         fi
-    }
-else
-    error "Node.js não está instalado."
+    fi
 fi
 
-# Clean up temporary script
-rm -f scripts/create-admin-user-temp.js
+# Admin user creation completed above
 
 echo ""
 echo "=== CREDENCIAIS DO ADMIN ==="
