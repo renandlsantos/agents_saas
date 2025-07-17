@@ -62,45 +62,45 @@ clean_environment() {
     echo -e "${YELLOW}=============================================================================="
     echo -e "🧹 LIMPEZA COMPLETA DO AMBIENTE"
     echo -e "==============================================================================${NC}"
-    
+
     warn "⚠️  ATENÇÃO: Isso irá remover TODOS os dados e containers!"
     read -p "Tem certeza que deseja continuar? (yes/no): " CONFIRM
-    
+
     if [ "$CONFIRM" != "yes" ]; then
         log "Operação cancelada."
         exit 0
     fi
-    
+
     log "Parando todos os containers..."
     docker-compose down -v 2>/dev/null || true
-    
+
     log "Removendo containers órfãos..."
     docker container prune -f
-    
+
     log "Removendo imagens não utilizadas..."
     docker image prune -a -f
-    
+
     log "Removendo volumes..."
     docker volume prune -f
-    
+
     log "Limpando sistema Docker..."
     docker system prune -a -f --volumes
-    
+
     log "Removendo diretórios de dados..."
     rm -rf data/ 2>/dev/null || true
     rm -rf .next/ 2>/dev/null || true
     rm -rf node_modules/ 2>/dev/null || true
     rm -rf .pnpm-store/ 2>/dev/null || true
-    
+
     log "Removendo arquivos de cache..."
     rm -rf ~/.pnpm-store/ 2>/dev/null || true
     rm -rf ~/.npm/_cacache/ 2>/dev/null || true
-    
+
     log "Removendo arquivos temporários..."
     rm -f .env.bak* 2>/dev/null || true
     rm -f admin-deploy-info.txt 2>/dev/null || true
     rm -f start-admin-*.sh 2>/dev/null || true
-    
+
     success "Ambiente limpo com sucesso!"
     echo ""
     log "Para fazer uma nova instalação, execute:"
@@ -187,14 +187,14 @@ if [ "$REBUILD_ONLY" = "true" ]; then
     fi
 else
     log "⚙️  Configurando ambiente para o painel administrativo..."
-    
+
     # Perguntar o IP/domínio para acesso externo
     read -p "Digite o IP ou domínio para acesso externo (ex: 192.168.1.100 ou admin.suaempresa.com): " EXTERNAL_HOST
     if [ -z "$EXTERNAL_HOST" ]; then
         EXTERNAL_HOST="localhost"
         warn "Usando localhost como host padrão"
     fi
-    
+
     # Perguntar sobre autenticação
     echo ""
     echo "Escolha o modo de autenticação:"
@@ -203,7 +203,7 @@ else
     echo "3) GitHub OAuth"
     echo "4) Casdoor (SSO)"
     read -p "Opção (1-4) [padrão: 1]: " AUTH_CHOICE
-    
+
     case "$AUTH_CHOICE" in
         2)
             AUTH_MODE="google"
@@ -257,6 +257,21 @@ if [ -n "$EXISTING_DB_PASSWORD" ]; then
     log "Using existing PostgreSQL password from .env"
 fi
 
+# Calculate memory allocation early for .env
+if [ -f /proc/meminfo ]; then
+    TOTAL_MEM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+    TOTAL_MEM_MB=$((TOTAL_MEM_KB / 1024))
+else
+    TOTAL_MEM_BYTES=$(sysctl -n hw.memsize 2>/dev/null || echo "8589934592")
+    TOTAL_MEM_MB=$((TOTAL_MEM_BYTES / 1024 / 1024))
+fi
+NODE_HEAP_SIZE=$((TOTAL_MEM_MB * 75 / 100))
+if [ $NODE_HEAP_SIZE -lt 28672 ]; then
+    NODE_HEAP_SIZE=28672
+elif [ $NODE_HEAP_SIZE -gt 24576 ]; then
+    NODE_HEAP_SIZE=24576
+fi
+
 # Atualizar variáveis no .env existente
 log "Atualizando configurações no .env..."
 
@@ -305,6 +320,10 @@ update_env "LOBE_DB_NAME" "agents_chat"
 update_env "ADMIN_EMAIL" "admin@${EXTERNAL_HOST}"
 update_env "ADMIN_DEFAULT_PASSWORD" "${ADMIN_PASSWORD}"
 update_env "ENABLE_ADMIN_PANEL" "true"
+
+# Memory configuration
+update_env "NODE_OPTIONS" "--max-old-space-size=${NODE_HEAP_SIZE:-28672}"
+update_env "NODE_MAX_MEMORY" "${NODE_HEAP_SIZE:-28672}"
 
 # Authentication configuration
 case "$AUTH_MODE" in
@@ -357,8 +376,14 @@ success "Docker Compose verificado!"
 # ============================================================================
 log "📦 Instalando dependências do projeto..."
 
-# Configurar Node.js para build
-export NODE_OPTIONS="--max-old-space-size=4096"
+# Memory was already calculated, just show the info
+log "🧮 Configuração de memória:"
+log "💾 Memória total: ${TOTAL_MEM_MB}MB"
+log "🚀 Alocando ${NODE_HEAP_SIZE}MB para Node.js"
+
+# Configure Node.js for build with dynamic memory
+export NODE_OPTIONS="--max-old-space-size=${NODE_HEAP_SIZE}"
+export NODE_MAX_MEMORY="${NODE_HEAP_SIZE}"
 
 # Instalar dependências
 pnpm install --no-frozen-lockfile
@@ -389,10 +414,10 @@ if [ "$REBUILD_ONLY" = "true" ]; then
     fi
 else
     log "🐳 Iniciando serviços Docker..."
-    
+
     # Parar serviços existentes se houver
     docker-compose down 2>/dev/null || true
-    
+
     # Iniciar serviços usando o docker-compose existente
     docker-compose up -d postgres redis minio
 fi
@@ -484,13 +509,13 @@ if [ "$EXISTING_DEPLOYMENT" = "true" ] && [ "$FORCE_MIGRATION" = "false" ]; then
     log "Use --force-migration para forçar execução de migrações"
 else
     log "Executando migrações do banco de dados..."
-    
+
     MIGRATION_DB=1 pnpm db:migrate || {
         warn "Migrações falharam - verificando tipo de erro..."
-        
+
         # Get the actual error
         ERROR_MSG=$(MIGRATION_DB=1 pnpm db:migrate 2>&1 || true)
-        
+
         if echo "$ERROR_MSG" | grep -q "column \"password\" of relation \"users\" already exists"; then
             log "Erro: A coluna 'password' já existe no banco de dados."
             log "Isso indica que as migrações estão dessincronizadas."
@@ -513,7 +538,7 @@ docker exec agents-chat-postgres psql -U postgres -d agents_chat << 'SQLEOF'
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
+        SELECT 1 FROM information_schema.columns
         WHERE table_name = 'users' AND column_name = 'is_admin'
     ) THEN
         ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT false NOT NULL;
@@ -573,8 +598,8 @@ INSERT INTO users (
     updated_at = NOW();
 
 -- Verificar que o admin foi criado
-SELECT id, email, username, full_name, is_admin 
-FROM users 
+SELECT id, email, username, full_name, is_admin
+FROM users
 WHERE email = '${ADMIN_EMAIL}';
 EOF
 
@@ -592,14 +617,41 @@ success "Usuário administrador criado!"
 # ============================================================================
 if [ "$REBUILD_ONLY" = "true" ] || [ "$FORCE_BUILD" = "true" ]; then
     log "🔨 Fazendo build da aplicação..."
-    
+
+    # Re-calculate memory for build process if not already set
+    if [ -z "$NODE_HEAP_SIZE" ]; then
+        if [ -f /proc/meminfo ]; then
+            TOTAL_MEM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+            TOTAL_MEM_MB=$((TOTAL_MEM_KB / 1024))
+        else
+            TOTAL_MEM_BYTES=$(sysctl -n hw.memsize 2>/dev/null || echo "8589934592")
+            TOTAL_MEM_MB=$((TOTAL_MEM_BYTES / 1024 / 1024))
+        fi
+        NODE_HEAP_SIZE=$((TOTAL_MEM_MB * 75 / 100))
+        if [ $NODE_HEAP_SIZE -lt 28672 ]; then
+            NODE_HEAP_SIZE=28672
+        elif [ $NODE_HEAP_SIZE -gt 24576 ]; then
+            NODE_HEAP_SIZE=24576
+        fi
+    fi
+
+    log "🚀 Build usando ${NODE_HEAP_SIZE}MB de memória"
+
     # Build com configurações de produção
     export DOCKER=true
     export NODE_ENV=production
     export NEXT_TELEMETRY_DISABLED=1
-    
+    export NODE_OPTIONS="--max-old-space-size=${NODE_HEAP_SIZE}"
+
+    # Additional optimizations to reduce memory usage
+    export GENERATE_SOURCEMAP=false
+    export NEXT_DISABLE_SWC_WASM=true
+
+    # Clear any previous build cache
+    rm -rf .next/cache 2>/dev/null || true
+
     pnpm build
-    
+
     success "Build concluído!"
 else
     # Check if .next directory exists
@@ -608,13 +660,40 @@ else
         log "Use --rebuild para forçar novo build"
     else
         log "🔨 Primeira build da aplicação..."
-        
+
+        # Calculate memory for build
+        if [ -z "$NODE_HEAP_SIZE" ]; then
+            if [ -f /proc/meminfo ]; then
+                TOTAL_MEM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+                TOTAL_MEM_MB=$((TOTAL_MEM_KB / 1024))
+            else
+                TOTAL_MEM_BYTES=$(sysctl -n hw.memsize 2>/dev/null || echo "8589934592")
+                TOTAL_MEM_MB=$((TOTAL_MEM_BYTES / 1024 / 1024))
+            fi
+            NODE_HEAP_SIZE=$((TOTAL_MEM_MB * 75 / 100))
+            if [ $NODE_HEAP_SIZE -lt 28672 ]; then
+                NODE_HEAP_SIZE=28672
+            elif [ $NODE_HEAP_SIZE -gt 24576 ]; then
+                NODE_HEAP_SIZE=24576
+            fi
+        fi
+
+        log "🚀 Build usando ${NODE_HEAP_SIZE}MB de memória"
+
         export DOCKER=true
         export NODE_ENV=production
         export NEXT_TELEMETRY_DISABLED=1
-        
+        export NODE_OPTIONS="--max-old-space-size=${NODE_HEAP_SIZE}"
+
+        # Additional optimizations to reduce memory usage
+        export GENERATE_SOURCEMAP=false
+        export NEXT_DISABLE_SWC_WASM=true
+
+        # Clear any previous build cache
+        rm -rf .next/cache 2>/dev/null || true
+
         pnpm build
-        
+
         success "Build concluído!"
     fi
 fi
@@ -624,7 +703,7 @@ fi
 # ============================================================================
 if [ "$REBUILD_ONLY" = "false" ]; then
     log "📝 Criando scripts de inicialização..."
-    
+
     # Script para desenvolvimento
 cat > start-admin-dev.sh << 'EOF'
 #!/bin/bash
@@ -657,7 +736,7 @@ pnpm start
 EOF
 
 chmod +x start-admin-prod.sh
-    
+
     success "Scripts criados!"
 fi
 
@@ -666,7 +745,7 @@ fi
 # ============================================================================
 if [ "$REBUILD_ONLY" = "false" ]; then
     log "💾 Salvando informações do deploy..."
-    
+
     cat > admin-deploy-info.txt << EOF
 === AGENTS CHAT ADMIN - INFORMAÇÕES DO DEPLOY ===
 Data: $(date)
@@ -699,7 +778,7 @@ COMANDOS ÚTEIS:
 
 MODO DE AUTENTICAÇÃO: ${AUTH_MODE}
 EOF
-    
+
     success "Informações salvas em admin-deploy-info.txt"
 fi
 
