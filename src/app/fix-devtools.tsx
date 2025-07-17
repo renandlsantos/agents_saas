@@ -9,12 +9,17 @@ import { useEffect } from 'react';
 export function DisableDevTools() {
   useEffect(() => {
     // Check if we're in production
-    if (process.env.NODE_ENV === 'production' && // Disable React DevTools
-      typeof window !== 'undefined' && window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
-        window.__REACT_DEVTOOLS_GLOBAL_HOOK__.inject = function () {};
-        window.__REACT_DEVTOOLS_GLOBAL_HOOK__.onCommitFiberRoot = function () {};
-        window.__REACT_DEVTOOLS_GLOBAL_HOOK__.onCommitFiberUnmount = function () {};
-      }
+    if (
+      process.env.NODE_ENV === 'production' && // Disable React DevTools
+      typeof window !== 'undefined' &&
+      window.__REACT_DEVTOOLS_GLOBAL_HOOK__
+    ) {
+      window.__REACT_DEVTOOLS_GLOBAL_HOOK__.inject = function () {
+        return 1;
+      };
+      window.__REACT_DEVTOOLS_GLOBAL_HOOK__.onCommitFiberRoot = function () {};
+      window.__REACT_DEVTOOLS_GLOBAL_HOOK__.onCommitFiberUnmount = function () {};
+    }
   }, []);
 
   return null;

@@ -1,6 +1,8 @@
 import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { users } from '@/database/schemas';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerDashboardMetrics } from '@/services/admin/serverHelpers';
@@ -22,7 +24,7 @@ export const adminRouter = router({
 
       // Check admin privileges
       const user = await ctx.serverDB.query.users.findFirst({
-        where: (users: any, { eq }: any) => eq(users.id, userId),
+        where: eq(users.id, userId),
         columns: {
           isAdmin: true,
         },
@@ -37,7 +39,7 @@ export const adminRouter = router({
 
       return opts.next();
     })
-    .query(async () => {
+    .query(async ({ ctx }) => {
       return getServerDashboardMetrics();
     }),
 });

@@ -69,18 +69,17 @@ const AdminDashboard = () => {
             title="Total Users"
             statistic={{
               value: metrics.totalUsers,
-              description: (
-                <Flexbox align="center" gap={4}>
-                  <UsersIcon size={16} />
-                  <span>All registered users</span>
-                </Flexbox>
-              ),
-              trend: metrics.userGrowth > 0 ? 'up' : 'down',
               suffix:
                 metrics.userGrowth !== 0
                   ? `${metrics.userGrowth > 0 ? '+' : ''}${metrics.userGrowth.toFixed(1)}%`
                   : undefined,
             }}
+            footer={
+              <Flexbox align="center" gap={4}>
+                <UsersIcon size={16} />
+                <span>All registered users</span>
+              </Flexbox>
+            }
           />
         </Col>
 
@@ -89,18 +88,17 @@ const AdminDashboard = () => {
             title="Active Users"
             statistic={{
               value: metrics.activeUsers,
-              description: (
-                <Flexbox align="center" gap={4}>
-                  <ActivityIcon size={16} />
-                  <span>Active in last 7 days</span>
-                </Flexbox>
-              ),
-              trend: metrics.activeUserGrowth > 0 ? 'up' : 'down',
               suffix:
                 metrics.activeUserGrowth !== 0
                   ? `${metrics.activeUserGrowth > 0 ? '+' : ''}${metrics.activeUserGrowth.toFixed(1)}%`
                   : undefined,
             }}
+            footer={
+              <Flexbox align="center" gap={4}>
+                <ActivityIcon size={16} />
+                <span>Active in last 7 days</span>
+              </Flexbox>
+            }
           />
         </Col>
 
@@ -109,18 +107,17 @@ const AdminDashboard = () => {
             title="Total Messages"
             statistic={{
               value: metrics.totalMessages,
-              description: (
-                <Flexbox align="center" gap={4}>
-                  <MessageSquareIcon size={16} />
-                  <span>All chat messages</span>
-                </Flexbox>
-              ),
-              trend: metrics.messageGrowth > 0 ? 'up' : 'down',
               suffix:
                 metrics.messageGrowth !== 0
                   ? `${metrics.messageGrowth > 0 ? '+' : ''}${metrics.messageGrowth.toFixed(1)}%`
                   : undefined,
             }}
+            footer={
+              <Flexbox align="center" gap={4}>
+                <MessageSquareIcon size={16} />
+                <span>All chat messages</span>
+              </Flexbox>
+            }
           />
         </Col>
 
@@ -134,18 +131,17 @@ const AdminDashboard = () => {
                 if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
                 return value.toString();
               },
-              description: (
-                <Flexbox align="center" gap={4}>
-                  <BrainCircuitIcon size={16} />
-                  <span>Total token consumption</span>
-                </Flexbox>
-              ),
-              trend: metrics.tokenGrowth > 0 ? 'up' : 'down',
               suffix:
                 metrics.tokenGrowth !== 0
                   ? `${metrics.tokenGrowth > 0 ? '+' : ''}${metrics.tokenGrowth.toFixed(1)}%`
                   : undefined,
             }}
+            footer={
+              <Flexbox align="center" gap={4}>
+                <BrainCircuitIcon size={16} />
+                <span>Total token consumption</span>
+              </Flexbox>
+            }
           />
         </Col>
       </Row>
@@ -156,18 +152,17 @@ const AdminDashboard = () => {
             title="Active Subscriptions"
             statistic={{
               value: metrics.activeSubscriptions,
-              description: (
-                <Flexbox align="center" gap={4}>
-                  <CreditCardIcon size={16} />
-                  <span>Paid subscriptions</span>
-                </Flexbox>
-              ),
-              trend: metrics.subscriptionGrowth > 0 ? 'up' : 'down',
               suffix:
                 metrics.subscriptionGrowth !== 0
                   ? `${metrics.subscriptionGrowth > 0 ? '+' : ''}${metrics.subscriptionGrowth.toFixed(1)}%`
                   : undefined,
             }}
+            footer={
+              <Flexbox align="center" gap={4}>
+                <CreditCardIcon size={16} />
+                <span>Paid subscriptions</span>
+              </Flexbox>
+            }
           />
         </Col>
 
@@ -177,19 +172,18 @@ const AdminDashboard = () => {
             statistic={{
               value: metrics.monthlyRevenue,
               prefix: '$',
-              precision: 2 as any,
-              description: (
-                <Flexbox align="center" gap={4}>
-                  <TrendingUpIcon size={16} />
-                  <span>Current month revenue</span>
-                </Flexbox>
-              ),
-              trend: metrics.revenueGrowth > 0 ? 'up' : 'down',
+              precision: 2,
               suffix:
                 metrics.revenueGrowth !== 0
                   ? `${metrics.revenueGrowth > 0 ? '+' : ''}${metrics.revenueGrowth.toFixed(1)}%`
                   : undefined,
             }}
+            footer={
+              <Flexbox align="center" gap={4}>
+                <TrendingUpIcon size={16} />
+                <span>Current month revenue</span>
+              </Flexbox>
+            }
           />
         </Col>
 
@@ -198,13 +192,13 @@ const AdminDashboard = () => {
             title="Active Models"
             statistic={{
               value: metrics.activeModels,
-              description: (
-                <Flexbox align="center" gap={4}>
-                  <ServerIcon size={16} />
-                  <span>Enabled AI models</span>
-                </Flexbox>
-              ),
             }}
+            footer={
+              <Flexbox align="center" gap={4}>
+                <ServerIcon size={16} />
+                <span>Enabled AI models</span>
+              </Flexbox>
+            }
           />
         </Col>
 
@@ -213,18 +207,17 @@ const AdminDashboard = () => {
             title="Custom Agents"
             statistic={{
               value: metrics.customAgents,
-              description: (
-                <Flexbox align="center" gap={4}>
-                  <BrainCircuitIcon size={16} />
-                  <span>User-created agents</span>
-                </Flexbox>
-              ),
-              trend: metrics.agentGrowth > 0 ? 'up' : 'down',
               suffix:
                 metrics.agentGrowth !== 0
                   ? `${metrics.agentGrowth > 0 ? '+' : ''}${metrics.agentGrowth.toFixed(1)}%`
                   : undefined,
             }}
+            footer={
+              <Flexbox align="center" gap={4}>
+                <BrainCircuitIcon size={16} />
+                <span>User-created agents</span>
+              </Flexbox>
+            }
           />
         </Col>
       </Row>
