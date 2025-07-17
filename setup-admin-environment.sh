@@ -9,11 +9,35 @@
 
 set -e  # Exit on error
 
-# Check for flags
+# Parse command line arguments
 FORCE_MIGRATION=false
-if [ "$1" = "--force-migration" ]; then
-    FORCE_MIGRATION=true
-fi
+CLEAN_ENVIRONMENT=false
+REBUILD_ONLY=false
+
+for arg in "$@"; do
+    case $arg in
+        --force-migration)
+            FORCE_MIGRATION=true
+            ;;
+        --clean)
+            CLEAN_ENVIRONMENT=true
+            ;;
+        --rebuild)
+            REBUILD_ONLY=true
+            ;;
+        --help)
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --force-migration  Force run all database migrations"
+            echo "  --clean           Clean entire environment (Docker, volumes, cache)"
+            echo "  --rebuild         Rebuild existing application (migrations + build)"
+            echo "  --help            Show this help message"
+            echo ""
+            exit 0
+            ;;
+    esac
+done
 
 # Colors for output
 RED='\033[0;31m'
@@ -29,6 +53,84 @@ success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 highlight() { echo -e "${PURPLE}[HIGHLIGHT]${NC} $1"; }
+
+# ============================================================================
+# CLEAN ENVIRONMENT FUNCTION
+# ============================================================================
+clean_environment() {
+    echo ""
+    echo -e "${YELLOW}=============================================================================="
+    echo -e "🧹 LIMPEZA COMPLETA DO AMBIENTE"
+    echo -e "==============================================================================${NC}"
+    
+    warn "⚠️  ATENÇÃO: Isso irá remover TODOS os dados e containers!"
+    read -p "Tem certeza que deseja continuar? (yes/no): " CONFIRM
+    
+    if [ "$CONFIRM" != "yes" ]; then
+        log "Operação cancelada."
+        exit 0
+    fi
+    
+    log "Parando todos os containers..."
+    docker-compose down -v 2>/dev/null || true
+    
+    log "Removendo containers órfãos..."
+    docker container prune -f
+    
+    log "Removendo imagens não utilizadas..."
+    docker image prune -a -f
+    
+    log "Removendo volumes..."
+    docker volume prune -f
+    
+    log "Limpando sistema Docker..."
+    docker system prune -a -f --volumes
+    
+    log "Removendo diretórios de dados..."
+    rm -rf data/ 2>/dev/null || true
+    rm -rf .next/ 2>/dev/null || true
+    rm -rf node_modules/ 2>/dev/null || true
+    rm -rf .pnpm-store/ 2>/dev/null || true
+    
+    log "Removendo arquivos de cache..."
+    rm -rf ~/.pnpm-store/ 2>/dev/null || true
+    rm -rf ~/.npm/_cacache/ 2>/dev/null || true
+    
+    log "Removendo arquivos temporários..."
+    rm -f .env.bak* 2>/dev/null || true
+    rm -f admin-deploy-info.txt 2>/dev/null || true
+    rm -f start-admin-*.sh 2>/dev/null || true
+    
+    success "Ambiente limpo com sucesso!"
+    echo ""
+    log "Para fazer uma nova instalação, execute:"
+    echo "  ./setup-admin-environment.sh"
+    echo ""
+    exit 0
+}
+
+# ============================================================================
+# HANDLE SPECIAL FLAGS FIRST
+# ============================================================================
+# Execute clean if requested
+if [ "$CLEAN_ENVIRONMENT" = "true" ]; then
+    clean_environment
+fi
+
+# Show mode header
+if [ "$REBUILD_ONLY" = "true" ]; then
+    echo ""
+    echo -e "${BLUE}=============================================================================="
+    echo -e "🔄 MODO REBUILD - RECONSTRUINDO APLICAÇÃO EXISTENTE"
+    echo -e "==============================================================================${NC}"
+    echo ""
+elif [ "$FORCE_MIGRATION" = "true" ]; then
+    echo ""
+    echo -e "${YELLOW}=============================================================================="
+    echo -e "⚡ MODO FORCE MIGRATION - EXECUTANDO TODAS AS MIGRAÇÕES"
+    echo -e "==============================================================================${NC}"
+    echo ""
+fi
 
 # ============================================================================
 # 1. VERIFICAÇÃO DO AMBIENTE
@@ -73,42 +175,54 @@ success "Pré-requisitos verificados!"
 # ============================================================================
 # 2. CONFIGURAÇÃO DO ADMIN
 # ============================================================================
-log "⚙️  Configurando ambiente para o painel administrativo..."
-
-# Perguntar o IP/domínio para acesso externo
-read -p "Digite o IP ou domínio para acesso externo (ex: 192.168.1.100 ou admin.suaempresa.com): " EXTERNAL_HOST
-if [ -z "$EXTERNAL_HOST" ]; then
-    EXTERNAL_HOST="localhost"
-    warn "Usando localhost como host padrão"
-fi
-
-# Perguntar sobre autenticação
-echo ""
-echo "Escolha o modo de autenticação:"
-echo "1) Login local (usuário/senha)"
-echo "2) Google OAuth"
-echo "3) GitHub OAuth"
-echo "4) Casdoor (SSO)"
-read -p "Opção (1-4) [padrão: 1]: " AUTH_CHOICE
-
-case "$AUTH_CHOICE" in
-    2)
-        AUTH_MODE="google"
-        read -p "Digite seu Google Client ID: " GOOGLE_CLIENT_ID
-        read -p "Digite seu Google Client Secret: " GOOGLE_CLIENT_SECRET
-        ;;
-    3)
-        AUTH_MODE="github"
-        read -p "Digite seu GitHub Client ID: " GITHUB_CLIENT_ID
-        read -p "Digite seu GitHub Client Secret: " GITHUB_CLIENT_SECRET
-        ;;
-    4)
-        AUTH_MODE="casdoor"
-        ;;
-    *)
+if [ "$REBUILD_ONLY" = "true" ]; then
+    log "🔄 Modo rebuild - pulando configuração interativa..."
+    # Extract existing host from .env if available
+    if [ -f .env ]; then
+        EXTERNAL_HOST=$(grep "^ADMIN_EMAIL=" .env | cut -d'@' -f2 || echo "localhost")
         AUTH_MODE="credentials"
-        ;;
-esac
+    else
+        EXTERNAL_HOST="localhost"
+        AUTH_MODE="credentials"
+    fi
+else
+    log "⚙️  Configurando ambiente para o painel administrativo..."
+    
+    # Perguntar o IP/domínio para acesso externo
+    read -p "Digite o IP ou domínio para acesso externo (ex: 192.168.1.100 ou admin.suaempresa.com): " EXTERNAL_HOST
+    if [ -z "$EXTERNAL_HOST" ]; then
+        EXTERNAL_HOST="localhost"
+        warn "Usando localhost como host padrão"
+    fi
+    
+    # Perguntar sobre autenticação
+    echo ""
+    echo "Escolha o modo de autenticação:"
+    echo "1) Login local (usuário/senha)"
+    echo "2) Google OAuth"
+    echo "3) GitHub OAuth"
+    echo "4) Casdoor (SSO)"
+    read -p "Opção (1-4) [padrão: 1]: " AUTH_CHOICE
+    
+    case "$AUTH_CHOICE" in
+        2)
+            AUTH_MODE="google"
+            read -p "Digite seu Google Client ID: " GOOGLE_CLIENT_ID
+            read -p "Digite seu Google Client Secret: " GOOGLE_CLIENT_SECRET
+            ;;
+        3)
+            AUTH_MODE="github"
+            read -p "Digite seu GitHub Client ID: " GITHUB_CLIENT_ID
+            read -p "Digite seu GitHub Client Secret: " GITHUB_CLIENT_SECRET
+            ;;
+        4)
+            AUTH_MODE="casdoor"
+            ;;
+        *)
+            AUTH_MODE="credentials"
+            ;;
+    esac
+fi
 
 # Backup do .env existente
 if [ -f .env ]; then
@@ -264,13 +378,24 @@ success "Esquema do banco de dados gerado!"
 # ============================================================================
 # 6. INICIAR SERVIÇOS DOCKER
 # ============================================================================
-log "🐳 Iniciando serviços Docker..."
-
-# Parar serviços existentes se houver
-docker-compose down 2>/dev/null || true
-
-# Iniciar serviços usando o docker-compose existente
-docker-compose up -d postgres redis minio
+if [ "$REBUILD_ONLY" = "true" ]; then
+    log "🐳 Verificando serviços Docker..."
+    # Ensure services are running but don't restart them
+    if ! docker ps | grep -q agents-chat-postgres; then
+        log "Iniciando serviços necessários..."
+        docker-compose up -d postgres redis minio
+    else
+        log "Serviços já estão rodando"
+    fi
+else
+    log "🐳 Iniciando serviços Docker..."
+    
+    # Parar serviços existentes se houver
+    docker-compose down 2>/dev/null || true
+    
+    # Iniciar serviços usando o docker-compose existente
+    docker-compose up -d postgres redis minio
+fi
 
 # Aguardar serviços iniciarem
 log "Aguardando serviços iniciarem..."
@@ -461,9 +586,10 @@ success "Build concluído!"
 # ============================================================================
 # 10. CRIAR SCRIPTS DE INICIALIZAÇÃO
 # ============================================================================
-log "📝 Criando scripts de inicialização..."
-
-# Script para desenvolvimento
+if [ "$REBUILD_ONLY" = "false" ]; then
+    log "📝 Criando scripts de inicialização..."
+    
+    # Script para desenvolvimento
 cat > start-admin-dev.sh << 'EOF'
 #!/bin/bash
 echo "🚀 Iniciando ambiente de desenvolvimento com Admin Panel..."
@@ -495,15 +621,17 @@ pnpm start
 EOF
 
 chmod +x start-admin-prod.sh
-
-success "Scripts criados!"
+    
+    success "Scripts criados!"
+fi
 
 # ============================================================================
 # 11. SALVAR INFORMAÇÕES DE DEPLOY
 # ============================================================================
-log "💾 Salvando informações do deploy..."
-
-cat > admin-deploy-info.txt << EOF
+if [ "$REBUILD_ONLY" = "false" ]; then
+    log "💾 Salvando informações do deploy..."
+    
+    cat > admin-deploy-info.txt << EOF
 === AGENTS CHAT ADMIN - INFORMAÇÕES DO DEPLOY ===
 Data: $(date)
 Host Externo: ${EXTERNAL_HOST}
@@ -535,12 +663,34 @@ COMANDOS ÚTEIS:
 
 MODO DE AUTENTICAÇÃO: ${AUTH_MODE}
 EOF
-
-success "Informações salvas em admin-deploy-info.txt"
+    
+    success "Informações salvas em admin-deploy-info.txt"
+fi
 
 # ============================================================================
 # 12. VERIFICAÇÃO FINAL E INSTRUÇÕES
 # ============================================================================
+# Skip certain sections for rebuild
+if [ "$REBUILD_ONLY" = "true" ]; then
+    echo ""
+    echo "=============================================================================="
+    success "🔄 REBUILD CONCLUÍDO!"
+    echo "=============================================================================="
+    echo ""
+    log "O que foi feito:"
+    echo "  ✅ Dependências atualizadas"
+    echo "  ✅ Schema do banco regenerado"
+    echo "  ✅ Migrações executadas"
+    echo "  ✅ Coluna admin verificada"
+    echo "  ✅ Aplicação reconstruída"
+    echo ""
+    echo "🚀 Próximos passos:"
+    echo "  1. Reinicie a aplicação: docker-compose restart app"
+    echo "  2. Ou use: pnpm start (produção) ou pnpm dev (desenvolvimento)"
+    echo ""
+    exit 0
+fi
+
 log "🔍 Verificando status dos serviços..."
 
 echo ""
