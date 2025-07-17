@@ -313,15 +313,25 @@ docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTE
     docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null || true
 }
 
+# Verificar conectividade antes de migrar
+log "Verificando conectividade com PostgreSQL..."
+for i in {1..10}; do
+    if nc -z localhost 5432 2>/dev/null; then
+        success "PostgreSQL está acessível na porta 5432"
+        break
+    fi
+    if [ $i -eq 10 ]; then
+        error "PostgreSQL não está acessível em localhost:5432. Verifique se o container está rodando."
+    fi
+    echo -n "."
+    sleep 2
+done
+
 # Executar migrações
 log "Tentando executar migrações..."
-# Use the container name if running from outside Docker network
-if docker network ls | grep -q agents-chat; then
-    MIGRATION_URL="postgresql://postgres:${DB_PASSWORD}@agents-chat-postgres:5432/agents_chat"
-else
-    MIGRATION_URL="postgresql://postgres:${DB_PASSWORD}@localhost:5432/agents_chat"
-fi
-log "Using database URL: ${MIGRATION_URL}"
+# Always use localhost for migrations run from host machine
+MIGRATION_URL="postgresql://postgres:${DB_PASSWORD}@localhost:5432/agents_chat"
+log "Using database URL for migration: postgresql://postgres:****@localhost:5432/agents_chat"
 MIGRATION_DB=1 DATABASE_URL="${MIGRATION_URL}" pnpm db:migrate || {
     warn "Migrações falharam - possivelmente o schema já existe"
     log "Verificando e adicionando coluna is_admin se necessário..."
