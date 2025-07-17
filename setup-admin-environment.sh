@@ -376,6 +376,12 @@ success "Docker Compose verificado!"
 # ============================================================================
 log "📦 Instalando dependências do projeto..."
 
+# Fix package.json to use pnpm instead of bun
+if grep -q '"bun run' package.json; then
+    log "🔧 Corrigindo package.json para usar pnpm ao invés de bun..."
+    sed -i.bak 's/"bun run/"pnpm run/g' package.json
+fi
+
 # Memory was already calculated, just show the info
 log "🧮 Configuração de memória:"
 log "💾 Memória total: ${TOTAL_MEM_MB}MB"
@@ -646,6 +652,13 @@ if [ "$REBUILD_ONLY" = "true" ] || [ "$FORCE_BUILD" = "true" ]; then
     # Additional optimizations to reduce memory usage
     export GENERATE_SOURCEMAP=false
     export NEXT_DISABLE_SWC_WASM=true
+    
+    # Temporarily disable Sentry to avoid React 19 compatibility issues
+    export NEXT_PUBLIC_SENTRY_DSN=""
+    export SENTRY_DISABLE_AUTO_UPLOAD=true
+    
+    # Skip postbuild migration since we handle it separately
+    export SKIP_BUILD_MIGRATION=1
 
     # Clear any previous build cache
     rm -rf .next/cache 2>/dev/null || true
@@ -688,6 +701,13 @@ else
         # Additional optimizations to reduce memory usage
         export GENERATE_SOURCEMAP=false
         export NEXT_DISABLE_SWC_WASM=true
+        
+        # Temporarily disable Sentry to avoid React 19 compatibility issues
+        export NEXT_PUBLIC_SENTRY_DSN=""
+        export SENTRY_DISABLE_AUTO_UPLOAD=true
+        
+        # Skip postbuild migration since we handle it separately
+        export SKIP_BUILD_MIGRATION=1
 
         # Clear any previous build cache
         rm -rf .next/cache 2>/dev/null || true
