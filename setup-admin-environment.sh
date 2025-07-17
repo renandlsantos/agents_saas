@@ -116,12 +116,26 @@ if [ ! -f .env ] && [ -f .env.example ]; then
     log "Criado .env a partir de .env.example"
 fi
 
-# Gerar senhas seguras
-DB_PASSWORD=$(openssl rand -hex 16)
-MINIO_PASSWORD=$(openssl rand -hex 16)
-KEY_VAULTS_SECRET=$(openssl rand -hex 32)
-NEXTAUTH_SECRET=$(openssl rand -hex 32)
+# Check if .env exists and extract existing passwords
+if [ -f .env ]; then
+    # Extract existing passwords from .env
+    EXISTING_DB_PASSWORD=$(grep "^POSTGRES_PASSWORD=" .env | cut -d'=' -f2)
+    EXISTING_MINIO_PASSWORD=$(grep "^MINIO_ROOT_PASSWORD=" .env | cut -d'=' -f2)
+    EXISTING_KEY_VAULTS=$(grep "^KEY_VAULTS_SECRET=" .env | cut -d'=' -f2)
+    EXISTING_NEXTAUTH=$(grep "^NEXT_AUTH_SECRET=" .env | cut -d'=' -f2)
+fi
+
+# Use existing passwords if available, otherwise generate new ones
+DB_PASSWORD=${EXISTING_DB_PASSWORD:-$(openssl rand -hex 32)}
+MINIO_PASSWORD=${EXISTING_MINIO_PASSWORD:-$(openssl rand -hex 16)}
+KEY_VAULTS_SECRET=${EXISTING_KEY_VAULTS:-$(openssl rand -hex 32)}
+NEXTAUTH_SECRET=${EXISTING_NEXTAUTH:-$(openssl rand -hex 32)}
 ADMIN_PASSWORD=$(openssl rand -base64 12)
+
+# Log if using existing passwords
+if [ -n "$EXISTING_DB_PASSWORD" ]; then
+    log "Using existing PostgreSQL password from .env"
+fi
 
 # Atualizar variáveis no .env existente
 log "Atualizando configurações no .env..."
@@ -293,11 +307,22 @@ success "Serviços Docker iniciados!"
 log "🔄 Executando migrações do banco de dados..."
 
 # Instalar extensão pgvector
-docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null || true
+docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null || {
+    log "Creating database if it doesn't exist..."
+    docker exec agents-chat-postgres psql -U postgres -c "CREATE DATABASE agents_chat;" 2>/dev/null || true
+    docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null || true
+}
 
 # Executar migrações
 log "Tentando executar migrações..."
-MIGRATION_DB=1 DATABASE_URL="postgresql://postgres:${DB_PASSWORD}@localhost:5432/agents_chat" pnpm db:migrate || {
+# Use the container name if running from outside Docker network
+if docker network ls | grep -q agents-chat; then
+    MIGRATION_URL="postgresql://postgres:${DB_PASSWORD}@agents-chat-postgres:5432/agents_chat"
+else
+    MIGRATION_URL="postgresql://postgres:${DB_PASSWORD}@localhost:5432/agents_chat"
+fi
+log "Using database URL: ${MIGRATION_URL}"
+MIGRATION_DB=1 DATABASE_URL="${MIGRATION_URL}" pnpm db:migrate || {
     warn "Migrações falharam - possivelmente o schema já existe"
     log "Verificando e adicionando coluna is_admin se necessário..."
     
@@ -321,63 +346,51 @@ SQLEOF
 # ============================================================================
 log "👤 Criando usuário administrador inicial..."
 
-# Criar script temporário para criar admin
-cat > create-admin.ts << EOF
-import { serverDB } from './src/database/server/index.js';
-import { users } from './src/database/schemas/index.js';
-import { eq } from 'drizzle-orm';
-import crypto from 'crypto';
+# Criar admin diretamente no banco via SQL
+log "Criando usuário administrador diretamente no banco..."
 
-async function createAdmin() {
-  const db = await serverDB;
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@${EXTERNAL_HOST}';
-  const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || '${ADMIN_PASSWORD}';
-  
-  try {
-    // Verificar se já existe
-    const existing = await db.query.users.findFirst({
-      where: eq(users.email, adminEmail),
-    });
-    
-    if (existing) {
-      // Atualizar para admin
-      await db.update(users)
-        .set({ isAdmin: true })
-        .where(eq(users.id, existing.id));
-      console.log('Usuário existente promovido a admin:', adminEmail);
-    } else {
-      // Criar novo admin
-      await db.insert(users).values({
-        id: crypto.randomUUID(),
-        email: adminEmail,
-        username: 'admin',
-        fullName: 'Administrator',
-        isAdmin: true,
-        isOnboarded: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      console.log('Usuário admin criado:', adminEmail);
-    }
-    
-    console.log('\n=== CREDENCIAIS DO ADMIN ===');
-    console.log('Email:', adminEmail);
-    console.log('Senha:', adminPassword);
-    console.log('\n⚠️  IMPORTANTE: Altere a senha após o primeiro login!');
-    
-  } catch (error) {
-    console.error('Erro ao criar admin:', error);
-  }
-  
-  process.exit(0);
-}
+# Gerar UUID v4 para o admin
+ADMIN_ID=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "$(openssl rand -hex 8)-$(openssl rand -hex 4)-4$(openssl rand -hex 3)-$(openssl rand -hex 4)-$(openssl rand -hex 12)")
+ADMIN_EMAIL="admin@${EXTERNAL_HOST}"
+ADMIN_USERNAME="admin"
 
-createAdmin();
+# Criar ou atualizar admin via SQL
+docker exec agents-chat-postgres psql -U postgres -d agents_chat << EOF
+-- Criar ou atualizar usuário admin
+INSERT INTO users (
+    id,
+    email,
+    username,
+    full_name,
+    is_admin,
+    is_onboarded,
+    created_at,
+    updated_at
+) VALUES (
+    '${ADMIN_ID}',
+    '${ADMIN_EMAIL}',
+    '${ADMIN_USERNAME}',
+    'Administrator',
+    true,
+    true,
+    NOW(),
+    NOW()
+) ON CONFLICT (email) DO UPDATE SET
+    is_admin = true,
+    updated_at = NOW();
+
+-- Verificar que o admin foi criado
+SELECT id, email, username, full_name, is_admin 
+FROM users 
+WHERE email = '${ADMIN_EMAIL}';
 EOF
 
-# Executar script
-DATABASE_URL="postgresql://postgres:${DB_PASSWORD}@localhost:5432/agents_chat" tsx create-admin.ts
-rm create-admin.ts
+echo ""
+echo "=== CREDENCIAIS DO ADMIN ==="
+echo "Email: ${ADMIN_EMAIL}"
+echo "Senha: ${ADMIN_PASSWORD}"
+echo ""
+echo "⚠️  IMPORTANTE: Altere a senha após o primeiro login!"
 
 success "Usuário administrador criado!"
 
