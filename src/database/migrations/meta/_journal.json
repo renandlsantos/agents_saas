@@ -196,6 +196,13 @@
       "when": 1752704102612,
       "tag": "0027_kind_kate_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1752767547805,
+      "tag": "0028_low_falcon",
+      "breakpoints": true
     }
   ],
   "version": "6"
