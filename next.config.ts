@@ -300,6 +300,12 @@ const nextConfig: NextConfig = {
 
     config.resolve.alias.canvas = false;
 
+    // Ensure pdfjs-dist can find our polyfills
+    config.resolve.alias['@napi-rs/canvas'] = path.join(
+      __dirname,
+      'src/server/polyfills/canvas.ts',
+    );
+
     // to ignore epub2 compile error
     // refs: https://github.com/lobehub/lobe-chat/discussions/6769
     config.resolve.fallback = {
@@ -324,6 +330,7 @@ const withPWA =
         register: false,
         swDest: 'public/sw.js',
         swSrc: 'src/app/sw.ts',
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB to include WASM files
       })
     : noWrapper;
 

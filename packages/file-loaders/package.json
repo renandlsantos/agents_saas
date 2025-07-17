@@ -26,7 +26,6 @@
   "dependencies": {
     "@langchain/community": "^0.3.41",
     "@langchain/core": "^0.3.45",
-    "@napi-rs/canvas": "^0.1.70",
     "@xmldom/xmldom": "^0.9.8",
     "concat-stream": "^2.0.0",
     "mammoth": "^1.8.0",
@@ -42,5 +41,8 @@
   },
   "peerDependencies": {
     "typescript": ">=5"
+  },
+  "optionalDependencies": {
+    "@napi-rs/canvas": "^0.1.70"
   }
 }

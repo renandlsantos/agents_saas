@@ -1,3 +1,4 @@
+// Ensure DOMMatrix polyfill is available for pdfjs-dist
 import debug from 'debug';
 import { readFile } from 'node:fs/promises';
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
@@ -6,6 +7,7 @@ import { getDocument, version } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as _pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 import type { TextContent } from 'pdfjs-dist/types/src/display/api';
 
+import '../../polyfills/dom-matrix';
 import type { DocumentPage, FileLoaderInterface } from '../../types';
 import { promptTemplate } from './prompt';
 
