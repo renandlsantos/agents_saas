@@ -39,7 +39,22 @@ command -v docker >/dev/null 2>&1 || error "Docker não está instalado!"
 command -v docker-compose >/dev/null 2>&1 || error "Docker Compose não está instalado!"
 command -v node >/dev/null 2>&1 || error "Node.js não está instalado!"
 command -v pnpm >/dev/null 2>&1 || error "PNPM não está instalado! Execute: npm install -g pnpm"
-command -v tsx >/dev/null 2>&1 || error "TSX não está instalado! Execute: pnpm install -g tsx"
+
+# Check for tsx in multiple locations
+if ! command -v tsx >/dev/null 2>&1; then
+    # Check in pnpm global directory
+    if [ -f "$HOME/.local/share/pnpm/tsx" ]; then
+        # Add pnpm global bin to PATH for this script
+        export PATH="$HOME/.local/share/pnpm:$PATH"
+        log "TSX encontrado em $HOME/.local/share/pnpm"
+    elif [ -f "/root/.local/share/pnpm/tsx" ]; then
+        # For root user
+        export PATH="/root/.local/share/pnpm:$PATH"
+        log "TSX encontrado em /root/.local/share/pnpm"
+    else
+        error "TSX não está instalado! Execute: pnpm install -g tsx"
+    fi
+fi
 
 # Verificar versão do Node.js
 NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
