@@ -29,25 +29,35 @@ export default {
   callbacks: {
     // Note: Data processing order of callback: authorize --> jwt --> session
     async jwt({ token, user }) {
-      // ref: https://authjs.dev/guides/extending-the-session#with-jwt
-      if (user?.id) {
-        token.userId = user?.id;
+      try {
+        // ref: https://authjs.dev/guides/extending-the-session#with-jwt
+        if (user?.id) {
+          token.userId = user?.id;
+        }
+        return token;
+      } catch (error) {
+        console.error('[NextAuth] JWT callback error:', error);
+        return token;
       }
-      return token;
     },
     async session({ session, token, user }) {
-      if (session.user) {
-        // ref: https://authjs.dev/guides/extending-the-session#with-database
-        if (user) {
-          session.user.id = user.id;
-        } else {
-          session.user.id = (token.userId ?? session.user.id) as string;
+      try {
+        if (session.user) {
+          // ref: https://authjs.dev/guides/extending-the-session#with-database
+          if (user) {
+            session.user.id = user.id;
+          } else {
+            session.user.id = (token.userId ?? session.user.id) as string;
+          }
         }
+        return session;
+      } catch (error) {
+        console.error('[NextAuth] Session callback error:', error);
+        return session;
       }
-      return session;
     },
   },
-  debug: authEnv.NEXT_AUTH_DEBUG,
+  debug: authEnv.NEXT_AUTH_DEBUG || process.env.NODE_ENV === 'development',
   pages: {
     error: '/next-auth/error',
     signIn: '/next-auth/signin',

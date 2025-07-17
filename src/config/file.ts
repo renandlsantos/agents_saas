@@ -12,6 +12,9 @@ export const getFileConfig = () => {
 
   const S3_PUBLIC_DOMAIN = process.env.S3_PUBLIC_DOMAIN || process.env.NEXT_PUBLIC_S3_DOMAIN;
 
+  console.log('Environment validation - S3_PUBLIC_DOMAIN:', S3_PUBLIC_DOMAIN);
+  console.log('Environment validation - S3_ENDPOINT:', process.env.S3_ENDPOINT);
+
   return createEnv({
     client: {
       /**
