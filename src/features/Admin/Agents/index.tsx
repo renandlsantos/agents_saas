@@ -1,10 +1,34 @@
 'use client';
 
-import { Button, Card, Empty, Form, Input, Modal, Space, Table, Tag, message } from 'antd';
+import {
+  Button,
+  Card,
+  Empty,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Switch,
+  Table,
+  Tag,
+  Upload,
+  message,
+} from 'antd';
 import { createStyles } from 'antd-style';
-import { BrainCircuitIcon, EditIcon, PlusIcon, TrashIcon } from 'lucide-react';
+import {
+  BrainCircuitIcon,
+  EditIcon,
+  FileIcon,
+  PlusIcon,
+  TrashIcon,
+  UploadIcon,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Center, Flexbox } from 'react-layout-kit';
+
+import { adminService } from '@/services/admin';
+import { AssistantCategory } from '@/types/discover';
 
 const { TextArea } = Input;
 
@@ -38,15 +62,43 @@ const useStyles = createStyles(({ css, token }) => ({
 }));
 
 interface Agent {
-  category: string;
+  category: AssistantCategory;
   createdAt: string;
   description: string;
+  files?: Array<{ id: string; name: string; size: number }>;
   id: string;
+  isDomain: boolean;
   isPublic: boolean;
+  knowledgeBaseId?: string;
   name: string;
   systemPrompt: string;
   tags: string[];
 }
+
+interface KnowledgeBase {
+  description?: string;
+  fileCount: number;
+  id: string;
+  name: string;
+}
+
+// Category options for the select dropdown
+const categoryOptions = [
+  { label: 'Acadêmico', value: AssistantCategory.Academic },
+  { label: 'Carreira', value: AssistantCategory.Career },
+  { label: 'Redação', value: AssistantCategory.CopyWriting },
+  { label: 'Design', value: AssistantCategory.Design },
+  { label: 'Educação', value: AssistantCategory.Education },
+  { label: 'Emoções', value: AssistantCategory.Emotions },
+  { label: 'Entretenimento', value: AssistantCategory.Entertainment },
+  { label: 'Jogos', value: AssistantCategory.Games },
+  { label: 'Geral', value: AssistantCategory.General },
+  { label: 'Vida', value: AssistantCategory.Life },
+  { label: 'Marketing', value: AssistantCategory.Marketing },
+  { label: 'Escritório', value: AssistantCategory.Office },
+  { label: 'Programação', value: AssistantCategory.Programming },
+  { label: 'Tradução', value: AssistantCategory.Translation },
+];
 
 // Mock data para demonstração
 const mockAgents: Agent[] = [
@@ -55,9 +107,10 @@ const mockAgents: Agent[] = [
     name: 'Assistente de Vendas',
     description: 'Especializado em ajudar com vendas e atendimento ao cliente',
     systemPrompt: 'Você é um assistente de vendas experiente...',
-    category: 'Vendas',
+    category: AssistantCategory.Marketing,
     tags: ['vendas', 'atendimento', 'e-commerce'],
     isPublic: true,
+    isDomain: true,
     createdAt: '2024-01-15T10:00:00Z',
   },
   {
@@ -65,9 +118,10 @@ const mockAgents: Agent[] = [
     name: 'Analista de Dados',
     description: 'Ajuda com análise de dados e criação de relatórios',
     systemPrompt: 'Você é um analista de dados especializado...',
-    category: 'Analytics',
+    category: AssistantCategory.Office,
     tags: ['dados', 'análise', 'relatórios'],
     isPublic: false,
+    isDomain: false,
     createdAt: '2024-01-10T14:30:00Z',
   },
 ];
@@ -78,16 +132,27 @@ const AdminAgents = () => {
   const [loading, setLoading] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
+  const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState<string | undefined>();
+  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   const [form] = Form.useForm();
 
   const fetchAgents = async () => {
     setLoading(true);
     try {
-      // TODO: Implementar chamada API real
-      await new Promise<void>((resolve) => {
-        setTimeout(() => resolve(), 1000);
+      const response = await adminService.getAgents({
+        page: 1,
+        pageSize: 100,
       });
-      setAgents(mockAgents);
+      setAgents(
+        response.agents.map((agent: any) => ({
+          ...agent,
+          category: agent.category as AssistantCategory,
+          tags: agent.tags || [],
+          isPublic: agent.isPublic || false,
+          isDomain: agent.isDomain || false,
+        })),
+      );
     } catch {
       message.error('Erro ao carregar agentes');
     } finally {
@@ -103,28 +168,33 @@ const AdminAgents = () => {
   const handleCreateAgent = async (values: any) => {
     try {
       setLoading(true);
-      // TODO: Call API to create agent
-      const newAgent: Agent = {
-        id: Date.now().toString(),
-        ...values,
+
+      const agentData = {
+        name: values.name,
+        description: values.description,
+        systemPrompt: values.systemPrompt,
+        category: values.category,
         tags: values.tags ? values.tags.split(',').map((t: string) => t.trim()) : [],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
+        isDomain: values.isDomain || false,
+        knowledgeBaseFiles: uploadedFiles.length > 0 ? uploadedFiles : undefined,
       };
 
       if (editingAgent) {
-        setAgents(
-          agents.map((a) => (a.id === editingAgent.id ? { ...newAgent, id: editingAgent.id } : a)),
-        );
+        await adminService.updateAgent(editingAgent.id, agentData);
         message.success('Agente atualizado com sucesso!');
       } else {
-        setAgents([...agents, newAgent]);
+        await adminService.createAgent(agentData);
         message.success('Agente criado com sucesso!');
       }
+
+      // Refresh the list
+      await fetchAgents();
 
       setCreateModalOpen(false);
       form.resetFields();
       setEditingAgent(null);
+      setSelectedKnowledgeBase(undefined);
+      setUploadedFiles([]);
     } catch {
       message.error('Erro ao salvar agente');
     } finally {
@@ -150,9 +220,10 @@ const AdminAgents = () => {
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          // TODO: Call API to delete agent
-          setAgents(agents.filter((a) => a.id !== agentId));
+          await adminService.deleteAgent(agentId);
           message.success('Agente excluído com sucesso!');
+          // Refresh the list
+          await fetchAgents();
         } catch {
           message.error('Erro ao excluir agente');
         }
@@ -182,14 +253,21 @@ const AdminAgents = () => {
       title: 'Categoria',
       dataIndex: 'category',
       key: 'category',
-      render: (category: string) => <Tag>{category}</Tag>,
+      render: (category: AssistantCategory) => {
+        const categoryOption = categoryOptions.find((opt) => opt.value === category);
+        return <Tag>{categoryOption?.label || category}</Tag>;
+      },
     },
     {
-      title: 'Status',
-      dataIndex: 'isPublic',
-      key: 'isPublic',
-      render: (isPublic: boolean) => (
-        <Tag color={isPublic ? 'green' : 'orange'}>{isPublic ? 'Público' : 'Privado'}</Tag>
+      title: 'Tipo',
+      key: 'type',
+      render: (_: any, record: Agent) => (
+        <Space>
+          <Tag color={record.isDomain ? 'blue' : 'default'}>
+            {record.isDomain ? 'Domínio' : 'Usuário'}
+          </Tag>
+          {record.knowledgeBaseId && <Tag icon={<FileIcon size={12} />}>KB</Tag>}
+        </Space>
       ),
     },
     {
@@ -270,6 +348,8 @@ const AdminAgents = () => {
           setCreateModalOpen(false);
           setEditingAgent(null);
           form.resetFields();
+          setSelectedKnowledgeBase(undefined);
+          setUploadedFiles([]);
         }}
         footer={null}
         width={600}
@@ -304,11 +384,53 @@ const AdminAgents = () => {
             label="Categoria"
             rules={[{ required: true, message: 'Categoria é obrigatória' }]}
           >
-            <Input placeholder="Ex: Vendas, Suporte, Marketing" />
+            <Select placeholder="Selecione uma categoria" options={categoryOptions} />
           </Form.Item>
 
           <Form.Item name="tags" label="Tags (separadas por vírgula)">
             <Input placeholder="vendas, atendimento, chatbot" />
+          </Form.Item>
+
+          <Form.Item
+            name="isDomain"
+            label="Agente de Domínio"
+            valuePropName="checked"
+            tooltip="Agentes de domínio são visíveis para todos os usuários"
+          >
+            <Switch checkedChildren="Sim" unCheckedChildren="Não" />
+          </Form.Item>
+
+          <Form.Item
+            label="Banco de Conhecimento"
+            tooltip="Adicione arquivos para criar um banco de conhecimento para este agente"
+          >
+            <Upload
+              beforeUpload={(file) => {
+                // Add file to list without uploading
+                setUploadedFiles([
+                  ...uploadedFiles,
+                  {
+                    id: Date.now().toString(),
+                    name: file.name,
+                    size: file.size,
+                  },
+                ]);
+                return false;
+              }}
+              onRemove={(file) => {
+                const newFiles = uploadedFiles.filter((f) => f.name !== file.name);
+                setUploadedFiles(newFiles);
+              }}
+              fileList={uploadedFiles.map((f) => ({
+                uid: f.id,
+                name: f.name,
+                size: f.size,
+                status: 'done' as const,
+              }))}
+              multiple
+            >
+              <Button icon={<UploadIcon size={16} />}>Adicionar Arquivos</Button>
+            </Upload>
           </Form.Item>
 
           <Form.Item>

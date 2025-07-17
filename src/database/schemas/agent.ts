@@ -57,6 +57,12 @@ export const agents = pgTable(
     openingMessage: text('opening_message'),
     openingQuestions: text('opening_questions').array().default([]),
 
+    // Category for organizing agents in discover page
+    category: varchar('category', { length: 50 }),
+
+    // Flag to indicate if this is a domain/admin created agent visible to all users
+    isDomain: boolean('is_domain').default(false),
+
     ...timestamps,
   },
   (t) => ({

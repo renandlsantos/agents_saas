@@ -22,11 +22,14 @@ import {
 } from '@/types/discover';
 import { getToolManifest } from '@/utils/toolManifest';
 
+import { DomainAgentsService } from './domainAgents';
+
 const revalidate: number = 3600;
 
 export class DiscoverService {
   assistantStore = new AssistantStore();
   pluginStore = new PluginStore();
+  domainAgentsService = new DomainAgentsService();
 
   // Assistants
   searchAssistant = async (locale: Locales, keywords: string): Promise<DiscoverAssistantItem[]> => {
@@ -57,14 +60,38 @@ export class DiscoverService {
       (agent: any) => agent.author === 'Agents SaaS',
     );
 
+    // Get domain agents from database
+    const domainAgents = await this.domainAgentsService.getDomainAgents();
+
+    // Combine both sources and remove duplicates based on identifier
+    const allAgents = [...filteredAgents, ...domainAgents];
+    const uniqueAgents = uniqBy(allAgents, 'identifier');
+
     // @ts-expect-error 目前类型不一致，未来要统一
-    return filteredAgents;
+    return uniqueAgents;
   };
 
   getAssistantById = async (
     locale: Locales,
     identifier: string,
   ): Promise<DiscoverAssistantItem | undefined> => {
+    // First check if it's a domain agent
+    const domainAgent = await this.domainAgentsService.getDomainAgentBySlug(identifier);
+    if (domainAgent) {
+      const categoryItems = await this.getAssistantCategory(
+        locale,
+        domainAgent.meta.category || AssistantCategory.General,
+      );
+
+      return {
+        ...domainAgent,
+        suggestions: categoryItems
+          .filter((item) => item.identifier !== domainAgent.identifier)
+          .slice(0, 5) as any,
+      };
+    }
+
+    // If not a domain agent, fetch from store
     let res = await fetch(this.assistantStore.getAgentUrl(identifier, locale), {
       next: { revalidate: 12 * revalidate },
     });
