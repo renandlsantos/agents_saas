@@ -292,15 +292,16 @@ else
 
     # Perguntar sobre o email do administrador
     echo ""
-    read -p "Digite o email do administrador (ex: admin@ai4learning.com.br) [padrão: admin@${EXTERNAL_HOST}]: " CUSTOM_ADMIN_EMAIL
+    read -p "Digite o email do administrador (ex: admin@ai4learning.com.br): " CUSTOM_ADMIN_EMAIL
+    
+    # Validar se o email foi fornecido
     if [ -z "$CUSTOM_ADMIN_EMAIL" ]; then
-        CUSTOM_ADMIN_EMAIL="admin@${EXTERNAL_HOST}"
+        error "Email do administrador é obrigatório!"
     fi
 
     # Validar formato do email
     if ! echo "$CUSTOM_ADMIN_EMAIL" | grep -qE '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'; then
-        warn "Email inválido. Usando padrão: admin@${EXTERNAL_HOST}"
-        CUSTOM_ADMIN_EMAIL="admin@${EXTERNAL_HOST}"
+        error "Email inválido! Use um formato válido como: admin@exemplo.com"
     fi
 
     # Perguntar sobre senha personalizada do administrador
@@ -442,11 +443,21 @@ update_env "POSTGRES_PASSWORD" "${DB_PASSWORD}"
 update_env "LOBE_DB_NAME" "agents_chat"
 
 # Admin configuration
-# Use custom admin email if provided, otherwise use default
+# Use the provided admin email (required in new setup)
 if [ -n "$CUSTOM_ADMIN_EMAIL" ]; then
     update_env "ADMIN_EMAIL" "${CUSTOM_ADMIN_EMAIL}"
 else
-    update_env "ADMIN_EMAIL" "admin@${EXTERNAL_HOST}"
+    # For rebuild mode, try to extract from existing .env
+    if [ -f .env ]; then
+        EXISTING_ADMIN_EMAIL=$(grep "^ADMIN_EMAIL=" .env | cut -d'=' -f2)
+        if [ -n "$EXISTING_ADMIN_EMAIL" ]; then
+            update_env "ADMIN_EMAIL" "${EXISTING_ADMIN_EMAIL}"
+        else
+            error "Email do administrador não encontrado! Configure manualmente no .env"
+        fi
+    else
+        error "Email do administrador é obrigatório!"
+    fi
 fi
 update_env "ADMIN_DEFAULT_PASSWORD" "${ADMIN_PASSWORD}"
 update_env "ENABLE_ADMIN_PANEL" "true"
@@ -782,8 +793,8 @@ fi
 # ============================================================================
 # 8. CRIAR USUÁRIO ADMINISTRADOR
 # ============================================================================
-if [ "$SKIP_ADMIN_CREATION" = "true" ]; then
-    log "⏭️  Pulando criação de usuário admin (--skip-admin)"
+if [ "$SKIP_ADMIN_CREATION" = "true" ] || [ "$REBUILD_ONLY" = "true" ]; then
+    log "⏭️  Pulando criação de usuário admin (--skip-admin ou --rebuild)"
 else
     log "👤 Criando usuário administrador inicial..."
 
@@ -791,7 +802,11 @@ else
     if [ -n "$CUSTOM_ADMIN_EMAIL" ]; then
         ADMIN_EMAIL="${CUSTOM_ADMIN_EMAIL}"
     else
-        ADMIN_EMAIL="admin@${EXTERNAL_HOST}"
+        # Extract from .env if available
+        ADMIN_EMAIL=$(grep "^ADMIN_EMAIL=" .env | cut -d'=' -f2)
+        if [ -z "$ADMIN_EMAIL" ]; then
+            error "Email do administrador não encontrado!"
+        fi
     fi
 
     # First, create or update the create-admin-user.ts script to use the correct email
@@ -869,14 +884,20 @@ fi
 
 # Admin user creation completed above
 
-echo ""
-echo "=== CREDENCIAIS DO ADMIN ==="
-echo "Email: ${ADMIN_EMAIL}"
-echo "Senha: ${ADMIN_PASSWORD}"
-echo ""
-echo "⚠️  IMPORTANTE: Altere a senha após o primeiro login!"
-
-success "Usuário administrador criado!"
+    # Only show credentials if admin was actually created
+    if [ "$ADMIN_EXISTS" -eq 0 ]; then
+        echo ""
+        echo "=== CREDENCIAIS DO ADMIN ==="
+        echo "Email: ${ADMIN_EMAIL}"
+        echo "Senha: ${ADMIN_PASSWORD}"
+        echo ""
+        echo "⚠️  IMPORTANTE: Altere a senha após o primeiro login!"
+        echo "⚠️  LEMBRE-SE: Salve essas credenciais em local seguro!"
+        echo ""
+        success "Usuário administrador criado!"
+    else
+        success "Usuário administrador verificado!"
+    fi
 
 # ============================================================================
 # 9. BUILD DA APLICAÇÃO
@@ -1178,11 +1199,19 @@ echo "🔗 ACESSOS:"
 echo "   • Admin Panel: ${GREEN}http://${EXTERNAL_HOST}:3210/admin${NC}"
 echo "   • Aplicação: ${BLUE}http://${EXTERNAL_HOST}:3210${NC}"
 echo "   • MinIO Console: ${BLUE}http://${EXTERNAL_HOST}:9001${NC}"
-echo ""
-echo "👤 CREDENCIAIS DO ADMIN:"
-echo "   • Email: ${YELLOW}${ADMIN_EMAIL}${NC}"
-echo "   • Senha: ${YELLOW}${ADMIN_PASSWORD}${NC}"
-echo "   • ${RED}⚠️  IMPORTANTE: Altere a senha após o primeiro login!${NC}"
+# Only show credentials if they were set (not in rebuild mode)
+if [ "$REBUILD_ONLY" = "false" ] && [ "$SKIP_ADMIN_CREATION" = "false" ]; then
+    echo ""
+    echo "👤 CREDENCIAIS DO ADMIN:"
+    echo "   • Email: ${YELLOW}${ADMIN_EMAIL}${NC}"
+    echo "   • Senha: ${YELLOW}${ADMIN_PASSWORD}${NC}"
+    echo "   • ${RED}⚠️  IMPORTANTE: Altere a senha após o primeiro login!${NC}"
+else
+    echo ""
+    echo "👤 ADMIN:"
+    echo "   • Use as credenciais existentes para acessar o painel"
+    echo "   • Email configurado: ${YELLOW}$(grep "^ADMIN_EMAIL=" .env | cut -d'=' -f2)${NC}"
+fi
 echo ""
 echo "🚀 PRÓXIMOS PASSOS:"
 echo "   1. Para desenvolvimento: ${GREEN}./start-admin-dev.sh${NC}"

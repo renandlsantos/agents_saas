@@ -1236,17 +1236,20 @@ For existing deployments, use the rebuild flag:
 
 #### Admin User Management | Gerenciamento de Usuário Admin
 
-The script provides flexible admin user management:
+The script provides flexible admin user management with enhanced security:
 
 ```bash
 # Interactive setup with custom admin credentials
 ./setup-admin-environment.sh
-# - Prompts for custom admin email
+# - REQUIRES custom admin email (no automatic IP-based defaults)
 # - Prompts for custom admin password (min 8 chars)
 # - Auto-generates secure password if not provided
 
 # Skip admin user creation for rebuilds
 ./setup-admin-environment.sh --skip-admin
+
+# Rebuild mode automatically skips admin creation
+./setup-admin-environment.sh --rebuild
 
 # Automatic admin user detection
 # - Checks if admin user already exists
@@ -1258,10 +1261,11 @@ The script provides flexible admin user management:
 
 During interactive setup, you can configure:
 
-1. **Custom Admin Email**: Set your preferred admin email
+1. **Custom Admin Email**: **REQUIRED** - no IP-based defaults (e.g., admin\@64.23.237.16)
 2. **Custom Admin Password**: Set a secure password (minimum 8 characters)
 3. **Auto-generated Password**: Leave empty for secure random password
 4. **Admin User Detection**: Automatically skips if admin already exists
+5. **Rebuild Safety**: Rebuild mode automatically skips admin creation
 
 #### Migration Safety | Segurança das Migrações
 
