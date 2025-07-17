@@ -164,12 +164,12 @@ const Footer = () => {
                 >
                   <Icon icon={Github} size={18} />
                 </a>
-                <a href="/docs" className={styles.socialIcon}>
+                <Link href="/docs" className={styles.socialIcon}>
                   <Icon icon={FileText} size={18} />
-                </a>
-                <a href="/community" className={styles.socialIcon}>
+                </Link>
+                <Link href="/community" className={styles.socialIcon}>
                   <Icon icon={MessageSquare} size={18} />
-                </a>
+                </Link>
                 <a href="mailto:support@agenteschat.com" className={styles.socialIcon}>
                   <Icon icon={Mail} size={18} />
                 </a>

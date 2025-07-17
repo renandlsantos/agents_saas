@@ -189,6 +189,13 @@
       "when": 1757494800000,
       "tag": "0026_add_password_field",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1752704102612,
+      "tag": "0027_kind_kate_bishop",
+      "breakpoints": true
     }
   ],
   "version": "6"

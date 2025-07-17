@@ -30,6 +30,9 @@ export const users = pgTable('users', {
 
   preference: jsonb('preference').$defaultFn(() => DEFAULT_PREFERENCE),
 
+  // Admin privileges
+  isAdmin: boolean('is_admin').default(false).notNull(),
+
   ...timestamps,
 });
 
