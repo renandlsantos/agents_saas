@@ -1,7 +1,6 @@
 import { PGlite } from '@electric-sql/pglite';
 import { vector } from '@electric-sql/pglite/vector';
 import { drizzle as pgliteDrizzle } from 'drizzle-orm/pglite';
-import fs from 'node:fs';
 import { Md5 } from 'ts-md5';
 
 import { DrizzleMigrationModel } from '@/database/models/drizzleMigration';
@@ -11,6 +10,9 @@ import { MigrationTableItem } from '@/types/clientDB';
 
 import migrations from '../client/migrations.json';
 import { LobeChatDatabase } from '../type';
+
+// Conditional import of fs only in Node.js environment
+const fs = typeof window === 'undefined' ? require('node:fs') : null;
 
 // 用于实例管理的全局对象
 interface LobeGlobal {
@@ -38,13 +40,20 @@ if (!globalThis.__LOBE__) {
  */
 const acquireLock = async (dbPath: string): Promise<boolean> => {
   try {
+    // Skip file locking in browser environment
+    if (!fs || typeof window !== 'undefined') {
+      console.log('⚠️ File locking not available in browser environment');
+      return true;
+    }
+
     // 数据库锁文件路径
     const lockPath = `${dbPath}.lock`;
 
     // 尝试创建锁文件
     if (!fs.existsSync(lockPath)) {
       // 创建锁文件并写入当前进程 ID
-      fs.writeFileSync(lockPath, process.pid.toString(), 'utf8');
+      const processId = typeof process !== 'undefined' ? process.pid : Date.now();
+      fs.writeFileSync(lockPath, processId.toString(), 'utf8');
 
       // 保存锁信息到全局对象
       if (!globalThis.__LOBE__.pgDBLock) {
@@ -68,7 +77,8 @@ const acquireLock = async (dbPath: string): Promise<boolean> => {
       // 删除过期锁文件
       fs.unlinkSync(lockPath);
       // 重新创建锁文件
-      fs.writeFileSync(lockPath, process.pid.toString(), 'utf8');
+      const processId = typeof process !== 'undefined' ? process.pid : Date.now();
+      fs.writeFileSync(lockPath, processId.toString(), 'utf8');
 
       // 保存锁信息到全局对象
       if (!globalThis.__LOBE__.pgDBLock) {
@@ -94,7 +104,7 @@ const acquireLock = async (dbPath: string): Promise<boolean> => {
  * 释放文件锁
  */
 const releaseLock = () => {
-  if (globalThis.__LOBE__.pgDBLock?.acquired && globalThis.__LOBE__.pgDBLock.lockPath) {
+  if (globalThis.__LOBE__.pgDBLock?.acquired && globalThis.__LOBE__.pgDBLock.lockPath && fs) {
     try {
       fs.unlinkSync(globalThis.__LOBE__.pgDBLock.lockPath);
       globalThis.__LOBE__.pgDBLock.acquired = false;
@@ -105,20 +115,22 @@ const releaseLock = () => {
   }
 };
 
-// 在进程退出时释放锁
-process.on('exit', releaseLock);
-process.on('SIGINT', () => {
-  releaseLock();
-  process.exit(0);
-});
+// 在进程退出时释放锁（仅在Node.js环境）
+if (typeof process !== 'undefined' && process.on) {
+  process.on('exit', releaseLock);
+  process.on('SIGINT', () => {
+    releaseLock();
+    process.exit(0);
+  });
 
-process.on('uncaughtException', (error) => {
-  // ignore ECONNRESET error
-  if ((error as any).code === 'ECONNRESET') return;
+  process.on('uncaughtException', (error) => {
+    // ignore ECONNRESET error
+    if ((error as any).code === 'ECONNRESET') return;
 
-  console.error('Uncaught exception:', error);
-  releaseLock();
-});
+    console.error('Uncaught exception:', error);
+    releaseLock();
+  });
+}
 
 const migrateDatabase = async (db: LobeChatDatabase): Promise<void> => {
   try {

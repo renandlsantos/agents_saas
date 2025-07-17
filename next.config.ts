@@ -252,10 +252,18 @@ const nextConfig: NextConfig = {
     config.externals.push('pino-pretty');
 
     // Configure aliases to use stubs in web/Edge Runtime environments
-    if (!isDesktop) {
-      const stubsDir = path.resolve(__dirname, './src/server/modules/stubs');
+    const stubsDir = path.resolve(__dirname, './src/server/modules/stubs');
 
-      config.resolve = config.resolve || {};
+    config.resolve = config.resolve || {};
+    config.resolve.alias = config.resolve.alias || {};
+
+    // Always apply fs-related stubs for client-side builds
+    config.resolve.alias['node:fs'] = path.join(stubsDir, 'fs.ts');
+
+    // Also apply the electron database stub globally to prevent webpack processing
+    config.resolve.alias['@/database/core/electron'] = path.join(stubsDir, 'database-electron.ts');
+
+    if (!isDesktop) {
       config.resolve.alias = {
         ...config.resolve.alias,
         // Replace desktop package.json
@@ -268,7 +276,6 @@ const nextConfig: NextConfig = {
         '@lobechat/electron-server-ipc': path.join(stubsDir, 'electron-server-ipc.ts'),
         'electron': path.join(stubsDir, 'electron.ts'),
         'fs': path.join(stubsDir, 'fs.ts'),
-        'node:fs': path.join(stubsDir, 'fs.ts'),
         'node:net': path.join(stubsDir, 'net.ts'),
         'net': path.join(stubsDir, 'net.ts'),
         'node:os': path.join(stubsDir, 'os.ts'),
