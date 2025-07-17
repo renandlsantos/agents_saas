@@ -1222,13 +1222,46 @@ For existing deployments, use the rebuild flag:
 # Rebuild with latest schema fixes
 ./setup-admin-environment.sh --rebuild
 
+# Rebuild without admin user creation (recommended for existing deployments)
+./setup-admin-environment.sh --rebuild --skip-admin
+
 # This will:
 # 1. Update dependencies
 # 2. Regenerate database schema
 # 3. Apply missing column fixes
 # 4. Rebuild application
 # 5. Preserve existing data
+# 6. Skip admin user creation if --skip-admin is used
 ```
+
+#### Admin User Management | Gerenciamento de Usuário Admin
+
+The script provides flexible admin user management:
+
+```bash
+# Interactive setup with custom admin credentials
+./setup-admin-environment.sh
+# - Prompts for custom admin email
+# - Prompts for custom admin password (min 8 chars)
+# - Auto-generates secure password if not provided
+
+# Skip admin user creation for rebuilds
+./setup-admin-environment.sh --skip-admin
+
+# Automatic admin user detection
+# - Checks if admin user already exists
+# - Only creates if none exists
+# - Uses SQL UPSERT for safe updates
+```
+
+#### Custom Admin Configuration | Configuração Personalizada do Admin
+
+During interactive setup, you can configure:
+
+1. **Custom Admin Email**: Set your preferred admin email
+2. **Custom Admin Password**: Set a secure password (minimum 8 characters)
+3. **Auto-generated Password**: Leave empty for secure random password
+4. **Admin User Detection**: Automatically skips if admin already exists
 
 #### Migration Safety | Segurança das Migrações
 
