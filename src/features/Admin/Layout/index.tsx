@@ -1,19 +1,25 @@
 'use client';
 
-import { Layout, Menu, theme } from 'antd';
+import { Avatar, Dropdown, Layout, Menu, theme } from 'antd';
 import { createStyles } from 'antd-style';
 import {
   BarChart3Icon,
   BrainCircuitIcon,
   CreditCardIcon,
   HomeIcon,
+  LogOutIcon,
   ServerIcon,
+  SettingsIcon,
   UsersIcon,
 } from 'lucide-react';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { PropsWithChildren } from 'react';
 import { Center, Flexbox } from 'react-layout-kit';
 
+import { BRANDING_LOGO_URL } from '@/const/branding';
+import { useUserStore } from '@/store/user';
+import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
 import { Locales } from '@/types/locale';
 
 const { Header, Sider, Content } = Layout;
@@ -35,9 +41,31 @@ const useStyles = createStyles(({ css, token, responsive }) => ({
     background: ${token.colorBgContainer};
   `,
   logo: css`
-    font-size: 24px;
-    font-weight: bold;
-    color: ${token.colorPrimary};
+    display: flex;
+    gap: 12px;
+    align-items: center;
+
+    font-size: 20px;
+    font-weight: 600;
+  `,
+  logoImg: css`
+    width: 32px;
+    height: 32px;
+  `,
+  userSection: css`
+    cursor: pointer;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  `,
+  userName: css`
+    margin-inline-end: 8px;
+    font-size: 14px;
+    color: ${token.colorText};
   `,
   sider: css`
     border-inline-end: 1px solid ${token.colorBorderSecondary};
@@ -112,6 +140,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const pathname = usePathname();
   const { token } = theme.useToken();
 
+  const logout = useUserStore((s) => s.logout);
+  const currentUser = useUserStore((s) => s.user);
+
   const selectedKey =
     menuItems.find(
       (item) =>
@@ -125,10 +156,50 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
+  const userMenuItems = [
+    {
+      key: 'settings',
+      icon: <SettingsIcon size={14} />,
+      label: 'Configurações',
+      onClick: () => router.push('/settings'),
+    },
+    {
+      type: 'divider' as const,
+    },
+    {
+      key: 'logout',
+      icon: <LogOutIcon size={14} />,
+      label: 'Sair',
+      onClick: handleLogout,
+    },
+  ];
+
   return (
     <Layout className={styles.layout}>
       <Header className={styles.header}>
-        <div className={styles.logo}>Admin Panel</div>
+        <div className={styles.logo}>
+          <Image
+            src={BRANDING_LOGO_URL}
+            alt="Logo"
+            width={32}
+            height={32}
+            className={styles.logoImg}
+          />
+          <span>Admin Panel</span>
+        </div>
+        <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" trigger={['click']}>
+          <div className={styles.userSection}>
+            <span className={styles.userName}>{currentUser?.fullName || currentUser?.email}</span>
+            <Avatar src={currentUser?.avatar} size={32}>
+              {currentUser?.fullName?.[0] || currentUser?.email?.[0]}
+            </Avatar>
+          </div>
+        </Dropdown>
       </Header>
       <Layout>
         <Sider className={styles.sider} breakpoint="lg" collapsedWidth="0" width={240}>

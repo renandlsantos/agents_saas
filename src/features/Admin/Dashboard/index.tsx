@@ -39,15 +39,22 @@ const useStyles = createStyles(({ css, token }) => ({
 
 const AdminDashboard = () => {
   const { styles } = useStyles();
-  const { metrics, loading, fetchMetrics } = useAdminStore((s) => ({
+  const { metrics, loading, fetchMetrics, refreshMetrics } = useAdminStore((s) => ({
     metrics: s.metrics,
     loading: s.loading,
     fetchMetrics: s.fetchMetrics,
+    refreshMetrics: s.refreshMetrics,
   }));
 
   useEffect(() => {
     fetchMetrics();
-  }, [fetchMetrics]);
+    // Refresh every 30 seconds
+    const interval = setInterval(() => {
+      refreshMetrics();
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  }, [fetchMetrics, refreshMetrics]);
 
   if (loading) {
     return (
