@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, count, countDistinct, desc, eq, gte, like, sql } from 'drizzle-orm';
+import { and, asc, count, countDistinct, desc, eq, gte, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
@@ -12,6 +12,7 @@ import {
   sessions,
   users,
 } from '@/database/schemas';
+import { aiModels, aiProviders } from '@/database/schemas/aiInfra';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerDashboardMetrics } from '@/services/admin/serverHelpers';
@@ -165,23 +166,141 @@ export const adminRouter = router({
 
   // Get model configuration
   getModelConfig: adminProcedure.query(async ({ ctx }) => {
-    // This would fetch from your model configuration
-    // For now, returning a placeholder structure
+    // Fetch all AI providers with their models
+    const providers = await ctx.serverDB.query.aiProviders.findMany({
+      orderBy: [asc(aiProviders.sort)],
+      where: and(
+        or(
+          eq(aiProviders.source, 'builtin'),
+          and(eq(aiProviders.source, 'custom'), eq(aiProviders.userId, ctx.userId)),
+        ),
+      ),
+      with: {
+        models: {
+          orderBy: [asc(aiModels.sort)],
+        },
+      },
+    });
+
     return {
-      providers: [
-        {
-          id: 'openai',
-          name: 'OpenAI',
-          enabled: true,
-          models: ['gpt-4', 'gpt-3.5-turbo'],
-        },
-        {
-          id: 'anthropic',
-          name: 'Anthropic',
-          enabled: true,
-          models: ['claude-3-opus', 'claude-3-sonnet'],
-        },
-      ],
+      providers: providers.map((provider) => ({
+        id: provider.id,
+        name: provider.name || provider.id,
+        logo: provider.logo,
+        enabled: provider.enabled,
+        models: provider.models.map((model) => ({
+          id: model.id,
+          displayName: model.displayName || model.id,
+          enabled: model.enabled,
+          type: model.type,
+          contextWindow: model.contextWindowTokens,
+        })),
+      })),
+    };
+  }),
+
+  // Update provider configuration
+  updateProviderConfig: adminProcedure
+    .input(
+      z.object({
+        providerId: z.string(),
+        enabled: z.boolean().optional(),
+        settings: z.record(z.any()).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.serverDB
+        .update(aiProviders)
+        .set({
+          enabled: input.enabled,
+          settings: input.settings,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(aiProviders.id, input.providerId),
+            or(eq(aiProviders.source, 'builtin'), eq(aiProviders.userId, ctx.userId)),
+          ),
+        );
+
+      return { success: true };
+    }),
+
+  // Get billing plans and subscription data
+  getBillingData: adminProcedure.query(async ({ ctx }) => {
+    // Get all users with their subscription status
+    const allUsers = await ctx.serverDB.query.users.findMany({
+      columns: {
+        id: true,
+        isAdmin: true,
+      },
+    });
+
+    // Count by subscription type (simplified - in a real app you'd have subscription tables)
+    const freeUsers = allUsers.filter((u) => !u.isAdmin).length;
+    const proUsers = Math.floor(allUsers.length * 0.2); // Simulated 20% pro users
+    const enterpriseUsers = Math.floor(allUsers.length * 0.05); // Simulated 5% enterprise
+
+    // Calculate revenue
+    const plans = [
+      {
+        id: 'free',
+        name: 'Free',
+        price: 0,
+        interval: 'monthly' as const,
+        tokensPerMonth: 100_000,
+        maxTokensPerRequest: 4000,
+        features: ['Basic chat functionality', 'GPT-3.5 access', 'Community support'],
+        isActive: true,
+        subscriberCount: freeUsers,
+      },
+      {
+        id: 'pro',
+        name: 'Pro',
+        price: 29.99,
+        interval: 'monthly' as const,
+        tokensPerMonth: 1_000_000,
+        maxTokensPerRequest: 8000,
+        features: [
+          'All Free features',
+          'GPT-4 access',
+          'Priority support',
+          'Custom agents',
+          'Advanced analytics',
+        ],
+        isActive: true,
+        subscriberCount: proUsers,
+      },
+      {
+        id: 'enterprise',
+        name: 'Enterprise',
+        price: 99.99,
+        interval: 'monthly' as const,
+        tokensPerMonth: 5_000_000,
+        maxTokensPerRequest: 16_000,
+        features: [
+          'All Pro features',
+          'Unlimited custom agents',
+          'API access',
+          'Dedicated support',
+          'Custom integrations',
+          'SLA guarantee',
+        ],
+        isActive: true,
+        subscriberCount: enterpriseUsers,
+      },
+    ];
+
+    const totalRevenue = plans.reduce((sum, plan) => sum + plan.price * plan.subscriberCount, 0);
+    const totalSubscribers = plans.reduce((sum, plan) => sum + plan.subscriberCount, 0);
+
+    return {
+      plans,
+      summary: {
+        totalRevenue,
+        totalSubscribers,
+        averageRevenuePerUser: totalSubscribers > 0 ? totalRevenue / totalSubscribers : 0,
+      },
     };
   }),
 

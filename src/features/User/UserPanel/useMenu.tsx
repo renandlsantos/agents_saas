@@ -8,6 +8,7 @@ import {
   HardDriveDownload,
   LogOut,
   Settings2,
+  ShieldIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
@@ -28,9 +29,10 @@ export const useMenu = () => {
   const { canInstall, install } = usePWAInstall();
   const { t } = useTranslation(['common', 'setting', 'auth']);
   const { showCloudPromotion, hideDocs } = useServerConfigStore(featureFlagsSelectors);
-  const [isLogin, isLoginWithAuth] = useUserStore((s) => [
+  const [isLogin, isLoginWithAuth, user] = useUserStore((s) => [
     authSelectors.isLogin(s),
     authSelectors.isLoginWithAuth(s),
+    s.user,
   ]);
 
   const profile: MenuProps['items'] = [
@@ -52,10 +54,16 @@ export const useMenu = () => {
       key: 'setting',
       label: <Link href={'/settings/common'}>{t('userPanel.setting')}</Link>,
     },
+    // Show admin panel link if user is admin
+    user?.isAdmin && {
+      icon: <Icon icon={ShieldIcon} />,
+      key: 'admin',
+      label: <Link href={'/admin/dashboard'}>Painel Admin</Link>,
+    },
     {
       type: 'divider',
     },
-  ];
+  ].filter(Boolean) as ItemType[];
 
   /* ↓ cloud slot ↓ */
 

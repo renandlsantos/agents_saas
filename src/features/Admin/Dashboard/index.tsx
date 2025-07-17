@@ -11,11 +11,10 @@ import {
   TrendingUpIcon,
   UsersIcon,
 } from 'lucide-react';
-import { useEffect } from 'react';
 import { Center, Flexbox } from 'react-layout-kit';
 
 import StatisticCard from '@/components/StatisticCard';
-import { useAdminStore } from '@/store/admin';
+import { lambdaQuery } from '@/libs/trpc/client';
 
 const { Title } = Typography;
 
@@ -39,24 +38,13 @@ const useStyles = createStyles(({ css, token }) => ({
 
 const AdminDashboard = () => {
   const { styles } = useStyles();
-  const { metrics, loading, fetchMetrics, refreshMetrics } = useAdminStore((s) => ({
-    metrics: s.metrics,
-    loading: s.loading,
-    fetchMetrics: s.fetchMetrics,
-    refreshMetrics: s.refreshMetrics,
-  }));
 
-  useEffect(() => {
-    fetchMetrics();
-    // Refresh every 30 seconds
-    const interval = setInterval(() => {
-      refreshMetrics();
-    }, 30_000);
+  // Fetch real metrics from API
+  const { data: metrics, isLoading } = lambdaQuery.admin.getDashboardMetrics.useQuery(undefined, {
+    refetchInterval: 30_000, // Refresh every 30 seconds
+  });
 
-    return () => clearInterval(interval);
-  }, [fetchMetrics, refreshMetrics]);
-
-  if (loading) {
+  if (isLoading || !metrics) {
     return (
       <Center className={styles.loadingContainer}>
         <Spin size="large" />
@@ -103,7 +91,7 @@ const AdminDashboard = () => {
             footer={
               <Flexbox align="center" gap={4}>
                 <ActivityIcon size={16} />
-                <span>Active in last 7 days</span>
+                <span>Last 7 days</span>
               </Flexbox>
             }
           />
@@ -122,7 +110,7 @@ const AdminDashboard = () => {
             footer={
               <Flexbox align="center" gap={4}>
                 <MessageSquareIcon size={16} />
-                <span>All chat messages</span>
+                <span>All time messages</span>
               </Flexbox>
             }
           />
@@ -130,23 +118,20 @@ const AdminDashboard = () => {
 
         <Col xs={24} sm={12} lg={6}>
           <StatisticCard
-            title="Tokens Used"
+            title="Revenue"
             statistic={{
-              value: metrics.totalTokens,
-              formatter: (value: any) => {
-                if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-                if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
-                return value.toString();
-              },
+              value: metrics.monthlyRevenue,
+              prefix: '$',
               suffix:
-                metrics.tokenGrowth !== 0
-                  ? `${metrics.tokenGrowth > 0 ? '+' : ''}${metrics.tokenGrowth.toFixed(1)}%`
+                metrics.revenueGrowth !== 0
+                  ? `${metrics.revenueGrowth > 0 ? '+' : ''}${metrics.revenueGrowth.toFixed(1)}%`
                   : undefined,
+              precision: 2,
             }}
             footer={
               <Flexbox align="center" gap={4}>
-                <BrainCircuitIcon size={16} />
-                <span>Total token consumption</span>
+                <CreditCardIcon size={16} />
+                <span>Monthly recurring</span>
               </Flexbox>
             }
           />
@@ -154,51 +139,12 @@ const AdminDashboard = () => {
       </Row>
 
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <StatisticCard
-            title="Active Subscriptions"
-            statistic={{
-              value: metrics.activeSubscriptions,
-              suffix:
-                metrics.subscriptionGrowth !== 0
-                  ? `${metrics.subscriptionGrowth > 0 ? '+' : ''}${metrics.subscriptionGrowth.toFixed(1)}%`
-                  : undefined,
-            }}
-            footer={
-              <Flexbox align="center" gap={4}>
-                <CreditCardIcon size={16} />
-                <span>Paid subscriptions</span>
-              </Flexbox>
-            }
-          />
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <StatisticCard
-            title="Revenue (Monthly)"
-            statistic={{
-              value: metrics.monthlyRevenue,
-              prefix: '$',
-              precision: 2,
-              suffix:
-                metrics.revenueGrowth !== 0
-                  ? `${metrics.revenueGrowth > 0 ? '+' : ''}${metrics.revenueGrowth.toFixed(1)}%`
-                  : undefined,
-            }}
-            footer={
-              <Flexbox align="center" gap={4}>
-                <TrendingUpIcon size={16} />
-                <span>Current month revenue</span>
-              </Flexbox>
-            }
-          />
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
           <StatisticCard
             title="Active Models"
             statistic={{
               value: metrics.activeModels,
+              suffix: 'models',
             }}
             footer={
               <Flexbox align="center" gap={4}>
@@ -209,15 +155,12 @@ const AdminDashboard = () => {
           />
         </Col>
 
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
           <StatisticCard
             title="Custom Agents"
             statistic={{
               value: metrics.customAgents,
-              suffix:
-                metrics.agentGrowth !== 0
-                  ? `${metrics.agentGrowth > 0 ? '+' : ''}${metrics.agentGrowth.toFixed(1)}%`
-                  : undefined,
+              suffix: 'agents',
             }}
             footer={
               <Flexbox align="center" gap={4}>
@@ -227,12 +170,23 @@ const AdminDashboard = () => {
             }
           />
         </Col>
-      </Row>
 
-      <div className={styles.recentSection}>
-        <Title level={3}>Recent Activity</Title>
-        {/* TODO: Add recent activity feed */}
-      </div>
+        <Col xs={24} sm={12} lg={8}>
+          <StatisticCard
+            title="Token Usage"
+            statistic={{
+              value: metrics.totalTokens.toLocaleString(),
+              suffix: 'tokens',
+            }}
+            footer={
+              <Flexbox align="center" gap={4}>
+                <TrendingUpIcon size={16} />
+                <span>Total tokens consumed</span>
+              </Flexbox>
+            }
+          />
+        </Col>
+      </Row>
     </div>
   );
 };

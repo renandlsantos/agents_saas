@@ -10,6 +10,7 @@ export interface LobeUser {
   firstName?: string | null;
   fullName?: string | null;
   id: string;
+  isAdmin?: boolean;
   latestName?: string | null;
   username?: string | null;
 }

@@ -12,11 +12,11 @@ import {
   UsersIcon,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Center, Flexbox } from 'react-layout-kit';
 
 import StatisticCard from '@/components/StatisticCard';
-import { adminService } from '@/services/admin';
+import { lambdaQuery } from '@/libs/trpc/client';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -65,7 +65,7 @@ const useStyles = createStyles(({ css, token }) => ({
 }));
 
 interface AnalyticsData {
-  messageVolume: Array<{ count: number, date: string; }>;
+  messageVolume: Array<{ count: number; date: string }>;
   modelUsage: Array<{ count: number; model: string; percentage: number }>;
   summary: {
     avgDailyMessages: number;
@@ -75,31 +75,19 @@ interface AnalyticsData {
   };
   tokenUsage: Array<{ date: string; tokens: number }>;
   topAgents: Array<{ messages: number; name: string; users: number }>;
-  userSignups: Array<{ count: number, date: string; }>;
+  userSignups: Array<{ count: number; date: string }>;
 }
 
 const AdminAnalytics = () => {
   const { styles } = useStyles();
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
-  const [loading, setLoading] = useState(false);
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
-  const fetchAnalytics = async () => {
-    setLoading(true);
-    try {
-      const data = await adminService.getAnalytics(timeRange);
-      setAnalyticsData(data);
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAnalytics();
-  }, [timeRange]);
+  // Fetch analytics data from API
+  const { data: analyticsData, isLoading: loading } = lambdaQuery.admin.getAnalytics.useQuery(
+    { timeRange },
+    { refetchInterval: 60_000 }, // Refresh every minute
+  );
 
   const handleDateRangeChange: RangePickerProps['onChange'] = (dates) => {
     if (dates && dates[0] && dates[1]) {

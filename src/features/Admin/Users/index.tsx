@@ -27,10 +27,10 @@ import {
   UserCheckIcon,
   UserXIcon,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Flexbox } from 'react-layout-kit';
 
-import { useAdminStore } from '@/store/admin';
+import { lambdaQuery } from '@/libs/trpc/client';
 
 dayjs.extend(relativeTime);
 
@@ -68,79 +68,50 @@ const useStyles = createStyles(({ css, token }) => ({
 }));
 
 interface UserData {
-  avatar?: string;
-  createdAt: string;
-  email: string;
-  fullName?: string;
+  avatar?: string | null;
+  createdAt: Date;
+  email: string | null;
+  fullName?: string | null;
   id: string;
   isAdmin: boolean;
-  isOnboarded: boolean;
-  lastActiveAt?: string;
-  subscription?: {
-    plan: string;
-    status: string;
-  };
-  updatedAt: string;
-  usage?: {
-    messages: number;
-    tokens: number;
-  };
-  username?: string;
+  messageCount: number;
+  sessionCount: number;
+  updatedAt: Date;
 }
 
 const AdminUsers = () => {
   const { styles } = useStyles();
-  const [users, setUsers] = useState<UserData[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'admin'>('all');
 
-  // Mock data - replace with actual API call
-  useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setUsers([
-        {
-          id: '1',
-          email: 'john.doe@example.com',
-          username: 'johndoe',
-          fullName: 'John Doe',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=johndoe',
-          isAdmin: false,
-          isOnboarded: true,
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-03-20T15:30:00Z',
-          lastActiveAt: '2024-03-20T15:30:00Z',
-          subscription: { plan: 'pro', status: 'active' },
-          usage: { messages: 1250, tokens: 450_000 },
-        },
-        {
-          id: '2',
-          email: 'jane.smith@example.com',
-          username: 'janesmith',
-          fullName: 'Jane Smith',
-          isAdmin: true,
-          isOnboarded: true,
-          createdAt: '2024-01-10T08:00:00Z',
-          updatedAt: '2024-03-19T12:00:00Z',
-          subscription: { plan: 'free', status: 'active' },
-          usage: { messages: 325, tokens: 125_000 },
-        },
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+  // Fetch users using tRPC
+  const { data, isLoading, refetch } = lambdaQuery.admin.getUsers.useQuery({
+    page: currentPage,
+    pageSize,
+    search: searchText,
+    filter,
+  });
+
+  const toggleAdminMutation = lambdaQuery.admin.toggleUserAdmin.useMutation({
+    onSuccess: () => {
+      message.success('User admin status updated successfully');
+      refetch();
+    },
+    onError: (error: any) => {
+      message.error(error.message || 'Failed to update admin status');
+    },
+  });
 
   const handleToggleAdmin = async (userId: string, isAdmin: boolean) => {
-    try {
-      // API call to update admin status
-      message.success(`User ${isAdmin ? 'granted' : 'revoked'} admin privileges`);
-      setUsers(users.map((u) => (u.id === userId ? { ...u, isAdmin } : u)));
-    } catch {
-      message.error('Failed to update admin status');
-    }
+    await toggleAdminMutation.mutateAsync({ userId, isAdmin });
   };
+
+  const users = data?.users || [];
+  const totalUsers = data?.total || 0;
 
   const columns: ColumnsType<UserData> = [
     {
@@ -157,11 +128,11 @@ const AdminUsers = () => {
               setDetailModalOpen(true);
             }}
           >
-            {record.fullName?.[0] || record.email[0].toUpperCase()}
+            {record.fullName?.[0] || record.email?.[0]?.toUpperCase() || 'U'}
           </Avatar>
           <div>
-            <div>{record.fullName || record.username || 'Unknown User'}</div>
-            <div style={{ fontSize: 12, color: '#999' }}>{record.email}</div>
+            <div>{record.fullName || record.email?.split('@')[0] || 'Unknown User'}</div>
+            <div style={{ fontSize: 12, color: '#999' }}>{record.email || 'No email'}</div>
           </div>
         </div>
       ),
@@ -171,11 +142,7 @@ const AdminUsers = () => {
       key: 'status',
       render: (_, record) => (
         <Space>
-          {record.isOnboarded ? (
-            <Tag color="success">Active</Tag>
-          ) : (
-            <Tag color="default">Pending</Tag>
-          )}
+          <Tag color="success">Active</Tag>
           {record.isAdmin && (
             <Tag color="blue" icon={<ShieldIcon size={12} />}>
               Admin
@@ -185,22 +152,17 @@ const AdminUsers = () => {
       ),
     },
     {
-      title: 'Subscription',
-      dataIndex: ['subscription', 'plan'],
-      key: 'subscription',
-      render: (plan) => (
-        <Tag color={plan === 'pro' ? 'gold' : 'default'}>{plan?.toUpperCase() || 'FREE'}</Tag>
-      ),
+      title: 'Sessions',
+      dataIndex: 'sessionCount',
+      key: 'sessions',
+      render: (count: number) => count || 0,
     },
     {
       title: 'Usage',
       key: 'usage',
       render: (_, record) => (
         <Space direction="vertical" size={0}>
-          <span>{record.usage?.messages || 0} messages</span>
-          <span style={{ fontSize: 12, color: '#999' }}>
-            {((record.usage?.tokens || 0) / 1000).toFixed(1)}k tokens
-          </span>
+          <span>{record.messageCount || 0} messages</span>
         </Space>
       ),
     },
@@ -208,20 +170,27 @@ const AdminUsers = () => {
       title: 'Joined',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => (
-        <Tooltip title={dayjs(date).format('YYYY-MM-DD HH:mm')}>{dayjs(date).fromNow()}</Tooltip>
-      ),
+      render: (date: Date) => {
+        const dateStr = typeof date === 'string' ? date : date?.toISOString();
+        return (
+          <Tooltip title={dayjs(dateStr).format('YYYY-MM-DD HH:mm')}>
+            {dayjs(dateStr).fromNow()}
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Last Active',
-      dataIndex: 'lastActiveAt',
-      key: 'lastActiveAt',
-      render: (date) =>
-        date ? (
-          <Tooltip title={dayjs(date).format('YYYY-MM-DD HH:mm')}>{dayjs(date).fromNow()}</Tooltip>
-        ) : (
-          '-'
-        ),
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      render: (date: Date) => {
+        const dateStr = typeof date === 'string' ? date : date?.toISOString();
+        return (
+          <Tooltip title={dayjs(dateStr).format('YYYY-MM-DD HH:mm')}>
+            {dayjs(dateStr).fromNow()}
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Actions',
@@ -253,22 +222,6 @@ const AdminUsers = () => {
                   label: 'Send Email',
                   icon: <MailIcon size={16} />,
                 },
-                { type: 'divider' },
-                {
-                  key: 'disable',
-                  label: record.isOnboarded ? 'Disable User' : 'Enable User',
-                  danger: record.isOnboarded,
-                  onClick: () => {
-                    try {
-                      // API call to enable/disable user
-                      message.success(
-                        `User ${!record.isOnboarded ? 'enabled' : 'disabled'} successfully`,
-                      );
-                    } catch {
-                      message.error('Failed to update user status');
-                    }
-                  },
-                },
               ],
             }}
           >
@@ -278,13 +231,6 @@ const AdminUsers = () => {
       ),
     },
   ];
-
-  const filteredUsers = users.filter(
-    (user) =>
-      user.email.toLowerCase().includes(searchText.toLowerCase()) ||
-      user.username?.toLowerCase().includes(searchText.toLowerCase()) ||
-      user.fullName?.toLowerCase().includes(searchText.toLowerCase()),
-  );
 
   return (
     <div className={styles.container}>
@@ -302,13 +248,19 @@ const AdminUsers = () => {
 
       <Table
         columns={columns}
-        dataSource={filteredUsers}
-        loading={loading}
+        dataSource={users}
+        loading={isLoading}
         rowKey="id"
         pagination={{
-          pageSize: 10,
+          current: currentPage,
+          pageSize: pageSize,
+          total: totalUsers,
           showSizeChanger: true,
           showTotal: (total) => `Total ${total} users`,
+          onChange: (page, size) => {
+            setCurrentPage(page);
+            if (size !== pageSize) setPageSize(size);
+          },
         }}
       />
 
@@ -323,15 +275,15 @@ const AdminUsers = () => {
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <Flexbox align="center" gap={16}>
               <Avatar src={selectedUser.avatar} size={64}>
-                {selectedUser.fullName?.[0] || selectedUser.email[0].toUpperCase()}
+                {selectedUser.fullName?.[0] || selectedUser.email?.[0]?.toUpperCase() || 'U'}
               </Avatar>
               <div>
                 <Title level={4} style={{ margin: 0 }}>
-                  {selectedUser.fullName || selectedUser.username || 'Unknown User'}
+                  {selectedUser.fullName || selectedUser.email?.split('@')[0] || 'Unknown User'}
                 </Title>
                 <Space>
                   <MailIcon size={16} />
-                  {selectedUser.email}
+                  {selectedUser.email || 'No email'}
                 </Space>
               </div>
             </Flexbox>
@@ -343,9 +295,7 @@ const AdminUsers = () => {
               </Flexbox>
               <Flexbox justify="space-between">
                 <span>Status:</span>
-                <Tag color={selectedUser.isOnboarded ? 'success' : 'default'}>
-                  {selectedUser.isOnboarded ? 'Active' : 'Pending'}
-                </Tag>
+                <Tag color="success">Active</Tag>
               </Flexbox>
               <Flexbox justify="space-between">
                 <span>Admin:</span>
@@ -354,22 +304,16 @@ const AdminUsers = () => {
                 </Tag>
               </Flexbox>
               <Flexbox justify="space-between">
-                <span>Subscription:</span>
-                <Tag color={selectedUser.subscription?.plan === 'pro' ? 'gold' : 'default'}>
-                  {selectedUser.subscription?.plan?.toUpperCase() || 'FREE'}
-                </Tag>
+                <span>Sessions:</span>
+                <span>{selectedUser.sessionCount || 0}</span>
               </Flexbox>
               <Flexbox justify="space-between">
                 <span>Joined:</span>
                 <span>{dayjs(selectedUser.createdAt).format('YYYY-MM-DD HH:mm')}</span>
               </Flexbox>
               <Flexbox justify="space-between">
-                <span>Last Active:</span>
-                <span>
-                  {selectedUser.lastActiveAt
-                    ? dayjs(selectedUser.lastActiveAt).format('YYYY-MM-DD HH:mm')
-                    : 'Never'}
-                </span>
+                <span>Last Updated:</span>
+                <span>{dayjs(selectedUser.updatedAt).format('YYYY-MM-DD HH:mm')}</span>
               </Flexbox>
             </Space>
 
@@ -377,11 +321,11 @@ const AdminUsers = () => {
               <Title level={5}>Usage Statistics</Title>
               <Flexbox justify="space-between">
                 <span>Messages:</span>
-                <span>{selectedUser.usage?.messages || 0}</span>
+                <span>{selectedUser.messageCount || 0}</span>
               </Flexbox>
               <Flexbox justify="space-between">
-                <span>Tokens:</span>
-                <span>{selectedUser.usage?.tokens?.toLocaleString() || 0}</span>
+                <span>Sessions:</span>
+                <span>{selectedUser.sessionCount || 0}</span>
               </Flexbox>
             </Space>
           </Space>
