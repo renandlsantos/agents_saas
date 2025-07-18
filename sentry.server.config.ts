@@ -26,11 +26,8 @@ if (!!process.env.NEXT_PUBLIC_SENTRY_DSN) {
       // Profiling (requires tracing to be enabled)
       profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1,
 
-      // Integrations
-      integrations: [
-        // Automatically instrument Node.js libraries and frameworks
-        ...Sentry.autoDiscoverNodePerformanceMonitoringIntegrations(),
-      ],
+      // Integrations are automatically set up by default in v9
+      // No need to manually specify integrations unless customizing
 
       // Filter transactions
       beforeSendTransaction(transaction) {

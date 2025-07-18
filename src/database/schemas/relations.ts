@@ -5,6 +5,7 @@ import { pgTable, primaryKey, text, uuid, varchar } from 'drizzle-orm/pg-core';
 import { createdAt } from '@/database/schemas/_helpers';
 
 import { agents, agentsFiles, agentsKnowledgeBases } from './agent';
+import { aiModels, aiProviders } from './aiInfra';
 import { asyncTasks } from './asyncTask';
 import { documentChunks, documents } from './document';
 import { files, knowledgeBases } from './file';
@@ -26,6 +27,7 @@ export const agentsToSessions = pgTable(
     userId: text('user_id')
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
+    category: varchar('category', { length: 255 }),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.agentId, t.sessionId] }),
@@ -191,5 +193,17 @@ export const documentChunksRelations = relations(documentChunks, ({ one }) => ({
   document: one(documents, {
     fields: [documentChunks.documentId],
     references: [documents.id],
+  }),
+}));
+
+// AI Infrastructure relations
+export const aiProvidersRelations = relations(aiProviders, ({ many }) => ({
+  models: many(aiModels),
+}));
+
+export const aiModelsRelations = relations(aiModels, ({ one }) => ({
+  provider: one(aiProviders, {
+    fields: [aiModels.providerId],
+    references: [aiProviders.id],
   }),
 }));

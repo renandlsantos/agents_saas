@@ -1,6 +1,7 @@
 /* eslint-disable sort-keys-fix/sort-keys-fix  */
 import {
   boolean,
+  integer,
   jsonb,
   pgTable,
   primaryKey,
@@ -62,6 +63,9 @@ export const agents = pgTable(
 
     // Flag to indicate if this is a domain/admin created agent visible to all users
     isDomain: boolean('is_domain').default(false),
+
+    // Sort order for domain agents
+    sort: integer('sort').default(0),
 
     ...timestamps,
   },

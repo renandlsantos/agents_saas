@@ -73,3 +73,9 @@ vertex-ai-key.json
 ./packages/lobe-ui
 .env.vm
 data/*
+
+# Backup files
+.env.backup
+.env.bak
+*.backup
+*.bak

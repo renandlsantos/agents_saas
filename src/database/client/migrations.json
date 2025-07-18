@@ -543,5 +543,17 @@
     "bps": true,
     "folderMillis": 1752767547805,
     "hash": "c1a5619d8cd34b23091a59302d089bd9b6915742f18b0d3296cb307e97854c05"
+  },
+  {
+    "sql": ["ALTER TABLE \"agents_to_sessions\" ADD COLUMN \"category\" varchar(255);"],
+    "bps": true,
+    "folderMillis": 1752808346904,
+    "hash": "782a915a4587d4ab8b9e6fb583dec05cb5ba7a6aada05d32601d9e94438fc4ac"
+  },
+  {
+    "sql": ["ALTER TABLE \"agents\" ADD COLUMN \"sort\" integer DEFAULT 0;"],
+    "bps": true,
+    "folderMillis": 1752813833828,
+    "hash": "4147ba69fb2b86a9dd23645cd14e904d2848247f12dc628f162a697f959e5d19"
   }
 ]

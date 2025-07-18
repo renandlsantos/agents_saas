@@ -14,12 +14,9 @@ import {
   UsersIcon,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { PropsWithChildren, Suspense, useMemo, useState } from 'react';
-import { Center, Flexbox } from 'react-layout-kit';
+import { PropsWithChildren, useMemo } from 'react';
+import { Flexbox } from 'react-layout-kit';
 
-import { ProductLogo } from '@/components/Branding/ProductLogo';
-import UserAvatar from '@/features/User/UserAvatar';
-import UserPanel from '@/features/User/UserPanel';
 import { Locales } from '@/types/locale';
 
 const useStyles = createStyles(({ css, token }) => ({
@@ -50,14 +47,6 @@ const useStyles = createStyles(({ css, token }) => ({
     border-radius: ${token.borderRadiusLG}px;
     background: ${token.colorBgContainer};
   `,
-  logo: css`
-    cursor: pointer;
-    transition: all 0.3s;
-
-    &:hover {
-      transform: scale(1.1);
-    }
-  `,
 }));
 
 export interface AdminLayoutProps extends PropsWithChildren {
@@ -85,12 +74,10 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const topActions = useMemo(
     () => (
       <Flexbox gap={8}>
-        <ProductLogo size={36} className={styles.logo} />
-        <div style={{ height: 16 }} />
         <ActionIcon
           active={currentKey === 'dashboard'}
           icon={HomeIcon}
-          onClick={() => router.push('/admin/dashboard')}
+          onClick={() => router.push('/admin')}
           size={{ blockSize: 40, size: 24, strokeWidth: 2 }}
           title="Dashboard"
           tooltipProps={{ placement: 'right' }}
@@ -166,13 +153,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   return (
     <div className={styles.container}>
       <SideNav
-        avatar={
-          <Suspense fallback={<UserAvatar />}>
-            <UserPanel>
-              <UserAvatar clickable />
-            </UserPanel>
-          </Suspense>
-        }
         bottomActions={bottomActions}
         style={{
           backgroundColor: 'transparent',

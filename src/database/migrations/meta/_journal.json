@@ -203,6 +203,20 @@
       "when": 1752767547805,
       "tag": "0028_low_falcon",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1752808346904,
+      "tag": "0029_nosy_callisto",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1752813833828,
+      "tag": "0030_new_the_renegades",
+      "breakpoints": true
     }
   ],
   "version": "6"

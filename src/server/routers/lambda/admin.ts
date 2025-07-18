@@ -166,58 +166,59 @@ export const adminRouter = router({
 
   // Get model configuration
   getModelConfig: adminProcedure.query(async ({ ctx }) => {
-    // Fetch all AI providers with their models
-    const providers = await ctx.serverDB.query.aiProviders.findMany({
-      orderBy: [asc(aiProviders.sort)],
-      where: and(
-        or(
-          eq(aiProviders.source, 'builtin'),
-          and(eq(aiProviders.source, 'custom'), eq(aiProviders.userId, ctx.userId)),
-        ),
-      ),
-      with: {
-        models: {
-          orderBy: [asc(aiModels.sort)],
-        },
-      },
-    });
+    // Use direct select queries instead of query builder to avoid relation issues
+    const providers = await ctx.serverDB
+      .select()
+      .from(aiProviders)
+      .where(eq(aiProviders.source, 'builtin'))
+      .orderBy(asc(aiProviders.sort));
 
     // Decrypt keyVaults if available
     const { KeyVaultsGateKeeper } = await import('@/server/modules/KeyVaultsEncrypt');
     const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
 
-    return {
-      providers: await Promise.all(
-        providers.map(async (provider) => {
-          let decryptedKeyVaults = {};
-          if (provider.keyVaults) {
-            try {
-              const { plaintext, wasAuthentic } = await gateKeeper.decrypt(provider.keyVaults);
-              if (wasAuthentic) {
-                decryptedKeyVaults = JSON.parse(plaintext);
-              }
-            } catch (error) {
-              console.error('Failed to decrypt keyVaults for provider:', provider.id, error);
-            }
-          }
+    // Get models for each provider
+    const providersWithModels = await Promise.all(
+      providers.map(async (provider) => {
+        // Get models for this provider using direct select
+        const models = await ctx.serverDB
+          .select()
+          .from(aiModels)
+          .where(and(eq(aiModels.providerId, provider.id), eq(aiModels.source, 'builtin')))
+          .orderBy(asc(aiModels.sort));
 
-          return {
-            id: provider.id,
-            name: provider.name || provider.id,
-            logo: provider.logo,
-            enabled: provider.enabled,
-            keyVaults: decryptedKeyVaults,
-            settings: provider.settings || {},
-            models: provider.models.map((model) => ({
-              id: model.id,
-              displayName: model.displayName || model.id,
-              enabled: model.enabled,
-              type: model.type,
-              contextWindow: model.contextWindowTokens,
-            })),
-          };
-        }),
-      ),
+        let decryptedKeyVaults = {};
+        if (provider.keyVaults) {
+          try {
+            const { plaintext, wasAuthentic } = await gateKeeper.decrypt(provider.keyVaults);
+            if (wasAuthentic) {
+              decryptedKeyVaults = JSON.parse(plaintext);
+            }
+          } catch (error) {
+            console.error('Failed to decrypt keyVaults for provider:', provider.id, error);
+          }
+        }
+
+        return {
+          id: provider.id,
+          name: provider.name || provider.id,
+          logo: provider.logo,
+          enabled: provider.enabled,
+          keyVaults: decryptedKeyVaults,
+          settings: provider.settings || {},
+          models: models.map((model) => ({
+            id: model.id,
+            displayName: model.displayName || model.id,
+            enabled: model.enabled ?? false,
+            type: model.type,
+            contextWindow: model.contextWindowTokens ?? undefined,
+          })),
+        };
+      }),
+    );
+
+    return {
+      providers: providersWithModels,
     };
   }),
 

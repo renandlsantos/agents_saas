@@ -87,22 +87,23 @@ export const captureMessage = (
 };
 
 /**
- * Start a Sentry transaction for performance monitoring
+ * Start a Sentry span for performance monitoring
  */
-export const startTransaction = (
-  name: string,
-  op: string,
-  description?: string,
-): ReturnType<typeof Sentry.startTransaction> | undefined => {
+export const startSpan = (name: string, op: string, description?: string): void => {
   if (!process.env.NEXT_PUBLIC_SENTRY_DSN) {
-    return undefined;
+    return;
   }
 
-  return Sentry.startTransaction({
-    name,
-    op,
-    description,
-  });
+  Sentry.startSpan(
+    {
+      name,
+      op,
+      attributes: description ? { description } : undefined,
+    },
+    () => {
+      // Span callback - the span will be automatically finished
+    },
+  );
 };
 
 /**
@@ -125,24 +126,28 @@ export function withSentryAPI<T extends (...args: any[]) => any>(
   operationName: string,
 ): T {
   return (async (...args: Parameters<T>) => {
-    const transaction = startTransaction(operationName, 'http.server');
-
-    try {
-      const result = await handler(...args);
-      transaction?.setHttpStatus(200);
-      return result;
-    } catch (error) {
-      transaction?.setHttpStatus(500);
-      captureException(error, {
-        operation: operationName,
-        tags: {
-          type: 'api',
-        },
-      });
-      throw error;
-    } finally {
-      transaction?.finish();
-    }
+    return Sentry.startSpan(
+      {
+        name: operationName,
+        op: 'http.server',
+      },
+      async (span) => {
+        try {
+          const result = await handler(...args);
+          span?.setStatus({ code: 1, message: 'ok' });
+          return result;
+        } catch (error) {
+          span?.setStatus({ code: 2, message: 'internal_error' });
+          captureException(error, {
+            operation: operationName,
+            tags: {
+              type: 'api',
+            },
+          });
+          throw error;
+        }
+      },
+    );
   }) as T;
 }
 

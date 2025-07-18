@@ -47,7 +47,10 @@ export class SessionModel {
       offset,
       orderBy: [desc(sessions.updatedAt)],
       where: and(eq(sessions.userId, this.userId), not(eq(sessions.slug, INBOX_SESSION_ID))),
-      with: { agentsToSessions: { columns: {}, with: { agent: true } }, group: true },
+      with: {
+        agentsToSessions: { columns: { category: true }, with: { agent: true } },
+        group: true,
+      },
     });
   };
 
@@ -84,7 +87,10 @@ export class SessionModel {
         or(eq(sessions.id, idOrSlug), eq(sessions.slug, idOrSlug)),
         eq(sessions.userId, this.userId),
       ),
-      with: { agentsToSessions: { columns: {}, with: { agent: true } }, group: true },
+      with: {
+        agentsToSessions: { columns: { category: true }, with: { agent: true } },
+        group: true,
+      },
     });
 
     if (!result) return;
@@ -462,7 +468,7 @@ export class SessionModel {
           ),
         ),
       ),
-      with: { agentsToSessions: { columns: {}, with: { session: true } } },
+      with: { agentsToSessions: { columns: { category: true }, with: { session: true } } },
     });
     try {
       // @ts-expect-error

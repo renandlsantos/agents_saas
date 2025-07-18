@@ -5,6 +5,16 @@
 # ============================================================================
 # Script para configurar o ambiente completo do painel administrativo
 # Utiliza a infraestrutura existente do projeto
+# 
+# RECENT UPDATES (2025-07-18):
+# - Fixed S3/MinIO configuration with correct bucket name (agents-chat)
+# - Added S3_ENABLE_PATH_STYLE and MINIO_LOBE_BUCKET variables
+# - Fixed admin/models endpoint 500 error (Drizzle ORM relations issue)
+# - Added CORS configuration for MinIO
+# - Improved memory management for builds
+# - Added automatic db:generate before builds
+# - Enhanced admin user creation with SQL approach
+# - Fixed missing database columns (category, group_id, etc)
 # ============================================================================
 
 set -e  # Exit on error
@@ -432,9 +442,12 @@ update_env "NEXT_PUBLIC_ENABLE_NEXT_AUTH" "1"
 update_env "S3_ENDPOINT" "http://agents-chat-minio:9000"
 update_env "S3_ACCESS_KEY_ID" "minioadmin"
 update_env "S3_SECRET_ACCESS_KEY" "${MINIO_PASSWORD}"
-update_env "S3_BUCKET" "lobe"
+update_env "S3_BUCKET" "agents-chat"
+update_env "MINIO_LOBE_BUCKET" "agents-chat"
 update_env "S3_REGION" "us-east-1"
+update_env "S3_ENABLE_PATH_STYLE" "1"
 update_env "S3_FORCE_PATH_STYLE" "true"
+update_env "S3_PUBLIC_DOMAIN" "http://${EXTERNAL_HOST}:9000"
 update_env "MINIO_ROOT_USER" "minioadmin"
 update_env "MINIO_ROOT_PASSWORD" "${MINIO_PASSWORD}"
 
@@ -594,7 +607,19 @@ if docker ps | grep -q minio; then
             docker run --rm --network host \
                 minio/mc alias set myminio http://localhost:9000 minioadmin ${MINIO_PASSWORD} && \
                 docker run --rm --network host \
-                minio/mc mb myminio/lobe --ignore-existing
+                minio/mc mb myminio/agents-chat --ignore-existing && \
+                docker run --rm --network host \
+                minio/mc policy set public myminio/agents-chat
+            
+            # Configure CORS for MinIO
+            log "Configurando CORS para MinIO..."
+            if [ -f scripts/configure-minio-cors.js ]; then
+                # Update the script with the current password
+                sed -i.bak "s|secretAccessKey: '.*'|secretAccessKey: '${MINIO_PASSWORD}'|" scripts/configure-minio-cors.js
+                node scripts/configure-minio-cors.js || warn "Falha ao configurar CORS do MinIO"
+            else
+                warn "Script de configuração CORS não encontrado"
+            fi
             break
         fi
         echo -n "."
@@ -774,6 +799,7 @@ SELECT safe_add_column('sessions', 'pinned', 'BOOLEAN DEFAULT false');
 SELECT safe_add_column('agents', 'category', 'VARCHAR(255) DEFAULT ''general''');
 SELECT safe_add_column('agents', 'is_domain', 'BOOLEAN DEFAULT false');
 SELECT safe_add_column('agents', 'sort', 'INTEGER DEFAULT 0');
+SELECT safe_add_column('agents_to_sessions', 'category', 'VARCHAR(255)');
 
 -- Drop the temporary function
 DROP FUNCTION IF EXISTS safe_add_column;
@@ -940,6 +966,13 @@ if [ "$REBUILD_ONLY" = "true" ] || [ "$FORCE_BUILD" = "true" ]; then
     
     # Skip postbuild migration since we handle it separately
     export SKIP_BUILD_MIGRATION=1
+    
+    # Clean next cache to avoid memory issues
+    export NEXT_PRIVATE_STANDALONE=true
+    
+    # Fix for admin/models endpoint - ensure db:generate is run before build
+    log "Regenerando esquema do banco antes do build..."
+    pnpm db:generate
 
     # Clear any previous build cache
     rm -rf .next/cache 2>/dev/null || true
@@ -947,6 +980,11 @@ if [ "$REBUILD_ONLY" = "true" ] || [ "$FORCE_BUILD" = "true" ]; then
     pnpm build
 
     success "Build concluído!"
+    
+    # Build Docker image
+    log "🐳 Construindo imagem Docker..."
+    docker-compose build app
+    success "Imagem Docker construída!"
 else
     # Check if .next directory exists
     if [ -d ".next" ]; then
@@ -989,6 +1027,13 @@ else
         
         # Skip postbuild migration since we handle it separately
         export SKIP_BUILD_MIGRATION=1
+        
+        # Clean next cache to avoid memory issues
+        export NEXT_PRIVATE_STANDALONE=true
+        
+        # Fix for admin/models endpoint - ensure db:generate is run before build
+        log "Regenerando esquema do banco antes do build..."
+        pnpm db:generate
 
         # Clear any previous build cache
         rm -rf .next/cache 2>/dev/null || true
@@ -996,6 +1041,11 @@ else
         pnpm build
 
         success "Build concluído!"
+        
+        # Build Docker image
+        log "🐳 Construindo imagem Docker..."
+        docker-compose build app
+        success "Imagem Docker construída!"
     fi
 fi
 
@@ -1028,12 +1078,15 @@ cat > start-admin-prod.sh << 'EOF'
 #!/bin/bash
 echo "🚀 Iniciando ambiente de produção com Admin Panel..."
 
+# Build Docker image
+echo "🐳 Building Docker image..."
+docker-compose build app
+
 # Garantir que os serviços estão rodando
 docker-compose up -d
 
 # Iniciar servidor de produção
 echo "Admin Panel disponível em: http://localhost:3210/admin"
-pnpm start
 EOF
 
 chmod +x start-admin-prod.sh
@@ -1175,6 +1228,37 @@ if [ "$REBUILD_ONLY" = "true" ]; then
     echo ""
     exit 0
 fi
+
+# ============================================================================
+# 12. DEPLOY FINAL - INICIAR APLICAÇÃO PRINCIPAL
+# ============================================================================
+log "🚀 Iniciando aplicação principal..."
+
+# Ensure docker-compose.yml has S3_ENABLE_PATH_STYLE variable
+if ! grep -q "S3_ENABLE_PATH_STYLE" docker-compose.yml; then
+    log "Adicionando S3_ENABLE_PATH_STYLE ao docker-compose.yml..."
+    sed -i '/S3_PUBLIC_DOMAIN/a\      - S3_ENABLE_PATH_STYLE=${S3_ENABLE_PATH_STYLE:-1}' docker-compose.yml
+fi
+
+# Garantir que todos os serviços estão rodando
+docker-compose up -d
+
+# Aguardar aplicação iniciar
+log "Aguardando aplicação iniciar (pode levar alguns minutos)..."
+for i in {1..60}; do
+    if curl -f http://localhost:3210/api/health >/dev/null 2>&1; then
+        success "Aplicação iniciada com sucesso!"
+        break
+    fi
+    if [ $i -eq 60 ]; then
+        error "Timeout aguardando aplicação iniciar"
+        echo "Verifique os logs com: docker logs agents-chat"
+        exit 1
+    fi
+    echo -n "."
+    sleep 5
+done
+echo ""
 
 log "🔍 Verificando status dos serviços..."
 

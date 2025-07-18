@@ -22,10 +22,7 @@ if (!!process.env.NEXT_PUBLIC_SENTRY_DSN && typeof window !== 'undefined') {
           maskAllText: true,
         }),
         // Browser Tracing for performance monitoring
-        Sentry.browserTracingIntegration({
-          // Set `tracePropagationTargets` to control for which URLs distributed tracing should be enabled
-          tracePropagationTargets: ['localhost', /^https:\/\/yourserver\.io\/api/],
-        }),
+        Sentry.browserTracingIntegration(),
       ],
 
       // Performance Monitoring
@@ -34,6 +31,9 @@ if (!!process.env.NEXT_PUBLIC_SENTRY_DSN && typeof window !== 'undefined') {
         : process.env.NODE_ENV === 'production'
           ? 0.1
           : 1,
+
+      // Set `tracePropagationTargets` to control for which URLs distributed tracing should be enabled
+      tracePropagationTargets: ['localhost', /^https:\/\/yourserver\.io\/api/],
 
       // Session Replay
       replaysOnErrorSampleRate: 1,
