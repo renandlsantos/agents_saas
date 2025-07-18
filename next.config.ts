@@ -252,10 +252,18 @@ const nextConfig: NextConfig = {
     config.externals.push('pino-pretty');
 
     // Configure aliases to use stubs in web/Edge Runtime environments
-    if (!isDesktop) {
-      const stubsDir = path.resolve(__dirname, './src/server/modules/stubs');
+    const stubsDir = path.resolve(__dirname, './src/server/modules/stubs');
 
-      config.resolve = config.resolve || {};
+    config.resolve = config.resolve || {};
+    config.resolve.alias = config.resolve.alias || {};
+
+    // Always apply fs-related stubs for client-side builds
+    config.resolve.alias['node:fs'] = path.join(stubsDir, 'fs.ts');
+
+    // Also apply the electron database stub globally to prevent webpack processing
+    config.resolve.alias['@/database/core/electron'] = path.join(stubsDir, 'database-electron.ts');
+
+    if (!isDesktop) {
       config.resolve.alias = {
         ...config.resolve.alias,
         // Replace desktop package.json
@@ -268,7 +276,6 @@ const nextConfig: NextConfig = {
         '@lobechat/electron-server-ipc': path.join(stubsDir, 'electron-server-ipc.ts'),
         'electron': path.join(stubsDir, 'electron.ts'),
         'fs': path.join(stubsDir, 'fs.ts'),
-        'node:fs': path.join(stubsDir, 'fs.ts'),
         'node:net': path.join(stubsDir, 'net.ts'),
         'net': path.join(stubsDir, 'net.ts'),
         'node:os': path.join(stubsDir, 'os.ts'),
@@ -300,6 +307,12 @@ const nextConfig: NextConfig = {
 
     config.resolve.alias.canvas = false;
 
+    // Ensure pdfjs-dist can find our polyfills
+    config.resolve.alias['@napi-rs/canvas'] = path.join(
+      __dirname,
+      'src/server/polyfills/canvas.ts',
+    );
+
     // to ignore epub2 compile error
     // refs: https://github.com/lobehub/lobe-chat/discussions/6769
     config.resolve.fallback = {
@@ -324,6 +337,7 @@ const withPWA =
         register: false,
         swDest: 'public/sw.js',
         swSrc: 'src/app/sw.ts',
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB to include WASM files
       })
     : noWrapper;
 
@@ -331,44 +345,39 @@ const hasSentry = !!process.env.NEXT_PUBLIC_SENTRY_DSN;
 const withSentry =
   isProd && hasSentry
     ? (c: NextConfig) =>
-        withSentryConfig(
-          c,
-          {
-            org: process.env.SENTRY_ORG,
+        withSentryConfig(c, {
+          // For all available options, see:
+          // https://github.com/getsentry/sentry-webpack-plugin#options
 
-            project: process.env.SENTRY_PROJECT,
-            // For all available options, see:
-            // https://github.com/getsentry/sentry-webpack-plugin#options
-            // Suppresses source map uploading logs during build
-            silent: true,
+          org: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+
+          // Only print logs for uploading source maps in CI
+          silent: !process.env.CI,
+
+          // For all available options, see:
+          // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+
+          // Upload a larger set of source maps for prettier stack traces (increases build time)
+          widenClientFileUpload: true,
+
+          // Routes browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+          // This can increase your server load as well as your hosting bill.
+          // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
+          // side errors will fail.
+          tunnelRoute: '/monitoring',
+
+          // Disable source map uploading if you want to keep them private
+          sourcemaps: {
+            disable: false,
           },
-          {
-            // Enables automatic instrumentation of Vercel Cron Monitors.
-            // See the following for more information:
-            // https://docs.sentry.io/product/crons/
-            // https://vercel.com/docs/cron-jobs
-            automaticVercelMonitors: true,
 
-            // Automatically tree-shake Sentry logger statements to reduce bundle size
-            disableLogger: true,
+          // Automatically tree-shake Sentry logger statements to reduce bundle size
+          disableLogger: true,
 
-            // Hides source maps from generated client bundles
-            hideSourceMaps: true,
-
-            // Transpiles SDK to be compatible with IE11 (increases bundle size)
-            transpileClientSDK: true,
-
-            // Routes browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers. (increases server load)
-            // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-            // side errors will fail.
-            tunnelRoute: '/monitoring',
-
-            // For all available options, see:
-            // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-            // Upload a larger set of source maps for prettier stack traces (increases build time)
-            widenClientFileUpload: true,
-          },
-        )
+          // Uncomment the line below to enable spotlight (https://spotlightjs.com)
+          // spotlight: process.env.NODE_ENV === 'development',
+        })
     : noWrapper;
 
 export default withBundleAnalyzer(withPWA(withSentry(nextConfig) as NextConfig));

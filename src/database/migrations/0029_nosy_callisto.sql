@@ -1,0 +1,1 @@
+ALTER TABLE "agents_to_sessions" ADD COLUMN "category" varchar(255);

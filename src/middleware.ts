@@ -44,6 +44,8 @@ export const config = {
     '/me(.*)',
     '/documentation',
     '/documentation(.*)',
+    '/admin',
+    '/admin(.*)',
 
     '/login(.*)',
     '/signup(.*)',
@@ -96,9 +98,12 @@ const defaultMiddleware = (request: NextRequest) => {
   const url = new URL(request.url);
   logDefault('Processing request: %s %s', request.method, request.url);
 
-  // skip all api requests
-  if (backendApiEndpoints.some((path) => url.pathname.startsWith(path))) {
-    logDefault('Skipping API request: %s', url.pathname);
+  // skip all api requests and admin routes
+  if (
+    backendApiEndpoints.some((path) => url.pathname.startsWith(path)) ||
+    url.pathname.startsWith('/admin')
+  ) {
+    logDefault('Skipping API/Admin request: %s', url.pathname);
     return NextResponse.next();
   }
 
@@ -176,6 +181,8 @@ const isProtectedRoute = createRouteMatcher([
   '/files(.*)',
   '/onboard(.*)',
   '/oauth(.*)',
+  '/admin',
+  '/admin(.*)',
   // ↓ cloud ↓
 ]);
 

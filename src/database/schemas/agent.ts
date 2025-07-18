@@ -1,6 +1,7 @@
 /* eslint-disable sort-keys-fix/sort-keys-fix  */
 import {
   boolean,
+  integer,
   jsonb,
   pgTable,
   primaryKey,
@@ -56,6 +57,15 @@ export const agents = pgTable(
 
     openingMessage: text('opening_message'),
     openingQuestions: text('opening_questions').array().default([]),
+
+    // Category for organizing agents in discover page
+    category: varchar('category', { length: 50 }),
+
+    // Flag to indicate if this is a domain/admin created agent visible to all users
+    isDomain: boolean('is_domain').default(false),
+
+    // Sort order for domain agents
+    sort: integer('sort').default(0),
 
     ...timestamps,
   },

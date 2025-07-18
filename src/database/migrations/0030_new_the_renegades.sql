@@ -1,0 +1,1 @@
+ALTER TABLE "agents" ADD COLUMN "sort" integer DEFAULT 0;

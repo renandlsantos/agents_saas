@@ -13,11 +13,19 @@ const provider = {
   provider: Credentials({
     async authorize(credentials) {
       try {
+        console.log('[Credentials Provider] Starting authentication process');
+
+        // Validate input credentials
         const validatedCredentials = credentialsSchema.parse(credentials);
+        console.log(
+          '[Credentials Provider] Credentials validated for email:',
+          validatedCredentials.email,
+        );
 
         // Dynamic import to avoid circular dependencies
         const { serverDB } = await import('@/database/server');
         const { users } = await import('@/database/schemas');
+        console.log('[Credentials Provider] Database imported successfully');
 
         // Find user by email
         const user = await serverDB.query.users.findFirst({
@@ -25,11 +33,18 @@ const provider = {
         });
 
         if (!user) {
+          console.log(
+            '[Credentials Provider] User not found for email:',
+            validatedCredentials.email,
+          );
           throw new Error('Invalid credentials');
         }
 
+        console.log('[Credentials Provider] User found:', { id: user.id, email: user.email });
+
         // Check if user has a password (for users created via SSO)
         if (!user.password) {
+          console.log('[Credentials Provider] User has no password, likely SSO user');
           throw new Error('Please sign in with your SSO provider');
         }
 
@@ -37,8 +52,11 @@ const provider = {
         const isPasswordValid = await bcrypt.compare(validatedCredentials.password, user.password);
 
         if (!isPasswordValid) {
+          console.log('[Credentials Provider] Invalid password for user:', user.email);
           throw new Error('Invalid credentials');
         }
+
+        console.log('[Credentials Provider] Authentication successful for user:', user.email);
 
         // Return user object for session
         return {
@@ -48,7 +66,14 @@ const provider = {
           name: user.fullName || user.username,
         };
       } catch (error) {
-        console.error('Authentication error:', error);
+        if (error instanceof z.ZodError) {
+          console.error('[Credentials Provider] Validation error:', error.errors);
+        } else {
+          console.error(
+            '[Credentials Provider] Authentication error:',
+            error instanceof Error ? error.message : String(error),
+          );
+        }
         return null;
       }
     },

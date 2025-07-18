@@ -514,5 +514,46 @@
     "bps": true,
     "folderMillis": 1749309388370,
     "hash": "39cea379f08ee4cb944875c0b67f7791387b508c2d47958bb4cd501ed1ef33eb"
+  },
+  {
+    "sql": ["ALTER TABLE \"users\" ADD COLUMN \"password\" text;"],
+    "bps": true,
+    "folderMillis": 1757494800000,
+    "hash": "7edcdb4befa5bbacd60e22d5d77ce1199063ecf9afbc14a7084ce76756670ef2"
+  },
+  {
+    "sql": [
+      "CREATE TABLE \"admin_logs\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"user_id\" text NOT NULL,\n\t\"action\" text NOT NULL,\n\t\"resource\" text NOT NULL,\n\t\"resource_id\" text,\n\t\"details\" jsonb,\n\t\"ip_address\" text,\n\t\"user_agent\" text,\n\t\"accessed_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);\n",
+      "\nCREATE TABLE \"admin_settings\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"key\" text NOT NULL,\n\t\"value\" jsonb NOT NULL,\n\t\"description\" text,\n\t\"accessed_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\tCONSTRAINT \"admin_settings_key_unique\" UNIQUE(\"key\")\n);\n",
+      "\nALTER TABLE \"users\" ADD COLUMN \"password\" text;",
+      "\nALTER TABLE \"users\" ADD COLUMN \"is_admin\" boolean DEFAULT false NOT NULL;",
+      "\nALTER TABLE \"admin_logs\" ADD CONSTRAINT \"admin_logs_user_id_users_id_fk\" FOREIGN KEY (\"user_id\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE cascade ON UPDATE no action;"
+    ],
+    "bps": true,
+    "folderMillis": 1752704102612,
+    "hash": "cb8fa3b1efc7fb03d94e8052291adc8819d649b6ae7f832706e0327d13cae7b8"
+  },
+  {
+    "sql": [
+      "ALTER TABLE \"agents\" ADD COLUMN \"category\" varchar(50);",
+      "\nALTER TABLE \"agents\" ADD COLUMN \"is_domain\" boolean DEFAULT false;",
+      "\nCREATE INDEX IF NOT EXISTS \"idx_agents_category\" ON \"agents\" USING btree (\"category\");",
+      "\nCREATE INDEX IF NOT EXISTS \"idx_agents_is_domain\" ON \"agents\" USING btree (\"is_domain\");"
+    ],
+    "bps": true,
+    "folderMillis": 1752767547805,
+    "hash": "c1a5619d8cd34b23091a59302d089bd9b6915742f18b0d3296cb307e97854c05"
+  },
+  {
+    "sql": ["ALTER TABLE \"agents_to_sessions\" ADD COLUMN \"category\" varchar(255);"],
+    "bps": true,
+    "folderMillis": 1752808346904,
+    "hash": "782a915a4587d4ab8b9e6fb583dec05cb5ba7a6aada05d32601d9e94438fc4ac"
+  },
+  {
+    "sql": ["ALTER TABLE \"agents\" ADD COLUMN \"sort\" integer DEFAULT 0;"],
+    "bps": true,
+    "folderMillis": 1752813833828,
+    "hash": "4147ba69fb2b86a9dd23645cd14e904d2848247f12dc628f162a697f959e5d19"
   }
 ]

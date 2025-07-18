@@ -3,6 +3,7 @@
  */
 import { publicProcedure, router } from '@/libs/trpc/lambda';
 
+import { adminRouter } from './admin';
 import { agentRouter } from './agent';
 import { aiModelRouter } from './aiModel';
 import { aiProviderRouter } from './aiProvider';
@@ -40,6 +41,7 @@ export const lambdaRouter = router({
   thread: threadRouter,
   topic: topicRouter,
   user: userRouter,
+  admin: adminRouter,
 });
 
 export type LambdaRouter = typeof lambdaRouter;

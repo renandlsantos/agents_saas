@@ -1,10 +1,5 @@
-// Polyfill DOMMatrix for pdfjs-dist in Node.js environment
-import { DOMMatrix } from '@napi-rs/canvas';
-
-if (typeof global.DOMMatrix === 'undefined') {
-  // @ts-ignore
-  global.DOMMatrix = DOMMatrix;
-}
+// Import and install DOMMatrix polyfill for pdfjs-dist in Node.js environment
+import '../src/polyfills/dom-matrix';
 
 // Polyfill URL.createObjectURL and URL.revokeObjectURL for pdfjs-dist
 if (typeof global.URL.createObjectURL === 'undefined') {

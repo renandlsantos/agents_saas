@@ -25,7 +25,7 @@ const isEdgeRuntime = () => {
 const isDesktopEnvironment = () => {
   // In Edge Runtime, always return false
   if (isEdgeRuntime()) return false;
-  
+
   // In Node.js runtime, check the environment variable
   return typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_IS_DESKTOP_APP === '1';
 };
@@ -42,13 +42,8 @@ export const getServerDB = async (): Promise<LobeChatDatabase> => {
     }
 
     // 根据环境选择合适的数据库实例
-    if (isDesktopEnvironment()) {
-      // 动态导入 electron 模块，避免在 Edge Runtime 中加载
-      const { getPgliteInstance } = await import('./electron');
-      cachedDB = await getPgliteInstance();
-    } else {
-      cachedDB = getDBInstance();
-    }
+    // For now, always use web server database to avoid webpack issues
+    cachedDB = getDBInstance();
     return cachedDB;
   } catch (error) {
     console.error('❌ Failed to initialize database:', error);

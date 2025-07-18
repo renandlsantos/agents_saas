@@ -14,6 +14,7 @@ import GlobalProvider from '@/layout/GlobalProvider';
 import { Locales } from '@/locales/resources';
 import { DynamicLayoutProps } from '@/types/next';
 import { RouteVariants } from '@/utils/server/routeVariants';
+import '../production-config';
 
 const inVercel = process.env.VERCEL === '1';
 

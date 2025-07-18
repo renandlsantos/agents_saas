@@ -59,8 +59,8 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     && corepack enable \
     # Use pnpm for corepack
     && corepack use $(sed -n 's/.*"packageManager": "\(.*\)".*/\1/p' package.json) \
-    # Install the dependencies incluindo workspace packages
-    && pnpm i --no-frozen-lockfile \
+    # Install the dependencies incluindo workspace packages (skip optional deps like @napi-rs/canvas)
+    && pnpm i --no-frozen-lockfile --no-optional \
     # Add db migration dependencies
     && mkdir -p /deps \
     && cd /deps \
@@ -69,6 +69,9 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 
 ## Builder image, build the app
 FROM deps AS builder
+
+# Note: We use polyfills for canvas-related APIs (DOMMatrix, ImageData, Path2D) 
+# instead of @napi-rs/canvas to avoid native dependency issues in Docker
 
 # Copiar todas as variáveis de ambiente necessárias
 ARG NEXT_PUBLIC_BASE_PATH
@@ -93,10 +96,14 @@ ENV NEXT_PUBLIC_SERVICE_MODE="${NEXT_PUBLIC_SERVICE_MODE:-server}" \
     DATABASE_URL="postgres://postgres:password@localhost:5432/postgres" \
     KEY_VAULTS_SECRET="use-for-build"
 
-# Sentry
-ENV NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
-    SENTRY_ORG="" \
-    SENTRY_PROJECT=""
+# Sentry (optional - leave blank to disable)
+# To enable Sentry, provide these values during build or runtime:
+# - NEXT_PUBLIC_SENTRY_DSN: Your Sentry DSN
+# - SENTRY_ORG: Your Sentry organization slug (only needed for source map upload)
+# - SENTRY_PROJECT: Your Sentry project name (only needed for source map upload)
+ENV NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN:-}" \
+    SENTRY_ORG="${SENTRY_ORG:-}" \
+    SENTRY_PROJECT="${SENTRY_PROJECT:-}"
 
 # Posthog
 ENV NEXT_PUBLIC_ANALYTICS_POSTHOG="${NEXT_PUBLIC_ANALYTICS_POSTHOG}" \

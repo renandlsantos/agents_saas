@@ -2,7 +2,6 @@ import NextAuth from 'next-auth';
 
 import { authEnv } from '@/config/auth';
 import { getServerDBConfig } from '@/config/db';
-import { serverDB } from '@/database/server';
 
 import { LobeNextAuthDbAdapter } from './adapter';
 import config from './auth.config';
@@ -13,11 +12,28 @@ const { NEXT_PUBLIC_ENABLED_SERVER_SERVICE } = getServerDBConfig();
 // Add credentials provider if it's configured
 const addCredentialsProvider = () => {
   if (!authEnv.NEXT_PUBLIC_ENABLE_NEXT_AUTH) return [];
-  
-  const hasCredentials = authEnv.NEXT_AUTH_SSO_PROVIDERS.split(/[,，]/)
-    .some((provider) => provider.trim() === 'credentials');
-    
+
+  const hasCredentials = authEnv.NEXT_AUTH_SSO_PROVIDERS.split(/[,，]/).some(
+    (provider) => provider.trim() === 'credentials',
+  );
+
   return hasCredentials ? [credentialsProvider.provider] : [];
+};
+
+// Initialize database adapter safely
+const getAdapter = () => {
+  if (!NEXT_PUBLIC_ENABLED_SERVER_SERVICE) return undefined;
+
+  try {
+    // Import serverDB only when needed
+    const { serverDB } = require('@/database/server');
+    return LobeNextAuthDbAdapter(serverDB);
+  } catch (error) {
+    console.error('Failed to initialize NextAuth database adapter:', error);
+    console.warn('Falling back to JWT-only mode without database adapter');
+    // Fallback to JWT-only mode if database connection fails
+    return undefined;
+  }
 };
 
 /**
@@ -38,7 +54,7 @@ const addCredentialsProvider = () => {
  */
 export default NextAuth({
   ...config,
-  adapter: NEXT_PUBLIC_ENABLED_SERVER_SERVICE ? LobeNextAuthDbAdapter(serverDB) : undefined,
+  adapter: getAdapter(),
   providers: [...config.providers, ...addCredentialsProvider()],
   session: {
     strategy: 'jwt',
