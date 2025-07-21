@@ -59,7 +59,7 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
   create_session: true,
   edit_agent: true,
 
-  plugins: true,
+  plugins: false,
   dalle: true,
 
   check_updates: true,
@@ -73,7 +73,7 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
 
   cloud_promotion: false,
 
-  market: true,
+  market: false,
   speech_to_text: true,
   changelog: true,
 

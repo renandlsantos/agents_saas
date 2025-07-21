@@ -39,21 +39,23 @@ export const useNav = () => {
         key: DiscoverTab.Assistants,
         label: t('tab.assistants'),
       },
-      {
-        icon: <Icon icon={Puzzle} size={ICON_SIZE} />,
-        key: DiscoverTab.Plugins,
-        label: t('tab.plugins'),
-      },
+      // Temporarily disabled plugins
+      // {
+      //   icon: <Icon icon={Puzzle} size={ICON_SIZE} />,
+      //   key: DiscoverTab.Plugins,
+      //   label: t('tab.plugins'),
+      // },
       {
         icon: <Icon icon={Brain} size={ICON_SIZE} />,
         key: DiscoverTab.Models,
         label: t('tab.models'),
       },
-      {
-        icon: <Icon icon={BrainCircuit} size={ICON_SIZE} />,
-        key: DiscoverTab.Providers,
-        label: t('tab.providers'),
-      },
+      // Temporarily disabled providers
+      // {
+      //   icon: <Icon icon={BrainCircuit} size={ICON_SIZE} />,
+      //   key: DiscoverTab.Providers,
+      //   label: t('tab.providers'),
+      // },
     ],
     [t],
   );

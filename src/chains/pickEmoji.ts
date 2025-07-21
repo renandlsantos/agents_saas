@@ -1,7 +1,7 @@
 import { ChatStreamPayload } from '@/types/openai/chat';
 
 /**
- * pick emoji for user prompt
+ * pick icon for user prompt (deprecated - returns empty string)
  * @param content
  */
 export const chainPickEmoji = (content: string): Partial<ChatStreamPayload> => ({
@@ -15,17 +15,17 @@ export const chainPickEmoji = (content: string): Partial<ChatStreamPayload> => (
       content: `输入: {你是一名文案大师，帮我为一些设计 / 艺术作品起名，名字需要有文学内涵，注重精炼和赋子意境，表达作品的情景氛国，使名称既简洁又富有诗意。}`,
       role: 'user',
     },
-    { content: '✒️', role: 'assistant' },
+    { content: '', role: 'assistant' },
     {
       content: `输入: {你是一名代码巫师，请将下面的代码转成 ts，不要修改实现。如果原本 js 中没有定义的全局变量，需要补充 declare 的类型声明。}`,
       role: 'user',
     },
-    { content: '🧙‍♂️', role: 'assistant' },
+    { content: '', role: 'assistant' },
     {
       content: `输入: {你是一名创业计划撰写专家，可以提供包括创意名称、简短的标语、目标用户画像、用户痛点、主要价值主张、销售/营销渠道、收入流、成本结构等计划生成。}`,
       role: 'user',
     },
-    { content: '🚀', role: 'assistant' },
+    { content: '', role: 'assistant' },
     { content: `输入: {${content}}`, role: 'user' },
   ],
 });

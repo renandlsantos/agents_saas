@@ -1,10 +1,13 @@
 'use client';
 
-import { Button, FluentEmoji } from '@lobehub/ui';
+import { Button } from '@lobehub/ui';
+import { Icon } from '@lobehub/ui';
+import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { memo, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Flexbox } from 'react-layout-kit';
+import { useTheme } from 'antd-style';
 
 import { MAX_WIDTH } from '@/const/layoutTokens';
 
@@ -17,6 +20,7 @@ interface ErrorCaptureProps {
 
 const ErrorCapture = memo<ErrorCaptureProps>(({ reset, error }) => {
   const { t } = useTranslation('error');
+  const theme = useTheme();
 
   useLayoutEffect(() => {
     sentryCaptureException(error);
@@ -37,7 +41,7 @@ const ErrorCapture = memo<ErrorCaptureProps>(({ reset, error }) => {
       >
         ERROR
       </h1>
-      <FluentEmoji emoji={'🤧'} size={64} />
+      <Icon icon={AlertCircle} size={64} color={theme.colorError} />
       <h2 style={{ fontWeight: 'bold', marginTop: '1em', textAlign: 'center' }}>
         {t('error.title')}
       </h2>

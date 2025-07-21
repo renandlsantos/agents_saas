@@ -47,9 +47,7 @@ const ConversationExample = memo<ConversationExampleProps>(({ data }) => {
           <ChatList
             data={[
               {
-                content: [t('assistants.conversation.l1', { name: data.meta.title }), '😎😋'].join(
-                  ' ',
-                ),
+                content: t('assistants.conversation.l1', { name: data.meta.title }),
                 createAt: 1_686_437_950_084,
                 id: '1',
                 meta: {
@@ -71,7 +69,7 @@ const ConversationExample = memo<ConversationExampleProps>(({ data }) => {
                 updateAt: 1_686_437_950_084,
               },
               {
-                content: [t('assistants.conversation.l3'), '👇✨'].join(' '),
+                content: t('assistants.conversation.l3'),
                 createAt: 1_686_437_950_084,
                 id: '3',
                 meta: {
