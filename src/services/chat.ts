@@ -517,6 +517,9 @@ class ChatService {
     },
     options?: FetchOptions,
   ): OpenAIChatMessage[] => {
+    // Get the agent's system role to include personalized instructions
+    const agentConfig = agentChatConfigSelectors.current(getAgentStoreState());
+    const agentSystemRole = agentConfig?.systemRole;
     // handle content type for vision model
     // for the models with visual ability, add image url to content
     // refs: https://platform.openai.com/docs/guides/vision/quick-start
@@ -634,17 +637,20 @@ class ChatService {
         welcome: inboxGuideSystemRole as string,
       });
 
-      if (!injectSystemRoles) return;
+      // Combine agent system role (personalized instructions) with injected system roles
+      const allSystemRoles = [agentSystemRole, injectSystemRoles].filter(Boolean).join('\n\n');
+
+      if (!allSystemRoles) return;
 
       const systemMessage = draft.find((i) => i.role === 'system');
 
       if (systemMessage) {
-        systemMessage.content = [systemMessage.content, injectSystemRoles]
+        systemMessage.content = [systemMessage.content, allSystemRoles]
           .filter(Boolean)
           .join('\n\n');
       } else {
         draft.unshift({
-          content: injectSystemRoles,
+          content: allSystemRoles,
           role: 'system',
         });
       }
