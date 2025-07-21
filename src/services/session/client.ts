@@ -4,7 +4,10 @@ import { SessionModel } from '@/database/models/session';
 import { SessionGroupModel } from '@/database/models/sessionGroup';
 import { AgentItem } from '@/database/schemas';
 import { BaseClientService } from '@/services/baseClientService';
+import { useUserStore } from '@/store/user';
+import { settingsSelectors } from '@/store/user/selectors';
 import { LobeAgentConfig } from '@/types/agent';
+import { merge } from '@/utils/merge';
 
 import { ISessionService } from './type';
 
@@ -57,10 +60,17 @@ export class ClientService extends BaseClientService implements ISessionService 
 
       // if there is no session for user, create one
       if (!item) {
-        const defaultAgentConfig =
+        // First get server default config
+        const serverDefaultConfig =
           window.global_serverConfigStore.getState().serverConfig.defaultAgent?.config || {};
+        
+        // Then get user's personalized default agent settings from user store
+        const userDefaultAgent = settingsSelectors.defaultAgent(useUserStore.getState());
+        
+        // Merge configs - user settings take precedence
+        const finalConfig = userDefaultAgent ? merge(serverDefaultConfig, userDefaultAgent) : serverDefaultConfig;
 
-        await this.sessionModel.createInbox(defaultAgentConfig);
+        await this.sessionModel.createInbox(finalConfig);
       }
     }
 
