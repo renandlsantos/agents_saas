@@ -127,10 +127,16 @@ docker-compose logs -f
 - No emojis in system (professional UI)
 - Plugins/providers temporarily disabled
 - Admin agent access control implemented
+- Domain agents cannot be edited by regular users
 
 ### 3. **Clean URLs**
 - Removed URL variants (pt-BR__0__dark)
 - Clean paths: `/login`, `/chat`, `/admin`
+
+### 4. **Default Assistant Settings**
+- Hidden tabs: Character config, Model config, Voice service
+- Only Chat preferences remain visible
+- Professional token icon replaces emoji in chat
 
 ## Testing Guidelines
 

@@ -1,12 +1,13 @@
 import { Icon } from '@lobehub/ui';
 import { Divider, Popover } from 'antd';
 import { useTheme } from 'antd-style';
-import { BadgeCent, CoinsIcon } from 'lucide-react';
+import { BadgeCent } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Center, Flexbox } from 'react-layout-kit';
 
 import InfoTooltip from '@/components/InfoTooltip';
+import TokenIcon from '@/components/TokenIcon';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -205,7 +206,7 @@ const TokenDetail = memo<TokenDetailProps>(({ meta, model, provider }) => {
       trigger={['hover', 'click']}
     >
       <Center gap={2} horizontal style={{ cursor: 'default' }}>
-        <Icon icon={isShowCredit ? BadgeCent : CoinsIcon} />
+        <Icon icon={isShowCredit ? BadgeCent : TokenIcon} />
         {displayTotal}
       </Center>
     </Popover>

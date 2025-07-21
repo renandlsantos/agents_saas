@@ -10,10 +10,10 @@ export class ServerService implements ISessionService {
   };
 
   createSession: ISessionService['createSession'] = async (type, data) => {
-    const { config, group, meta, ...session } = data;
+    const { config, group, meta, isDomain, ...session } = data;
     return lambdaClient.session.createSession.mutate({
       config: { ...config, ...meta } as any,
-      session: { ...session, groupId: group },
+      session: { ...session, groupId: group, isDomain },
       type,
     });
   };

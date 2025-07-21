@@ -29,27 +29,27 @@ export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
           key: ChatSettingsTabs.Meta,
           label: t('agentTab.meta'),
         },
-        {
+        !isInbox && {
           icon: <Icon icon={Bot} size={iconSize} />,
           key: ChatSettingsTabs.Prompt,
           label: t('agentTab.prompt'),
         },
-        (!isInbox && {
+        !isInbox && {
           icon: <Icon icon={Handshake} size={iconSize} />,
           key: ChatSettingsTabs.Opening,
           label: t('agentTab.opening'),
-        }) as MenuItemType,
+        },
         {
           icon: <Icon icon={MessagesSquare} size={iconSize} />,
           key: ChatSettingsTabs.Chat,
           label: t('agentTab.chat'),
         },
-        {
+        !isInbox && {
           icon: <Icon icon={BrainCog} size={iconSize} />,
           key: ChatSettingsTabs.Modal,
           label: t('agentTab.modal'),
         },
-        {
+        !isInbox && {
           icon: <Icon icon={Mic2} size={iconSize} />,
           key: ChatSettingsTabs.TTS,
           label: t('agentTab.tts'),
