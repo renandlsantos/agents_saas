@@ -31,12 +31,15 @@ interface TokenCountProps {
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
 }
 
+const MILLION = 1000000;
+const THOUSAND = 1000;
+
 const defaultFormatCount = (count: number): string => {
-  if (count >= 1000000) {
-    return `${(count / 1000000).toFixed(1)}M`;
+  if (count >= MILLION) {
+    return `${(count / MILLION).toFixed(1)}M`;
   }
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}K`;
+  if (count >= THOUSAND) {
+    return `${(count / THOUSAND).toFixed(1)}K`;
   }
   return count.toLocaleString();
 };
