@@ -202,6 +202,11 @@ docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTE
 - Use nullish coalescing (`??`) to convert: `value ?? undefined`
 - Common with `isDomain` and other optional boolean fields
 
+### ESLint Issues
+- `unicorn/numeric-separators-style` - Use constants or disable per line
+- For large numbers like 1000000, use: `// eslint-disable-next-line unicorn/numeric-separators-style`
+- Alternative: Define constants like `const MILLION = 1000000`
+
 ## Important Reminders
 
 - Always prefer editing existing files over creating new ones

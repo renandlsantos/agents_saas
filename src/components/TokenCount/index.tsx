@@ -31,7 +31,9 @@ interface TokenCountProps {
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
 }
 
+// eslint-disable-next-line unicorn/numeric-separators-style
 const MILLION = 1000000;
+// eslint-disable-next-line unicorn/numeric-separators-style
 const THOUSAND = 1000;
 
 const defaultFormatCount = (count: number): string => {
