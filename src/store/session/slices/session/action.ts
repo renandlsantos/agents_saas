@@ -109,7 +109,11 @@ export const createSessionSlice: StateCreator<
       settingsSelectors.defaultAgent(useUserStore.getState()),
     );
 
+    // Preserve isDomain field from agent parameter
     const newSession: LobeAgentSession = merge(defaultAgent, agent);
+    if (agent?.isDomain !== undefined) {
+      newSession.isDomain = agent.isDomain;
+    }
 
     const id = await sessionService.createSession(LobeSessionType.Agent, newSession);
     await refreshSessions();

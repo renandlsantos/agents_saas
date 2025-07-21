@@ -40,7 +40,7 @@ const SettingButton = memo<{ mobile?: boolean }>(({ mobile }) => {
   if (!isAgentEditable || !currentSession) return null;
   
   const isOwnAgent = currentSession.userId === currentUserId;
-  const isDomainAgent = currentSession.isDomain || false;
+  const isDomainAgent = currentSession.isDomain === true;
   
   // Only show settings for:
   // 1. Admin users (can edit everything)

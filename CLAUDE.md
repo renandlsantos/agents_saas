@@ -134,8 +134,9 @@ docker-compose logs -f
 - Clean paths: `/login`, `/chat`, `/admin`
 
 ### 4. **Default Assistant Settings**
-- Hidden tabs: Character config, Model config, Voice service
-- Only Chat preferences remain visible
+- All users can configure personalized instructions
+- Available tabs: Prompt, Opening, Chat preferences
+- Hidden tabs: Model config, Voice service (to simplify UI)
 - Professional token icon replaces emoji in chat
 
 ## Testing Guidelines

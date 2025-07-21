@@ -29,12 +29,12 @@ export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
           key: ChatSettingsTabs.Meta,
           label: t('agentTab.meta'),
         },
-        !isInbox && {
+        {
           icon: <Icon icon={Bot} size={iconSize} />,
           key: ChatSettingsTabs.Prompt,
           label: t('agentTab.prompt'),
         },
-        !isInbox && {
+        {
           icon: <Icon icon={Handshake} size={iconSize} />,
           key: ChatSettingsTabs.Opening,
           label: t('agentTab.opening'),

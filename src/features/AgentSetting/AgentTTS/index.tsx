@@ -42,7 +42,7 @@ const AgentTTS = memo(() => {
   const isAdmin = useUserStore(userProfileSelectors.isAdmin);
   
   // Check if this is a domain agent (published by admin)
-  const isDomainAgent = currentSession?.isDomain || false;
+  const isDomainAgent = currentSession?.isDomain === true;
   const isOwnAgent = currentSession?.userId === currentUserId;
   
   // User can edit TTS if:

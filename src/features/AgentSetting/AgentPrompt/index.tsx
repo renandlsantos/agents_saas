@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Flexbox } from 'react-layout-kit';
 
 import { FORM_STYLE } from '@/const/layoutTokens';
+import { INBOX_SESSION_ID } from '@/const/session';
 import Tokens from '@/features/AgentSetting/AgentPrompt/TokenTag';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { useSessionStore } from '@/store/session';
@@ -27,16 +28,19 @@ const AgentPrompt = memo(() => {
   const currentSession = useSessionStore(sessionSelectors.currentSession);
   const currentUserId = useUserStore(userProfileSelectors.userId);
   const isAdmin = useUserStore(userProfileSelectors.isAdmin);
+  const activeId = useSessionStore((s) => s.activeId);
+  const isInbox = activeId === INBOX_SESSION_ID;
   
   // Check if this is a domain agent (published by admin)
-  const isDomainAgent = currentSession?.isDomain || false;
-  const isOwnAgent = currentSession?.userId === currentUserId;
+  const isDomainAgent = currentSession?.isDomain === true;
+  const isOwnAgent = currentSession?.userId === currentUserId || isInbox;
   
   // User can view system role if:
   // 1. They are admin OR
-  // 2. It's their own agent and not a domain agent
-  const canViewSystemRole = isAdmin || (isOwnAgent && !isDomainAgent);
-  const canEditSystemRole = isAdmin || (isOwnAgent && !isDomainAgent);
+  // 2. It's their own agent and not a domain agent OR
+  // 3. It's the inbox (default assistant) settings
+  const canViewSystemRole = isAdmin || (isOwnAgent && !isDomainAgent) || isInbox;
+  const canEditSystemRole = isAdmin || (isOwnAgent && !isDomainAgent) || isInbox;
 
   const editButton = !editing && !!systemRole && canEditSystemRole && (
     <Button
