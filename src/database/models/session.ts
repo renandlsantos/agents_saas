@@ -194,7 +194,7 @@ export class SessionModel {
   }: {
     config?: Partial<NewAgent>;
     id?: string;
-    session?: Partial<NewSession>;
+    session?: Partial<NewSession> & { isDomain?: boolean };
     slug?: string;
     type: 'agent' | 'group';
   }): Promise<SessionItem> => {
@@ -207,10 +207,14 @@ export class SessionModel {
         if (existResult) return existResult;
       }
 
+      // Extract isDomain from session and put it in agent config
+      const { isDomain, ...sessionData } = session;
+      
       const newAgents = await trx
         .insert(agents)
         .values({
           ...config,
+          isDomain: isDomain ?? false,
           createdAt: new Date(),
           id: idGenerator('agents'),
           updatedAt: new Date(),
@@ -221,7 +225,7 @@ export class SessionModel {
       const result = await trx
         .insert(sessions)
         .values({
-          ...session,
+          ...sessionData,
           createdAt: new Date(),
           id,
           slug,
@@ -411,6 +415,11 @@ export class SessionModel {
       );
     }
 
+    // Check if this is a domain agent and user is not the owner
+    if (session.agent.isDomain && session.agent.userId !== this.userId) {
+      throw new Error('You do not have permission to modify this domain agent.');
+    }
+
     const mergedValue = merge(session.agent, data);
     return this.db
       .update(agents)
@@ -444,6 +453,8 @@ export class SessionModel {
         title: agent?.title ?? title ?? undefined,
       },
       model: agent?.model,
+      isDomain: agent?.isDomain ?? false,
+      userId: agent?.userId ?? res.userId,
     } as any;
   };
 

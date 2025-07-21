@@ -25,11 +25,12 @@ const ConversationExample = memo<ConversationExampleProps>(({ data }) => {
   const theme = useTheme();
   const isAdmin = useUserStore(userProfileSelectors.isAdmin);
   
-  // Check if this is an admin-published agent
-  const isAdminPublishedAgent = data.author === 'Agents SaaS';
+  // Check if this is a domain agent (published by admin)
+  // Note: DiscoverAssistantItem may not have isDomain field, so we check author as fallback
+  const isDomainAgent = (data as any).isDomain || data.author === 'Agents SaaS';
   
-  // Only admins can view system roles of admin-published agents
-  const canViewSystemRole = isAdmin || !isAdminPublishedAgent;
+  // Only admins can view system roles of domain agents
+  const canViewSystemRole = isAdmin || !isDomainAgent;
 
   return (
     <HighlightBlock

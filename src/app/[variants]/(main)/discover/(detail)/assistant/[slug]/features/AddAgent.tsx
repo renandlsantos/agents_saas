@@ -33,7 +33,11 @@ const AddAgent = memo<{ data: DiscoverAssistantItem; mobile?: boolean }>(({ data
     if (!data) return;
 
     setIsLoading(true);
-    const session = await createSession({ config: data.config, meta: data.meta });
+    const session = await createSession({ 
+      config: data.config, 
+      meta: data.meta,
+      isDomain: data.isDomain 
+    });
     setIsLoading(false);
     message.success(t('assistants.addAgentSuccess'));
     router.push(SESSION_CHAT_URL(session, mobile));
@@ -42,7 +46,11 @@ const AddAgent = memo<{ data: DiscoverAssistantItem; mobile?: boolean }>(({ data
   const handleAddAgent = async () => {
     if (!data) return;
     setIsLoading(true);
-    createSession({ config: data.config, meta: data.meta }, false);
+    createSession({ 
+      config: data.config, 
+      meta: data.meta,
+      isDomain: data.isDomain 
+    }, false);
     message.success(t('assistants.addAgentSuccess'));
     setIsLoading(false);
   };

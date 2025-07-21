@@ -64,6 +64,7 @@ export interface DiscoverAssistantItem extends LobeAgentSettings {
   examples?: ExampleTopic[];
   homepage: string;
   identifier: string;
+  isDomain?: boolean;
   meta: MetaData & {
     category?: AssistantCategory;
   };

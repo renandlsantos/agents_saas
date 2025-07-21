@@ -32,6 +32,7 @@ export class DomainAgentsService {
         createdAt: agent.createdAt.toISOString(),
         homepage: '/discover/assistant/' + (agent.slug || agent.id),
         identifier: agent.slug || agent.id,
+        isDomain: true,
         meta: {
           avatar: agent.avatar || '',
           category: (agent.category as AssistantCategory) || AssistantCategory.General,
@@ -120,6 +121,7 @@ export class DomainAgentsService {
         createdAt: agent.createdAt.toISOString(),
         homepage: '/discover/assistant/' + (agent.slug || agent.id),
         identifier: agent.slug || agent.id,
+        isDomain: true,
         meta: {
           avatar: agent.avatar || '',
           backgroundColor: agent.backgroundColor || undefined,
