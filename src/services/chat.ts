@@ -18,7 +18,7 @@ import {
 import { filesPrompts } from '@/prompts/files';
 import { BuiltinSystemRolePrompts } from '@/prompts/systemRole';
 import { getAgentStoreState } from '@/store/agent';
-import { agentChatConfigSelectors } from '@/store/agent/selectors';
+import { agentChatConfigSelectors, agentSelectors } from '@/store/agent/selectors';
 import { aiModelSelectors, aiProviderSelectors, getAiInfraStoreState } from '@/store/aiInfra';
 import { getSessionStoreState } from '@/store/session';
 import { sessionMetaSelectors } from '@/store/session/selectors';
@@ -518,8 +518,7 @@ class ChatService {
     options?: FetchOptions,
   ): OpenAIChatMessage[] => {
     // Get the agent's system role to include personalized instructions
-    const agentConfig = agentChatConfigSelectors.current(getAgentStoreState());
-    const agentSystemRole = agentConfig?.systemRole;
+    const agentSystemRole = agentSelectors.currentAgentSystemRole(getAgentStoreState());
     // handle content type for vision model
     // for the models with visual ability, add image url to content
     // refs: https://platform.openai.com/docs/guides/vision/quick-start
