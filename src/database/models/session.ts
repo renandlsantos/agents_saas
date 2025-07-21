@@ -281,7 +281,11 @@ export class SessionModel {
     const { id: _, slug: __, ...config } = agent;
 
     return this.create({
-      config: config,
+      config: {
+        ...config,
+        // Convert null to undefined for compatibility
+        isDomain: config.isDomain ?? undefined,
+      },
       id: sessionId,
       session: {
         ...session,

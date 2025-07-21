@@ -197,6 +197,11 @@ docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "CREATE EXTE
 ./setup-admin-environment.sh --rebuild
 ```
 
+### Type Issues
+- Database fields can be `null`, but TypeScript often expects `undefined`
+- Use nullish coalescing (`??`) to convert: `value ?? undefined`
+- Common with `isDomain` and other optional boolean fields
+
 ## Important Reminders
 
 - Always prefer editing existing files over creating new ones
