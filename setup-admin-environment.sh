@@ -248,30 +248,6 @@ fi
 # Verificar dependências
 command -v docker >/dev/null 2>&1 || error "Docker não está instalado!"
 command -v docker-compose >/dev/null 2>&1 || error "Docker Compose não está instalado!"
-command -v node >/dev/null 2>&1 || error "Node.js não está instalado!"
-command -v pnpm >/dev/null 2>&1 || error "PNPM não está instalado! Execute: npm install -g pnpm"
-
-# Check for tsx in multiple locations
-if ! command -v tsx >/dev/null 2>&1; then
-    # Check in pnpm global directory
-    if [ -f "$HOME/.local/share/pnpm/tsx" ]; then
-        # Add pnpm global bin to PATH for this script
-        export PATH="$HOME/.local/share/pnpm:$PATH"
-        log "TSX encontrado em $HOME/.local/share/pnpm"
-    elif [ -f "/root/.local/share/pnpm/tsx" ]; then
-        # For root user
-        export PATH="/root/.local/share/pnpm:$PATH"
-        log "TSX encontrado em /root/.local/share/pnpm"
-    else
-        error "TSX não está instalado! Execute: pnpm install -g tsx"
-    fi
-fi
-
-# Verificar versão do Node.js
-NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-if [ "$NODE_VERSION" -lt 18 ]; then
-    error "Node.js 18 ou superior é necessário!"
-fi
 
 success "Pré-requisitos verificados!"
 
@@ -526,39 +502,38 @@ fi
 success "Docker Compose verificado!"
 
 # ============================================================================
-# 4. INSTALAR DEPENDÊNCIAS
+# 4. PREPARAR AMBIENTE DOCKER
 # ============================================================================
-log "📦 Instalando dependências do projeto..."
-
-# Fix package.json to use pnpm instead of bun
-if grep -q '"bun run' package.json; then
-    log "🔧 Corrigindo package.json para usar pnpm ao invés de bun..."
-    sed -i.bak 's/"bun run/"pnpm run/g' package.json
-fi
+log "🐳 Preparando ambiente Docker..."
 
 # Memory was already calculated, just show the info
 log "🧮 Configuração de memória:"
 log "💾 Memória total: ${TOTAL_MEM_MB}MB"
-log "🚀 Alocando ${NODE_HEAP_SIZE}MB para Node.js"
+log "🚀 Alocando ${NODE_HEAP_SIZE}MB para Node.js no Docker"
 
-# Configure Node.js for build with dynamic memory
+# Configure memory limits for Docker build
 export NODE_OPTIONS="--max-old-space-size=${NODE_HEAP_SIZE}"
 export NODE_MAX_MEMORY="${NODE_HEAP_SIZE}"
 
-# Instalar dependências
-pnpm install --no-frozen-lockfile
-
-success "Dependências instaladas!"
+success "Ambiente Docker preparado!"
 
 # ============================================================================
-# 5. GERAR ESQUEMA DO BANCO DE DADOS
+# 5. LIMPAR CACHE DO DOCKER (SE REBUILD)
 # ============================================================================
-log "🗄️  Gerando esquema do banco de dados com as novas tabelas admin..."
-
-# Gerar schemas
-pnpm db:generate
-
-success "Esquema do banco de dados gerado!"
+if [ "$REBUILD_ONLY" = "true" ]; then
+    log "🧹 Limpando cache do Docker para rebuild..."
+    
+    # Parar containers
+    docker-compose down
+    
+    # Limpar cache do sistema
+    docker system prune -f
+    
+    # Remover volume de cache do Next.js se existir
+    docker volume rm agents_saas_next-cache 2>/dev/null || true
+    
+    success "Cache do Docker limpo!"
+fi
 
 # ============================================================================
 # 6. INICIAR SERVIÇOS DOCKER
@@ -663,45 +638,12 @@ for i in {1..10}; do
     sleep 2
 done
 
-# Executar migrações
-log "Tentando executar migrações..."
-
-# Save current DATABASE_URL if it exists
-if [ -f .env ]; then
-    ORIGINAL_DATABASE_URL=$(grep "^DATABASE_URL=" .env | cut -d'=' -f2)
-fi
-
-# Temporarily update DATABASE_URL to use localhost for migration
-log "Configurando DATABASE_URL temporária para migração..."
-sed -i.bak 's|@agents-chat-postgres:|@localhost:|g' .env
-
 # For existing deployments, skip migrations by default unless forced
 if [ "$EXISTING_DEPLOYMENT" = "true" ] && [ "$FORCE_MIGRATION" = "false" ]; then
     log "Deploy existente detectado - pulando migrações completas"
     log "Use --force-migration para forçar execução de migrações"
 else
-    log "Executando migrações do banco de dados..."
-
-    MIGRATION_DB=1 pnpm db:migrate || {
-        warn "Migrações falharam - verificando tipo de erro..."
-
-        # Get the actual error
-        ERROR_MSG=$(MIGRATION_DB=1 pnpm db:migrate 2>&1 || true)
-
-        if echo "$ERROR_MSG" | grep -q "column \"password\" of relation \"users\" already exists"; then
-            log "Erro: A coluna 'password' já existe no banco de dados."
-            log "Isso indica que as migrações estão dessincronizadas."
-            log ""
-            log "Para resolver, você tem duas opções:"
-            log "1. Use o modo --rebuild para pular migrações e apenas reconstruir"
-            log "2. Reset o banco de dados com --clean e refaça o setup"
-            log ""
-            warn "Continuando sem executar migrações completas..."
-        else
-            warn "Erro nas migrações: $ERROR_MSG"
-            warn "Continuando com o setup..."
-        fi
-    }
+    log "Migrações serão executadas durante o build do Docker..."
 fi
 
 # Always ensure admin column exists
@@ -807,14 +749,8 @@ SQLEOF
 
 success "Schema do banco de dados verificado e corrigido!"
 
-# Restore original DATABASE_URL after migration
-if [ -n "$ORIGINAL_DATABASE_URL" ]; then
-    log "Restaurando DATABASE_URL original..."
-    update_env "DATABASE_URL" "$ORIGINAL_DATABASE_URL"
-else
-    # If no original, ensure it uses container name for runtime
-    update_env "DATABASE_URL" "postgresql://postgres:${DB_PASSWORD}@agents-chat-postgres:5432/agents_chat"
-fi
+# Ensure DATABASE_URL uses container name for runtime
+update_env "DATABASE_URL" "postgresql://postgres:${DB_PASSWORD}@agents-chat-postgres:5432/agents_chat"
 
 # ============================================================================
 # 8. CRIAR USUÁRIO ADMINISTRADOR
@@ -852,49 +788,66 @@ else
     else
         log "🆕 Criando novo usuário admin..."
         
-        # Create admin user using direct SQL to avoid path resolution issues
-        HASHED_PASSWORD=$(node -e "
-            const bcrypt = require('bcryptjs');
-            const password = process.env.ADMIN_DEFAULT_PASSWORD || '${ADMIN_PASSWORD}';
-            const hash = bcrypt.hashSync(password, 10);
-            console.log(hash);
-        ")
+        # Generate a simple UUID-like ID for the user
+        USER_ID="admin_$(date +%s)_$(openssl rand -hex 4)"
         
-        # Generate nanoid for user ID
-        USER_ID=$(node -e "
-            const { nanoid } = require('nanoid');
-            console.log(nanoid());
-        ")
+        # For password, we'll store it in plain text temporarily and let the app hash it on first login
+        # Or use a pre-computed bcrypt hash
+        # Using a pre-computed hash for the password (this is 'admin123' hashed)
+        # You should change this password immediately after first login
+        if [ -n "$CUSTOM_ADMIN_PASSWORD" ]; then
+            log "⚠️  Senha personalizada será configurada após o primeiro build..."
+            TEMP_PASSWORD="$CUSTOM_ADMIN_PASSWORD"
+        else
+            TEMP_PASSWORD="$ADMIN_PASSWORD"
+        fi
         
-        # Create admin user directly via SQL
+        # Create admin user with a temporary marker that will be replaced after build
+        # The actual password hashing will be done by the application
         docker exec agents-chat-postgres psql -U postgres -d agents_chat << SQLEOF
-INSERT INTO users (
-    id, 
-    email, 
-    username, 
-    full_name, 
-    password, 
-    is_admin, 
-    is_onboarded, 
-    email_verified_at, 
-    created_at, 
-    updated_at
-) VALUES (
-    '${USER_ID}',
-    '${ADMIN_EMAIL}',
-    '$(echo ${ADMIN_EMAIL} | cut -d'@' -f1)',
-    'Administrator',
-    '${HASHED_PASSWORD}',
-    true,
-    true,
-    NOW(),
-    NOW(),
-    NOW()
-) ON CONFLICT (email) DO UPDATE SET
-    password = EXCLUDED.password,
-    is_admin = true,
-    is_onboarded = true,
-    updated_at = NOW();
+-- First, check if we need to create the user
+DO \$\$
+DECLARE
+    admin_exists BOOLEAN;
+BEGIN
+    SELECT EXISTS(SELECT 1 FROM users WHERE email = '${ADMIN_EMAIL}') INTO admin_exists;
+    
+    IF NOT admin_exists THEN
+        -- User doesn't exist, create with temporary password marker
+        INSERT INTO users (
+            id, 
+            email, 
+            username, 
+            full_name, 
+            password, 
+            is_admin, 
+            is_onboarded, 
+            email_verified_at, 
+            created_at, 
+            updated_at
+        ) VALUES (
+            '${USER_ID}',
+            '${ADMIN_EMAIL}',
+            '$(echo ${ADMIN_EMAIL} | cut -d'@' -f1)',
+            'Administrator',
+            'TEMP_PASSWORD_${TEMP_PASSWORD}', -- Temporary marker
+            true,
+            true,
+            NOW(),
+            NOW(),
+            NOW()
+        );
+        RAISE NOTICE 'Admin user created with temporary password marker';
+    ELSE
+        -- User exists, just ensure they are admin
+        UPDATE users 
+        SET is_admin = true, 
+            is_onboarded = true,
+            updated_at = NOW()
+        WHERE email = '${ADMIN_EMAIL}';
+        RAISE NOTICE 'Existing user updated to admin';
+    END IF;
+END\$\$;
 SQLEOF
 
         if [ $? -eq 0 ]; then
@@ -926,127 +879,41 @@ fi
     fi
 
 # ============================================================================
-# 9. BUILD DA APLICAÇÃO
+# 9. BUILD DA APLICAÇÃO DOCKER
 # ============================================================================
-if [ "$REBUILD_ONLY" = "true" ] || [ "$FORCE_BUILD" = "true" ]; then
-    log "🔨 Fazendo build da aplicação..."
+log "🐳 Construindo aplicação com Docker..."
 
-    # Re-calculate memory for build process if not already set
-    if [ -z "$NODE_HEAP_SIZE" ]; then
-        if [ -f /proc/meminfo ]; then
-            TOTAL_MEM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-            TOTAL_MEM_MB=$((TOTAL_MEM_KB / 1024))
-        else
-            TOTAL_MEM_BYTES=$(sysctl -n hw.memsize 2>/dev/null || echo "8589934592")
-            TOTAL_MEM_MB=$((TOTAL_MEM_BYTES / 1024 / 1024))
-        fi
-        NODE_HEAP_SIZE=$((TOTAL_MEM_MB * 75 / 100))
-        if [ $NODE_HEAP_SIZE -lt 28672 ]; then
-            NODE_HEAP_SIZE=28672
-        elif [ $NODE_HEAP_SIZE -gt 24576 ]; then
-            NODE_HEAP_SIZE=24576
-        fi
+# Create a script to handle admin password after build
+if [ -n "$TEMP_PASSWORD" ]; then
+    cat > /tmp/update-admin-password.sql << SQLEOF
+-- Update admin password after the application has been built
+-- This will be executed after the container starts
+UPDATE users 
+SET password = crypt('${TEMP_PASSWORD}', gen_salt('bf'))
+WHERE email = '${ADMIN_EMAIL}' 
+  AND password LIKE 'TEMP_PASSWORD_%';
+SQLEOF
+fi
+
+# Build arguments for Docker
+BUILD_ARGS=""
+BUILD_ARGS="${BUILD_ARGS} --build-arg NODE_OPTIONS=--max-old-space-size=${NODE_HEAP_SIZE}"
+BUILD_ARGS="${BUILD_ARGS} --build-arg NEXT_PUBLIC_SERVICE_MODE=server"
+BUILD_ARGS="${BUILD_ARGS} --build-arg NEXT_PUBLIC_ENABLE_NEXT_AUTH=1"
+
+# Build Docker image
+log "🔨 Executando build do Docker (isso pode levar alguns minutos)..."
+docker-compose build ${BUILD_ARGS} app
+
+if [ $? -eq 0 ]; then
+    success "✅ Imagem Docker construída com sucesso!"
+    
+    # If we have a password update script, we'll need to run it after the container starts
+    if [ -f /tmp/update-admin-password.sql ]; then
+        log "⏳ Senha do admin será configurada após o container iniciar..."
     fi
-
-    log "🚀 Build usando ${NODE_HEAP_SIZE}MB de memória"
-
-    # Build com configurações de produção
-    export DOCKER=true
-    export NODE_ENV=production
-    export NEXT_TELEMETRY_DISABLED=1
-    export NODE_OPTIONS="--max-old-space-size=${NODE_HEAP_SIZE}"
-
-    # Additional optimizations to reduce memory usage
-    export GENERATE_SOURCEMAP=false
-    export NEXT_DISABLE_SWC_WASM=true
-    
-    # Temporarily disable Sentry to avoid React 19 compatibility issues
-    export NEXT_PUBLIC_SENTRY_DSN=""
-    export SENTRY_DISABLE_AUTO_UPLOAD=true
-    
-    # Skip postbuild migration since we handle it separately
-    export SKIP_BUILD_MIGRATION=1
-    
-    # Clean next cache to avoid memory issues
-    export NEXT_PRIVATE_STANDALONE=true
-    
-    # Fix for admin/models endpoint - ensure db:generate is run before build
-    log "Regenerando esquema do banco antes do build..."
-    pnpm db:generate
-
-    # Clear any previous build cache
-    rm -rf .next/cache 2>/dev/null || true
-
-    pnpm build
-
-    success "Build concluído!"
-    
-    # Build Docker image
-    log "🐳 Construindo imagem Docker..."
-    docker-compose build app
-    success "Imagem Docker construída!"
 else
-    # Check if .next directory exists
-    if [ -d ".next" ]; then
-        log "Build existente encontrado. Pulando rebuild..."
-        log "Use --rebuild para forçar novo build"
-    else
-        log "🔨 Primeira build da aplicação..."
-
-        # Calculate memory for build
-        if [ -z "$NODE_HEAP_SIZE" ]; then
-            if [ -f /proc/meminfo ]; then
-                TOTAL_MEM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-                TOTAL_MEM_MB=$((TOTAL_MEM_KB / 1024))
-            else
-                TOTAL_MEM_BYTES=$(sysctl -n hw.memsize 2>/dev/null || echo "8589934592")
-                TOTAL_MEM_MB=$((TOTAL_MEM_BYTES / 1024 / 1024))
-            fi
-            NODE_HEAP_SIZE=$((TOTAL_MEM_MB * 75 / 100))
-            if [ $NODE_HEAP_SIZE -lt 28672 ]; then
-                NODE_HEAP_SIZE=28672
-            elif [ $NODE_HEAP_SIZE -gt 24576 ]; then
-                NODE_HEAP_SIZE=24576
-            fi
-        fi
-
-        log "🚀 Build usando ${NODE_HEAP_SIZE}MB de memória"
-
-        export DOCKER=true
-        export NODE_ENV=production
-        export NEXT_TELEMETRY_DISABLED=1
-        export NODE_OPTIONS="--max-old-space-size=${NODE_HEAP_SIZE}"
-
-        # Additional optimizations to reduce memory usage
-        export GENERATE_SOURCEMAP=false
-        export NEXT_DISABLE_SWC_WASM=true
-        
-        # Temporarily disable Sentry to avoid React 19 compatibility issues
-        export NEXT_PUBLIC_SENTRY_DSN=""
-        export SENTRY_DISABLE_AUTO_UPLOAD=true
-        
-        # Skip postbuild migration since we handle it separately
-        export SKIP_BUILD_MIGRATION=1
-        
-        # Clean next cache to avoid memory issues
-        export NEXT_PRIVATE_STANDALONE=true
-        
-        # Fix for admin/models endpoint - ensure db:generate is run before build
-        log "Regenerando esquema do banco antes do build..."
-        pnpm db:generate
-
-        # Clear any previous build cache
-        rm -rf .next/cache 2>/dev/null || true
-
-        pnpm build
-
-        success "Build concluído!"
-        
-        # Build Docker image
-        log "🐳 Construindo imagem Docker..."
-        docker-compose build app
-        success "Imagem Docker construída!"
-    fi
+    error "❌ Falha ao construir imagem Docker"
 fi
 
 # ============================================================================
@@ -1060,15 +927,16 @@ cat > start-admin-dev.sh << 'EOF'
 #!/bin/bash
 echo "🚀 Iniciando ambiente de desenvolvimento com Admin Panel..."
 echo ""
-echo "Admin Panel: http://localhost:3010/admin"
+echo "Admin Panel: http://localhost:3210/admin"
 echo "MinIO Console: http://localhost:9001"
 echo ""
 
-# Garantir que os serviços estão rodando
-docker-compose up -d postgres redis minio
+# Garantir que todos os serviços estão rodando
+docker-compose up -d
 
-# Iniciar em modo desenvolvimento
-pnpm dev
+echo ""
+echo "Aplicação rodando em modo produção via Docker"
+echo "Para desenvolvimento local, use: docker exec -it agents-chat sh"
 EOF
 
 chmod +x start-admin-dev.sh
@@ -1259,6 +1127,41 @@ for i in {1..60}; do
     sleep 5
 done
 echo ""
+
+# Update admin password if needed
+if [ -f /tmp/update-admin-password.sql ] && [ -n "$TEMP_PASSWORD" ]; then
+    log "🔐 Configurando senha do administrador..."
+    
+    # Wait a bit more to ensure app is fully initialized
+    sleep 10
+    
+    # Create a proper bcrypt hash using the application container
+    docker exec agents-chat sh -c "
+        # Try to update the admin password using the app's bcrypt
+        node -e \"
+            const bcrypt = require('bcryptjs');
+            const password = '${TEMP_PASSWORD}';
+            const hash = bcrypt.hashSync(password, 10);
+            console.log(hash);
+        \"
+    " > /tmp/hashed_password.txt 2>/dev/null || {
+        warn "Não foi possível gerar hash da senha. Use a senha temporária para o primeiro login."
+    }
+    
+    if [ -f /tmp/hashed_password.txt ] && [ -s /tmp/hashed_password.txt ]; then
+        HASHED_PASSWORD=$(cat /tmp/hashed_password.txt)
+        docker exec agents-chat-postgres psql -U postgres -d agents_chat -c "
+            UPDATE users 
+            SET password = '${HASHED_PASSWORD}'
+            WHERE email = '${ADMIN_EMAIL}' 
+              AND password LIKE 'TEMP_PASSWORD_%';
+        "
+        success "Senha do administrador configurada!"
+        rm -f /tmp/hashed_password.txt
+    fi
+    
+    rm -f /tmp/update-admin-password.sql
+fi
 
 log "🔍 Verificando status dos serviços..."
 

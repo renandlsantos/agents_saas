@@ -1,14 +1,16 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
+import { Alert, Markdown } from '@lobehub/ui';
 import { Skeleton } from 'antd';
 import { useTheme } from 'antd-style';
-import { BotMessageSquare } from 'lucide-react';
+import { BotMessageSquare, EyeOff } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Flexbox, FlexboxProps } from 'react-layout-kit';
 
 import { DiscoverAssistantItem } from '@/types/discover';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import HighlightBlock from '../../../features/HighlightBlock';
 
@@ -19,8 +21,15 @@ interface ConversationExampleProps extends FlexboxProps {
 }
 
 const ConversationExample = memo<ConversationExampleProps>(({ data }) => {
-  const { t } = useTranslation('discover');
+  const { t } = useTranslation(['discover', 'setting']);
   const theme = useTheme();
+  const isAdmin = useUserStore(userProfileSelectors.isAdmin);
+  
+  // Check if this is an admin-published agent
+  const isAdminPublishedAgent = data.author === 'Agents SaaS';
+  
+  // Only admins can view system roles of admin-published agents
+  const canViewSystemRole = isAdmin || !isAdminPublishedAgent;
 
   return (
     <HighlightBlock
@@ -28,10 +37,17 @@ const ConversationExample = memo<ConversationExampleProps>(({ data }) => {
       icon={BotMessageSquare}
       justify={'space-between'}
       style={{ background: theme.colorBgContainer }}
-      title={t('assistants.systemRole')}
+      title={t('assistants.systemRole', { ns: 'discover' })}
     >
       <Flexbox paddingInline={16}>
-        {data.config.systemRole ? (
+        {!canViewSystemRole ? (
+          <Alert
+            description={t('settingAgent.prompt.adminProtected', { ns: 'setting' })}
+            icon={<EyeOff />}
+            message={t('settingAgent.prompt.hiddenTitle', { ns: 'setting' })}
+            type="info"
+          />
+        ) : data.config.systemRole ? (
           <Markdown fontSize={theme.fontSize}>{data.config.systemRole}</Markdown>
         ) : (
           <Skeleton paragraph={{ rows: 4 }} title={false} />

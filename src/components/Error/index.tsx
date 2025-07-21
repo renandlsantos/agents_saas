@@ -1,7 +1,6 @@
 'use client';
 
-import { Button } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
+import { Button, Icon } from '@lobehub/ui';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { memo, useLayoutEffect } from 'react';

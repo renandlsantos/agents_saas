@@ -1,5 +1,3 @@
-/// <reference types="vitest" />
-
 import type {
   describe as vitestDescribe,
   it as vitestIt,

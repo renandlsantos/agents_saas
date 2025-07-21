@@ -8,9 +8,11 @@ import { useTranslation } from 'react-i18next';
 
 import { DESKTOP_HEADER_ICON_SIZE, MOBILE_HEADER_ICON_SIZE } from '@/const/layoutTokens';
 import { useOpenChatSettings } from '@/hooks/useInterceptingRoutes';
+import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useSessionStore } from '@/store/session';
+import { sessionSelectors } from '@/store/session/selectors';
 import { useUserStore } from '@/store/user';
-import { settingsSelectors } from '@/store/user/selectors';
+import { settingsSelectors, userProfileSelectors } from '@/store/user/selectors';
 import { HotkeyEnum } from '@/types/hotkey';
 
 const AgentSettings = dynamic(() => import('./AgentSettings'), {
@@ -22,6 +24,23 @@ const SettingButton = memo<{ mobile?: boolean }>(({ mobile }) => {
   const { t } = useTranslation('common');
   const openChatSettings = useOpenChatSettings();
   const id = useSessionStore((s) => s.activeId);
+  
+  // Check permissions
+  const isAgentEditable = useServerConfigStore(featureFlagsSelectors.isAgentEditable);
+  const currentSession = useSessionStore(sessionSelectors.currentSession);
+  const currentUserId = useUserStore(userProfileSelectors.userId);
+  const isAdmin = useUserStore(userProfileSelectors.isAdmin);
+  
+  // Don't show settings button if:
+  // 1. Agent editing is disabled globally
+  // 2. Session doesn't exist
+  // 3. User is not admin and the session doesn't belong to them
+  if (!isAgentEditable || !currentSession) return null;
+  
+  const isOwnAgent = currentSession.userId === currentUserId;
+  const canEdit = isAdmin || isOwnAgent;
+  
+  if (!canEdit) return null;
 
   return (
     <>

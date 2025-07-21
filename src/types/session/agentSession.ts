@@ -16,12 +16,14 @@ export interface LobeAgentSession {
   createdAt: Date;
   group?: SessionGroupId;
   id: string;
+  isDomain?: boolean;
   meta: MetaData;
   model: string;
   pinned?: boolean;
   tags?: string[];
   type: LobeSessionType.Agent;
   updatedAt: Date;
+  userId?: string;
 }
 
 export interface LobeAgentSettings {

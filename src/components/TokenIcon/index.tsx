@@ -1,6 +1,6 @@
 import { Icon } from '@lobehub/ui';
 import { LucideIcon } from 'lucide-react';
-import { forwardRef } from 'react';
+import React, { forwardRef } from 'react';
 
 // Custom token icon SVG
 const TokenIconSvg: LucideIcon = forwardRef<SVGSVGElement, any>((props, ref) => (
@@ -40,8 +40,8 @@ const TokenIconSvg: LucideIcon = forwardRef<SVGSVGElement, any>((props, ref) => 
 TokenIconSvg.displayName = 'TokenIcon';
 
 interface TokenIconProps {
-  size?: number;
   className?: string;
+  size?: number;
   style?: React.CSSProperties;
 }
 

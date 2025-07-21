@@ -6,25 +6,25 @@ import TokenIcon from '../TokenIcon';
 
 interface TokenCountProps {
   /**
+   * Additional className for styling
+   */
+  className?: string;
+  /**
    * The number of tokens to display
    */
   count: number;
   /**
-   * Optional label to display (e.g., "Tokens Used", "Remaining", etc.)
+   * Format function for the count display
    */
-  label?: string;
+  formatCount?: (count: number) => string;
   /**
    * Size of the icon (default: 16)
    */
   iconSize?: number;
   /**
-   * Additional className for styling
+   * Optional label to display (e.g., "Tokens Used", "Remaining", etc.)
    */
-  className?: string;
-  /**
-   * Format function for the count display
-   */
-  formatCount?: (count: number) => string;
+  label?: string;
   /**
    * Color variant for the display
    */
@@ -32,11 +32,11 @@ interface TokenCountProps {
 }
 
 const defaultFormatCount = (count: number): string => {
-  if (count >= 1000000) {
-    return `${(count / 1000000).toFixed(1)}M`;
+  if (count >= 1_000_000) {
+    return `${(count / 1_000_000).toFixed(1)}M`;
   }
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}K`;
+  if (count >= 1_000) {
+    return `${(count / 1_000).toFixed(1)}K`;
   }
   return count.toLocaleString();
 };
@@ -53,16 +53,21 @@ export const TokenCount: FC<TokenCountProps> = ({
 
   const getColor = () => {
     switch (variant) {
-      case 'primary':
+      case 'primary': {
         return theme.colorPrimary;
-      case 'success':
+      }
+      case 'success': {
         return theme.colorSuccess;
-      case 'warning':
+      }
+      case 'warning': {
         return theme.colorWarning;
-      case 'danger':
+      }
+      case 'danger': {
         return theme.colorError;
-      default:
+      }
+      default: {
         return theme.colorTextSecondary;
+      }
     }
   };
 

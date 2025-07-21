@@ -161,6 +161,8 @@ export default {
       title: '名称',
     },
     prompt: {
+      adminProtected: 'Este assistente foi publicado pelo administrador e o prompt do sistema está protegido por motivos de segurança.',
+      hiddenTitle: 'Prompt do Sistema Protegido',
       placeholder: '请输入角色 Prompt 提示词',
       title: '角色设定',
     },
