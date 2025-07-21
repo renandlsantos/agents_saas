@@ -19,7 +19,7 @@ export class ClientService extends BaseClientService implements ISessionService 
 
   hasSessions: ISessionService['hasSessions'] = async () => {
     const result = await this.countSessions();
-    return result === 0;
+    return result > 0;
   };
 
   createSession: ISessionService['createSession'] = async (type, data) => {

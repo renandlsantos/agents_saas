@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Center, Flexbox } from 'react-layout-kit';
 
 import InfoTooltip from '@/components/InfoTooltip';
-import TokenIcon from '@/components/TokenIcon';
+import { TokenIconSvg } from '@/components/TokenIcon';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -107,14 +107,18 @@ const TokenDetail = memo<TokenDetailProps>(({ meta, model, provider }) => {
   ].filter(Boolean) as TokenProgressItem[];
 
   const displayTotal =
-    isShowCredit && !!detailTokens.totalTokens
+    isShowCredit && detailTokens.totalTokens
       ? formatNumber(detailTokens.totalTokens.credit)
-      : formatNumber(detailTokens.totalTokens!.token);
+      : detailTokens.totalTokens
+      ? formatNumber(detailTokens.totalTokens.token)
+      : '0';
 
-  const averagePricing = formatNumber(
-    detailTokens.totalTokens!.credit / detailTokens.totalTokens!.token,
-    2,
-  );
+  const averagePricing = detailTokens.totalTokens
+    ? formatNumber(
+        detailTokens.totalTokens.credit / detailTokens.totalTokens.token,
+        2,
+      )
+    : '0';
 
   const tps = meta?.tps ? formatNumber(meta.tps, 2) : undefined;
   const ttft = meta?.ttft ? formatNumber(meta.ttft / 1000, 2) : undefined;
@@ -206,7 +210,7 @@ const TokenDetail = memo<TokenDetailProps>(({ meta, model, provider }) => {
       trigger={['hover', 'click']}
     >
       <Center gap={2} horizontal style={{ cursor: 'default' }}>
-        <Icon icon={isShowCredit ? BadgeCent : TokenIcon} />
+        <Icon icon={isShowCredit ? BadgeCent : TokenIconSvg} />
         {displayTotal}
       </Center>
     </Popover>

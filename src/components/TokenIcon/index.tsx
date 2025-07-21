@@ -1,9 +1,9 @@
 import { Icon } from '@lobehub/ui';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, LucideProps } from 'lucide-react';
 import React, { forwardRef } from 'react';
 
 // Custom token icon SVG
-const TokenIconSvg: LucideIcon = forwardRef<SVGSVGElement, any>((props, ref) => (
+export const TokenIconSvg: LucideIcon = forwardRef<SVGSVGElement, LucideProps>((props, ref) => (
   <svg
     fill="currentColor"
     fillRule="evenodd"

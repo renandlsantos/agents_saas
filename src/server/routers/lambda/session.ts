@@ -90,7 +90,16 @@ export const sessionRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const data = await ctx.sessionModel.create(input);
+      // Convert null values to undefined for compatibility
+      const processedInput = {
+        ...input,
+        config: input.config ? {
+          ...input.config,
+          isDomain: input.config.isDomain ?? undefined,
+        } : undefined,
+      };
+      
+      const data = await ctx.sessionModel.create(processedInput);
 
       return data.id;
     }),
