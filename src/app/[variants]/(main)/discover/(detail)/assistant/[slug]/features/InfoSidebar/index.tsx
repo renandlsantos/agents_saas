@@ -24,6 +24,7 @@ const InfoSidebar = memo<InfoSidebarProps>(({ pluginData, data }) => {
 
   return (
     <Flexbox gap={48} style={{ position: 'relative' }} width={'100%'}>
+      {/* Plugins section disabled
       {pluginData && pluginData?.length > 0 && (
         <Block gap={12} title={t('assistants.plugins')}>
           {pluginData.map((item) => (
@@ -37,6 +38,7 @@ const InfoSidebar = memo<InfoSidebarProps>(({ pluginData, data }) => {
           ))}
         </Block>
       )}
+      */}
       <Block
         gap={24}
         more={t('assistants.more')}

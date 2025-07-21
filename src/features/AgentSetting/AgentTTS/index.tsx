@@ -1,16 +1,22 @@
 'use client';
 
 import { VoiceList } from '@lobehub/tts';
-import { Form, type FormGroupItemType, Select } from '@lobehub/ui';
+import { Alert, Form, type FormGroupItemType, Select } from '@lobehub/ui';
 import { Switch } from 'antd';
 import isEqual from 'fast-deep-equal';
-import { Mic } from 'lucide-react';
+import { EyeOff, Mic } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Flexbox } from 'react-layout-kit';
 
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
+import { useServerConfigStore } from '@/store/serverConfig';
+import { useSessionStore } from '@/store/session';
+import { sessionSelectors } from '@/store/session/selectors';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { selectors, useStore } from '../store';
 import SelectWithTTSPreview from './SelectWithTTSPreview';
@@ -22,12 +28,54 @@ const { openaiVoiceOptions, localeOptions } = VoiceList;
 const AgentTTS = memo(() => {
   const { t } = useTranslation('setting');
   const [form] = Form.useForm();
+  const isMobile = useServerConfigStore((s) => s.isMobile);
   const voiceList = useGlobalStore((s) => {
     const locale = globalGeneralSelectors.currentLanguage(s);
     return (all?: boolean) => new VoiceList(all ? undefined : locale);
   });
   const config = useStore(selectors.currentTtsConfig, isEqual);
   const updateConfig = useStore((s) => s.setAgentConfig);
+
+  // Check user permissions
+  const currentSession = useSessionStore(sessionSelectors.currentSession);
+  const currentUserId = useUserStore(userProfileSelectors.userId);
+  const isAdmin = useUserStore(userProfileSelectors.isAdmin);
+  
+  // Check if this is a domain agent (published by admin)
+  const isDomainAgent = currentSession?.isDomain || false;
+  const isOwnAgent = currentSession?.userId === currentUserId;
+  
+  // User can edit TTS if:
+  // 1. They are admin OR
+  // 2. It's their own agent and not a domain agent
+  const canEditTTS = isAdmin || (isOwnAgent && !isDomainAgent);
+
+  // If user cannot edit TTS, show a message
+  if (!canEditTTS) {
+    return (
+      <Form
+        items={[
+          {
+            children: (
+              <Flexbox gap={16} paddingBlock={isMobile ? 16 : 0}>
+                <Alert
+                  closable={false}
+                  description={t('settingAgent.prompt.adminProtected', { ns: 'setting' })}
+                  icon={<EyeOff />}
+                  message={t('settingAgent.prompt.hiddenTitle', { ns: 'setting' })}
+                  type="info"
+                />
+              </Flexbox>
+            ),
+            title: t('settingTTS.title'),
+          },
+        ]}
+        itemsType={'group'}
+        variant={'borderless'}
+        {...FORM_STYLE}
+      />
+    );
+  }
 
   const { edgeVoiceOptions, microsoftVoiceOptions } = useMemo(
     () => voiceList(config.showAllLocaleVoice),

@@ -1,26 +1,75 @@
 'use client';
 
-import { Form, type FormGroupItemType, Select, SliderWithInput } from '@lobehub/ui';
+import { Alert, Form, type FormGroupItemType, Select, SliderWithInput } from '@lobehub/ui';
 import { Form as AntdForm, Switch } from 'antd';
 import isEqual from 'fast-deep-equal';
+import { EyeOff } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Flexbox } from 'react-layout-kit';
 
 import { FORM_STYLE } from '@/const/layoutTokens';
 import ModelSelect from '@/features/ModelSelect';
 import { useProviderName } from '@/hooks/useProviderName';
+import { useServerConfigStore } from '@/store/serverConfig';
+import { useSessionStore } from '@/store/session';
+import { sessionSelectors } from '@/store/session/selectors';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { selectors, useStore } from '../store';
 
 const AgentModal = memo(() => {
   const { t } = useTranslation('setting');
   const [form] = Form.useForm();
+  const isMobile = useServerConfigStore((s) => s.isMobile);
   const enableMaxTokens = AntdForm.useWatch(['chatConfig', 'enableMaxTokens'], form);
   const enableReasoningEffort = AntdForm.useWatch(['chatConfig', 'enableReasoningEffort'], form);
   const config = useStore(selectors.currentAgentConfig, isEqual);
 
   const updateConfig = useStore((s) => s.setAgentConfig);
   const providerName = useProviderName(useStore((s) => s.config.provider) as string);
+
+  // Check user permissions
+  const currentSession = useSessionStore(sessionSelectors.currentSession);
+  const currentUserId = useUserStore(userProfileSelectors.userId);
+  const isAdmin = useUserStore(userProfileSelectors.isAdmin);
+  
+  // Check if this is a domain agent (published by admin)
+  const isDomainAgent = currentSession?.isDomain || false;
+  const isOwnAgent = currentSession?.userId === currentUserId;
+  
+  // User can edit model if:
+  // 1. They are admin OR
+  // 2. It's their own agent and not a domain agent
+  const canEditModel = isAdmin || (isOwnAgent && !isDomainAgent);
+
+  // If user cannot edit model, show a message
+  if (!canEditModel) {
+    return (
+      <Form
+        items={[
+          {
+            children: (
+              <Flexbox gap={16} paddingBlock={isMobile ? 16 : 0}>
+                <Alert
+                  closable={false}
+                  description={t('settingAgent.prompt.adminProtected', { ns: 'setting' })}
+                  icon={<EyeOff />}
+                  message={t('settingAgent.prompt.hiddenTitle', { ns: 'setting' })}
+                  type="info"
+                />
+              </Flexbox>
+            ),
+            title: t('settingModel.title'),
+          },
+        ]}
+        itemsType={'group'}
+        variant={'borderless'}
+        {...FORM_STYLE}
+      />
+    );
+  }
 
   const model: FormGroupItemType = {
     children: [

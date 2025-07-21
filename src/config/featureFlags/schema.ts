@@ -73,7 +73,7 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
 
   cloud_promotion: false,
 
-  market: false,
+  market: true,
   speech_to_text: true,
   changelog: true,
 

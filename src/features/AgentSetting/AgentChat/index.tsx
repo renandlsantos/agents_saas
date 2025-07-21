@@ -1,15 +1,21 @@
 'use client';
 
-import { Form, type FormGroupItemType, ImageSelect, SliderWithInput, TextArea } from '@lobehub/ui';
+import { Alert, Form, type FormGroupItemType, ImageSelect, SliderWithInput, TextArea } from '@lobehub/ui';
 import { Switch } from 'antd';
 import { useThemeMode } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { LayoutList, MessagesSquare } from 'lucide-react';
+import { EyeOff, LayoutList, MessagesSquare } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Flexbox } from 'react-layout-kit';
 
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { imageUrl } from '@/const/url';
+import { useServerConfigStore } from '@/store/serverConfig';
+import { useSessionStore } from '@/store/session';
+import { sessionSelectors } from '@/store/session/selectors';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { selectors, useStore } from '../store';
 
@@ -17,8 +23,50 @@ const AgentChat = memo(() => {
   const { t } = useTranslation('setting');
   const [form] = Form.useForm();
   const { isDarkMode } = useThemeMode();
+  const isMobile = useServerConfigStore((s) => s.isMobile);
   const updateConfig = useStore((s) => s.setChatConfig);
   const config = useStore(selectors.currentChatConfig, isEqual);
+
+  // Check user permissions
+  const currentSession = useSessionStore(sessionSelectors.currentSession);
+  const currentUserId = useUserStore(userProfileSelectors.userId);
+  const isAdmin = useUserStore(userProfileSelectors.isAdmin);
+  
+  // Check if this is a domain agent (published by admin)
+  const isDomainAgent = currentSession?.isDomain || false;
+  const isOwnAgent = currentSession?.userId === currentUserId;
+  
+  // User can edit chat config if:
+  // 1. They are admin OR
+  // 2. It's their own agent and not a domain agent
+  const canEditChat = isAdmin || (isOwnAgent && !isDomainAgent);
+
+  // If user cannot edit chat config, show a message
+  if (!canEditChat) {
+    return (
+      <Form
+        items={[
+          {
+            children: (
+              <Flexbox gap={16} paddingBlock={isMobile ? 16 : 0}>
+                <Alert
+                  closable={false}
+                  description={t('settingAgent.prompt.adminProtected', { ns: 'setting' })}
+                  icon={<EyeOff />}
+                  message={t('settingAgent.prompt.hiddenTitle', { ns: 'setting' })}
+                  type="info"
+                />
+              </Flexbox>
+            ),
+            title: t('settingChat.title'),
+          },
+        ]}
+        itemsType={'group'}
+        variant={'borderless'}
+        {...FORM_STYLE}
+      />
+    );
+  }
 
   const chat: FormGroupItemType = {
     children: [

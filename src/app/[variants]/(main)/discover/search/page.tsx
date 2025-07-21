@@ -70,9 +70,13 @@ const Page = async (props: Props) => {
     <>
       <StructuredData ld={ld} />
       {type === 'assistants' && <AssistantsResult locale={locale} mobile={isMobile} q={keywords} />}
+      {/* Plugins disabled
       {type === 'plugins' && <PluginsResult locale={locale} mobile={isMobile} q={keywords} />}
+      */}
       {type === 'models' && <ModelsResult locale={locale} mobile={isMobile} q={keywords} />}
+      {/* Providers disabled  
       {type === 'providers' && <ProvidersResult locale={locale} mobile={isMobile} q={keywords} />}
+      */}
     </>
   );
 };

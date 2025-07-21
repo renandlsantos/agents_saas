@@ -35,11 +35,17 @@ const SettingButton = memo<{ mobile?: boolean }>(({ mobile }) => {
   // Don't show settings button if:
   // 1. Agent editing is disabled globally
   // 2. Session doesn't exist
-  // 3. User is not admin and the session doesn't belong to them
+  // 3. It's a domain agent and user is not admin
+  // 4. User is not admin and the session doesn't belong to them
   if (!isAgentEditable || !currentSession) return null;
   
   const isOwnAgent = currentSession.userId === currentUserId;
-  const canEdit = isAdmin || isOwnAgent;
+  const isDomainAgent = currentSession.isDomain || false;
+  
+  // Only show settings for:
+  // 1. Admin users (can edit everything)
+  // 2. Regular users editing their own non-domain agents
+  const canEdit = isAdmin || (isOwnAgent && !isDomainAgent);
   
   if (!canEdit) return null;
 

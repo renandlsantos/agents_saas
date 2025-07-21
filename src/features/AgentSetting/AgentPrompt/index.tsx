@@ -34,10 +34,9 @@ const AgentPrompt = memo(() => {
   
   // User can view system role if:
   // 1. They are admin OR
-  // 2. It's their own agent OR
-  // 3. It's not a domain agent
-  const canViewSystemRole = isAdmin || isOwnAgent || !isDomainAgent;
-  const canEditSystemRole = isAdmin || isOwnAgent;
+  // 2. It's their own agent and not a domain agent
+  const canViewSystemRole = isAdmin || (isOwnAgent && !isDomainAgent);
+  const canEditSystemRole = isAdmin || (isOwnAgent && !isDomainAgent);
 
   const editButton = !editing && !!systemRole && canEditSystemRole && (
     <Button
