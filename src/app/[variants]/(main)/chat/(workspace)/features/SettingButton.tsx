@@ -26,7 +26,8 @@ const SettingButton = memo<{ mobile?: boolean }>(({ mobile }) => {
   const id = useSessionStore((s) => s.activeId);
   
   // Check permissions
-  const isAgentEditable = useServerConfigStore(featureFlagsSelectors.isAgentEditable);
+  const featureFlags = useServerConfigStore(featureFlagsSelectors);
+  const isAgentEditable = featureFlags.isAgentEditable;
   const currentSession = useSessionStore(sessionSelectors.currentSession);
   const currentUserId = useUserStore(userProfileSelectors.userId);
   const isAdmin = useUserStore(userProfileSelectors.isAdmin);
