@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/numeric-separators-style */
 import { useTheme } from 'antd-style';
 import { FC } from 'react';
 import { Flexbox } from 'react-layout-kit';
