@@ -192,9 +192,9 @@ export class SessionModel {
     config = {},
     slug,
   }: {
-    config?: Partial<NewAgent>;
+    config?: Partial<NewAgent> & { isDomain?: boolean };
     id?: string;
-    session?: Partial<NewSession> & { isDomain?: boolean };
+    session?: Partial<NewSession>;
     slug?: string;
     type: 'agent' | 'group';
   }): Promise<SessionItem> => {
@@ -207,14 +207,11 @@ export class SessionModel {
         if (existResult) return existResult;
       }
 
-      // Extract isDomain from session and put it in agent config
-      const { isDomain, ...sessionData } = session;
-      
       const newAgents = await trx
         .insert(agents)
         .values({
           ...config,
-          isDomain: isDomain ?? false,
+          isDomain: config?.isDomain ?? false,
           createdAt: new Date(),
           id: idGenerator('agents'),
           updatedAt: new Date(),
@@ -225,7 +222,7 @@ export class SessionModel {
       const result = await trx
         .insert(sessions)
         .values({
-          ...sessionData,
+          ...session,
           createdAt: new Date(),
           id,
           slug,

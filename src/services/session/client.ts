@@ -26,8 +26,8 @@ export class ClientService extends BaseClientService implements ISessionService 
     const { config, group, meta, isDomain, ...session } = data;
 
     const item = await this.sessionModel.create({
-      config: { ...config, ...meta } as any,
-      session: { ...session, groupId: group, isDomain },
+      config: { ...config, ...meta, isDomain } as any,
+      session: { ...session, groupId: group },
       type,
     });
     if (!item) {
