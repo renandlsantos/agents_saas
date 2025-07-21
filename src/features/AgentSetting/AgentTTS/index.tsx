@@ -50,6 +50,12 @@ const AgentTTS = memo(() => {
   // 2. It's their own agent and not a domain agent
   const canEditTTS = isAdmin || (isOwnAgent && !isDomainAgent);
 
+  // Must call hooks before conditional returns
+  const { edgeVoiceOptions, microsoftVoiceOptions } = useMemo(
+    () => voiceList(config.showAllLocaleVoice),
+    [config.showAllLocaleVoice],
+  );
+
   // If user cannot edit TTS, show a message
   if (!canEditTTS) {
     return (
@@ -76,11 +82,6 @@ const AgentTTS = memo(() => {
       />
     );
   }
-
-  const { edgeVoiceOptions, microsoftVoiceOptions } = useMemo(
-    () => voiceList(config.showAllLocaleVoice),
-    [config.showAllLocaleVoice],
-  );
 
   const tts: FormGroupItemType = {
     children: [
