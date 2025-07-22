@@ -60,9 +60,12 @@ const StoreInitialization = memo(() => {
   // Merge server config with user's personalized settings
   const userDefaultAgent = useUserStore(settingsSelectors.defaultAgent);
   const serverDefaultConfig = serverConfig.defaultAgent?.config;
-  const mergedDefaultConfig = userDefaultAgent && serverDefaultConfig 
-    ? merge(serverDefaultConfig, userDefaultAgent) 
-    : userDefaultAgent || serverDefaultConfig;
+  const userDefaultConfig = userDefaultAgent?.config;
+  
+  const mergedDefaultConfig = userDefaultConfig && serverDefaultConfig 
+    ? merge(serverDefaultConfig, userDefaultConfig) 
+    : userDefaultConfig || serverDefaultConfig;
+    
   useInitAgentStore(isLoginOnInit, mergedDefaultConfig);
 
   // init user provider key vaults
