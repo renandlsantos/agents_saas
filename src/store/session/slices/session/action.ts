@@ -109,21 +109,20 @@ export const createSessionSlice: StateCreator<
       settingsSelectors.defaultAgent(useUserStore.getState()),
     );
 
-    // Preserve user's personalized systemRole
+    // Merge sessions first
+    const newSession: LobeAgentSession = merge(defaultAgent, agent);
+    
+    // Preserve user's personalized systemRole by combining it with assistant's
     const userSystemRole = defaultAgent.config?.systemRole || '';
     const assistantSystemRole = agent?.config?.systemRole || '';
     
-    // Combine user's personalized instructions with assistant's systemRole
-    const combinedSystemRole = [userSystemRole, assistantSystemRole]
-      .filter(Boolean)
-      .join('\n\n');
-
-    // Merge sessions while preserving combined systemRole
-    const newSession: LobeAgentSession = merge(defaultAgent, agent);
-    
-    // Apply combined systemRole
-    if (combinedSystemRole) {
-      if (!newSession.config) newSession.config = {};
+    // Only combine if we have at least one systemRole
+    if (userSystemRole || assistantSystemRole) {
+      const combinedSystemRole = [userSystemRole, assistantSystemRole]
+        .filter(Boolean)
+        .join('\n\n');
+      
+      // newSession.config will always exist after merge because DEFAULT_AGENT_LOBE_SESSION has it
       newSession.config.systemRole = combinedSystemRole;
     }
     
