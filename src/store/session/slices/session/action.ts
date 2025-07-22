@@ -109,8 +109,25 @@ export const createSessionSlice: StateCreator<
       settingsSelectors.defaultAgent(useUserStore.getState()),
     );
 
-    // Preserve isDomain field from agent parameter
+    // Preserve user's personalized systemRole
+    const userSystemRole = defaultAgent.config?.systemRole || '';
+    const assistantSystemRole = agent?.config?.systemRole || '';
+    
+    // Combine user's personalized instructions with assistant's systemRole
+    const combinedSystemRole = [userSystemRole, assistantSystemRole]
+      .filter(Boolean)
+      .join('\n\n');
+
+    // Merge sessions while preserving combined systemRole
     const newSession: LobeAgentSession = merge(defaultAgent, agent);
+    
+    // Apply combined systemRole
+    if (combinedSystemRole) {
+      if (!newSession.config) newSession.config = {};
+      newSession.config.systemRole = combinedSystemRole;
+    }
+    
+    // Preserve isDomain field from agent parameter
     if (agent?.isDomain !== undefined) {
       newSession.isDomain = agent.isDomain;
     }

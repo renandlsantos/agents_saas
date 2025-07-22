@@ -15,7 +15,8 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';
 import { useUserStore } from '@/store/user';
-import { authSelectors } from '@/store/user/selectors';
+import { authSelectors, settingsSelectors } from '@/store/user/selectors';
+import { merge } from '@/utils/merge';
 
 const StoreInitialization = memo(() => {
   // prefetch error ns to avoid don't show error content correctly
@@ -56,7 +57,13 @@ const StoreInitialization = memo(() => {
   const isLoginOnInit = isDBInited && (enableNextAuth ? isSignedIn : isLogin);
 
   // init inbox agent and default agent config
-  useInitAgentStore(isLoginOnInit, serverConfig.defaultAgent?.config);
+  // Merge server config with user's personalized settings
+  const userDefaultAgent = useUserStore(settingsSelectors.defaultAgent);
+  const serverDefaultConfig = serverConfig.defaultAgent?.config;
+  const mergedDefaultConfig = userDefaultAgent && serverDefaultConfig 
+    ? merge(serverDefaultConfig, userDefaultAgent) 
+    : userDefaultAgent || serverDefaultConfig;
+  useInitAgentStore(isLoginOnInit, mergedDefaultConfig);
 
   // init user provider key vaults
   useInitAiProviderKeyVaults(isLoginOnInit);
