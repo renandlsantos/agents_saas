@@ -22,7 +22,7 @@ export class AgentService {
     const serverDefaultConfig = getServerDefaultAgentConfig();
     
     // Get user's personalized default agent settings
-    const userState = await userModel.getUserState(KeyVaultsGateKeeper.decrypt);
+    const userState = await userModel.getUserState(KeyVaultsGateKeeper.getUserKeyVaults);
     const userDefaultAgent = userState?.settings?.defaultAgent;
     
     // Merge server defaults with user's personalized settings
